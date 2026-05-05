@@ -44,7 +44,11 @@ export function AdminPanel({ leagues, teams, games, user, onLogin, defaultLeague
     description: string;
     history: { season: string; winnerId: string; }[];
   }>({ name: '', country: '', logo: '', description: '', history: [] });
-  const [historyForm, setHistoryForm] = useState({ season: '', winnerId: '' });
+  const [historyForm, setHistoryForm] = useState<{
+    season: string;
+    winnerId: string;
+    editingIndex: number | null;
+  }>({ season: '', winnerId: '', editingIndex: null });
   const [teamForm, setTeamForm] = useState({ name: '', leagueId: defaultLeagueId || '', logo: '' });
   const [gameForm, setGameForm] = useState({ 
     leagueId: defaultLeagueId || '', 
@@ -82,11 +86,34 @@ export function AdminPanel({ leagues, teams, games, user, onLogin, defaultLeague
 
   const addHistoryEntry = () => {
     if (!historyForm.season || !historyForm.winnerId) return;
+    
+    const newHistory = [...(leagueForm.history || [])];
+    const entry = { season: historyForm.season, winnerId: historyForm.winnerId };
+
+    if (historyForm.editingIndex !== null) {
+      newHistory[historyForm.editingIndex] = entry;
+    } else {
+      newHistory.push(entry);
+    }
+
     setLeagueForm({
       ...leagueForm,
-      history: [...(leagueForm.history || []), historyForm]
+      history: newHistory
     });
-    setHistoryForm({ season: '', winnerId: '' });
+    setHistoryForm({ season: '', winnerId: '', editingIndex: null });
+  };
+
+  const startEditingHistory = (index: number) => {
+    const entry = leagueForm.history![index];
+    setHistoryForm({
+      season: entry.season,
+      winnerId: entry.winnerId,
+      editingIndex: index
+    });
+  };
+
+  const cancelHistoryEdit = () => {
+    setHistoryForm({ season: '', winnerId: '', editingIndex: null });
   };
 
   const removeHistoryEntry = (index: number) => {
@@ -184,6 +211,7 @@ export function AdminPanel({ leagues, teams, games, user, onLogin, defaultLeague
       description: l.description || '',
       history: l.history || []
     });
+    setHistoryForm({ season: '', winnerId: '', editingIndex: null });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -213,6 +241,7 @@ export function AdminPanel({ leagues, teams, games, user, onLogin, defaultLeague
   const cancelEdit = () => {
     setEditingId(null);
     setLeagueForm({ name: '', country: '', logo: '', description: '', history: [] });
+    setHistoryForm({ season: '', winnerId: '', editingIndex: null });
     setTeamForm({ name: '', leagueId: defaultLeagueId || '', logo: '' });
     setGameForm({ 
       leagueId: defaultLeagueId || '', homeTeamId: '', awayTeamId: '', 
@@ -338,13 +367,23 @@ export function AdminPanel({ leagues, teams, games, user, onLogin, defaultLeague
                       onChange={v => setHistoryForm({ ...historyForm, winnerId: v })} 
                       options={teams.filter(t => t.leagueId === editingId || !editingId).map(t => ({ label: t.name, value: t.id }))} 
                     />
-                    <div className="pt-7">
+                    <div className="pt-7 flex gap-2">
+                       {historyForm.editingIndex !== null && (
+                        <button 
+                          type="button"
+                          onClick={cancelHistoryEdit}
+                          className="px-4 h-[54px] bg-gray-100 text-gray-500 rounded-2xl font-bold hover:bg-gray-200 transition-all"
+                        >
+                          Cancel
+                        </button>
+                      )}
                       <button 
                         type="button"
                         onClick={addHistoryEntry}
-                        className="w-full h-[54px] bg-gray-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all"
+                        className="flex-1 h-[54px] bg-gray-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all"
                       >
-                        <PlusIcon size={18} /> Add Entry
+                        {historyForm.editingIndex !== null ? <SaveIcon size={18} /> : <PlusIcon size={18} />}
+                        {historyForm.editingIndex !== null ? 'Update' : 'Add Entry'}
                       </button>
                     </div>
                   </div>
@@ -358,9 +397,14 @@ export function AdminPanel({ leagues, teams, games, user, onLogin, defaultLeague
                             <span className="font-black text-xs text-gray-400">{h.season}</span>
                             <span className="font-bold text-sm">{winner?.name || 'Unknown Team'}</span>
                           </div>
-                          <button onClick={() => removeHistoryEntry(i)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all">
-                            <Trash2Icon size={16} />
-                          </button>
+                          <div className="flex items-center gap-2">
+                             <button onClick={() => startEditingHistory(i)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all">
+                              <SaveIcon size={16} />
+                            </button>
+                            <button onClick={() => removeHistoryEntry(i)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all">
+                              <Trash2Icon size={16} />
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
