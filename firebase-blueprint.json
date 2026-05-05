@@ -1,0 +1,86 @@
+{
+  "entities": {
+    "League": {
+      "title": "League",
+      "description": "A sports league or championship",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the league" },
+        "logo": { "type": "string", "description": "URL to league logo" },
+        "country": { "type": "string", "description": "Country of the league" }
+      },
+      "required": ["name"]
+    },
+    "Season": {
+      "title": "Season",
+      "description": "A specific season of a league",
+      "type": "object",
+      "properties": {
+        "leagueId": { "type": "string" },
+        "year": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "finished", "upcoming"] }
+      },
+      "required": ["leagueId", "year"]
+    },
+    "Team": {
+      "title": "Team",
+      "description": "A sports team",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "logo": { "type": "string" },
+        "leagueId": { "type": "string" }
+      },
+      "required": ["name", "leagueId"]
+    },
+    "Player": {
+      "title": "Player",
+      "description": "A sport player",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "teamId": { "type": "string" },
+        "position": { "type": "string" },
+        "number": { "type": "number" }
+      },
+      "required": ["name", "teamId"]
+    },
+    "Venue": {
+      "title": "Venue",
+      "description": "A match venue/stadium",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "city": { "type": "string" },
+        "capacity": { "type": "number" }
+      },
+      "required": ["name"]
+    },
+    "Game": {
+      "title": "Game",
+      "description": "A match between two teams",
+      "type": "object",
+      "properties": {
+        "leagueId": { "type": "string" },
+        "seasonId": { "type": "string" },
+        "homeTeamId": { "type": "string" },
+        "awayTeamId": { "type": "string" },
+        "homeScore": { "type": "number" },
+        "awayScore": { "type": "number" },
+        "status": { "type": "string", "enum": ["scheduled", "live", "finished"] },
+        "date": { "type": "string", "format": "date-time" },
+        "venueId": { "type": "string" },
+        "attendance": { "type": "number" }
+      },
+      "required": ["leagueId", "homeTeamId", "awayTeamId", "date"]
+    }
+  },
+  "firestore": {
+    "/leagues/{leagueId}": { "schema": "League", "description": "Global leagues" },
+    "/leagues/{leagueId}/seasons/{seasonId}": { "schema": "Season", "description": "Seasons per league" },
+    "/teams/{teamId}": { "schema": "Team", "description": "Teams in the system" },
+    "/teams/{teamId}/players/{playerId}": { "schema": "Player", "description": "Players per team" },
+    "/venues/{venueId}": { "schema": "Venue", "description": "Venues/Stadiums" },
+    "/games/{gameId}": { "schema": "Game", "description": "All matches" }
+  }
+}

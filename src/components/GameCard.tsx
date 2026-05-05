@@ -1,0 +1,167 @@
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Game, Team } from '../types';
+import { Shield as ShieldIcon } from 'lucide-react';
+import { cn } from '../lib/utils';
+
+interface GameCardProps {
+  key?: string | number;
+  game: Game;
+  teams: Team[];
+  onClick: () => void;
+  onTeamClick?: (teamId: string) => void;
+  isLive?: boolean;
+}
+
+export function GameCard({ game, teams, onClick, onTeamClick, isLive }: GameCardProps) {
+  const homeTeam = teams.find(t => t.id === game.homeTeamId);
+  const awayTeam = teams.find(t => t.id === game.awayTeamId);
+  const [pulse, setPulse] = useState<'home' | 'away' | null>(null);
+
+  useEffect(() => {
+    // Basic detection for score change (upward only usually)
+    const timer = setTimeout(() => setPulse(null), 2000);
+    return () => clearTimeout(timer);
+  }, [game.homeScore, game.awayScore]);
+
+  // Use a ref-like approach or compare props to trigger pulse
+  // For simplicity, we just watch the score values themselves
+  const [prevScores, setPrevScores] = useState({ h: game.homeScore, a: game.awayScore });
+
+  useEffect(() => {
+    if (game.homeScore > prevScores.h) {
+      setPulse('home');
+      setPrevScores({ ...prevScores, h: game.homeScore });
+    }
+    if (game.awayScore > prevScores.a) {
+      setPulse('away');
+      setPrevScores({ ...prevScores, a: game.awayScore });
+    }
+    // Update local state if scores decrease (reset)
+    if (game.homeScore < prevScores.h || game.awayScore < prevScores.a) {
+       setPrevScores({ h: game.homeScore, a: game.awayScore });
+    }
+  }, [game.homeScore, game.awayScore]);
+
+  return (
+    <motion.div
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className={cn(
+        "p-6 cursor-pointer relative overflow-hidden transition-all",
+        isLive 
+          ? "bg-blue-600 text-white rounded-[32px] shadow-2xl shadow-blue-200" 
+          : "bg-white border border-gray-100 rounded-3xl hover:shadow-lg hover:shadow-gray-100"
+      )}
+    >
+      <AnimatePresence>
+        {pulse && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.2 }}
+            className="absolute inset-x-0 top-0 flex justify-center pt-2 pointer-events-none"
+          >
+            <div className="bg-yellow-400 text-black font-black px-4 py-1 rounded-full text-[10px] uppercase tracking-widest shadow-xl">
+              GOAL!
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {isLive && (
+        <div className="absolute top-4 right-6 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+          <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Live</span>
+        </div>
+      )}
+
+      {game.round && (
+        <div className={cn(
+          "absolute top-4 left-6 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
+          isLive ? "bg-white/10 text-white" : "bg-gray-100 text-gray-400"
+        )}>
+          {game.round}
+        </div>
+      )}
+
+      <div className="flex justify-between items-center">
+        <div 
+          className="flex-1 flex flex-col items-center text-center gap-3 cursor-pointer group/team"
+          onClick={(e) => {
+            if (onTeamClick && homeTeam) {
+              e.stopPropagation();
+              onTeamClick(homeTeam.id);
+            }
+          }}
+        >
+          <TeamLogo logo={homeTeam?.logo} name={homeTeam?.name} dark={isLive} />
+          <span className={cn(
+            "font-bold text-sm transition-colors", 
+            isLive ? "text-white group-hover/team:text-blue-200" : "text-gray-900 group-hover/team:text-blue-600"
+          )}>
+            {homeTeam?.name || 'Loading...'}
+          </span>
+        </div>
+
+        <div className="px-6 flex flex-col items-center">
+          <div className="flex items-center gap-4">
+            <motion.span 
+              animate={pulse === 'home' ? { scale: [1, 1.5, 1], color: ['#fff', '#facc15', '#fff'] } : {}}
+              className={cn("text-3xl font-black tabular-nums", isLive ? "text-white" : "text-gray-900")}
+            >
+              {game.homeScore}
+            </motion.span>
+            <span className={cn("text-lg opacity-40 font-bold", isLive ? "text-white" : "text-gray-300")}>:</span>
+            <motion.span 
+              animate={pulse === 'away' ? { scale: [1, 1.5, 1], color: ['#fff', '#facc15', '#fff'] } : {}}
+              className={cn("text-3xl font-black tabular-nums", isLive ? "text-white" : "text-gray-900")}
+            >
+              {game.awayScore}
+            </motion.span>
+          </div>
+          <div className={cn(
+            "mt-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider",
+            isLive ? "bg-white/10 text-white" : "bg-gray-50 text-gray-400"
+          )}>
+            {game.status === 'live' ? 'Playing' : game.status === 'finished' ? 'Final' : new Date(game.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        </div>
+
+        <div 
+          className="flex-1 flex flex-col items-center text-center gap-3 cursor-pointer group/team"
+          onClick={(e) => {
+            if (onTeamClick && awayTeam) {
+              e.stopPropagation();
+              onTeamClick(awayTeam.id);
+            }
+          }}
+        >
+          <TeamLogo logo={awayTeam?.logo} name={awayTeam?.name} dark={isLive} />
+          <span className={cn(
+            "font-bold text-sm transition-colors", 
+            isLive ? "text-white group-hover/team:text-blue-200" : "text-gray-900 group-hover/team:text-blue-600"
+          )}>
+            {awayTeam?.name || 'Loading...'}
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function TeamLogo({ logo, name, dark }: { logo?: string; name?: string; dark?: boolean }) {
+  return (
+    <div className={cn(
+      "w-16 h-16 rounded-2xl flex items-center justify-center overflow-hidden transition-all",
+      dark ? "bg-white/10" : "bg-gray-50 border border-gray-100"
+    )}>
+      {logo ? (
+        <img src={logo} alt={name} className="w-10 h-10 object-contain" />
+      ) : (
+        <ShieldIcon size={32} className={dark ? "text-white/40" : "text-gray-200"} />
+      )}
+    </div>
+  );
+}

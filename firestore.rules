@@ -1,0 +1,125 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitives & Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isAdmin() {
+      return isSignedIn() && 
+             request.auth.token.email == 'pitop6988@gmail.com' && 
+             request.auth.token.email_verified == true;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Entity Validation Blueprints
+    function isValidLeague(data) {
+      return data.keys().hasAll(['name']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             (!('logo' in data) || (data.logo is string && data.logo.size() <= 1000000)) &&
+             (!('country' in data) || (data.country is string && data.country.size() <= 100));
+    }
+
+    function isValidTeam(data) {
+      return data.keys().hasAll(['name', 'leagueId']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.leagueId is string && isValidId(data.leagueId) &&
+             (!('logo' in data) || (data.logo is string && data.logo.size() <= 1000000));
+    }
+
+    function isValidGame(data) {
+      return data.keys().hasAll(['leagueId', 'homeTeamId', 'awayTeamId', 'date', 'status', 'homeScore', 'awayScore']) &&
+             data.leagueId is string &&
+             data.homeTeamId is string &&
+             data.awayTeamId is string &&
+             data.date is string &&
+             data.status in ['scheduled', 'live', 'finished'] &&
+             data.homeScore is number && data.homeScore >= 0 &&
+             data.awayScore is number && data.awayScore >= 0;
+    }
+
+    function isValidPlayer(data) {
+      return data.keys().hasAll(['name', 'teamId', 'position', 'number']) &&
+             data.name is string && data.name.size() > 0 &&
+             data.teamId is string && 
+             data.position is string &&
+             data.number is number;
+    }
+
+    function isValidVenue(data) {
+      return data.keys().hasAll(['name', 'city', 'capacity']) &&
+             data.name is string && data.name.size() > 0 &&
+             data.city is string &&
+             data.capacity is number;
+    }
+
+    // Collection Rules
+    match /leagues/{leagueId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidLeague(incoming());
+      allow update: if isAdmin() && isValidLeague(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /teams/{teamId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidTeam(incoming());
+      allow update: if isAdmin() && (
+        // Action: Generic Update
+        isValidTeam(incoming()) ||
+        // Action: Patch (more robust)
+        (incoming().diff(existing()).affectedKeys().hasOnly(['name', 'logo', 'leagueId']))
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /games/{gameId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidGame(incoming());
+      allow update: if isAdmin() && (
+        // Action: Update Score (Specific Action)
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['homeScore', 'awayScore'])) ||
+        // Action: Update Status
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])) ||
+        // Action: Full Update
+        isValidGame(incoming())
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /players/{playerId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidPlayer(incoming());
+      allow update: if isAdmin() && isValidPlayer(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /venues/{venueId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidVenue(incoming());
+      allow update: if isAdmin() && isValidVenue(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+  }
+}
