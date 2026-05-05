@@ -143,7 +143,7 @@ export function LeagueDetails({ league, teams, games, onBack, onGameClick, onTea
             className="space-y-8"
           >
             {Object.keys(gamesByRound).length > 0 ? (
-              Object.entries(gamesByRound).map(([round, roundGames]) => (
+              (Object.entries(gamesByRound) as [string, Game[]][]).map(([round, roundGames]) => (
                 <div key={round} className="space-y-4">
                   <div className="flex items-center gap-3 px-2">
                     <div className="h-px bg-gray-100 flex-1" />

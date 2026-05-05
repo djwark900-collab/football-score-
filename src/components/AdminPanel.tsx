@@ -24,6 +24,8 @@ interface AdminPanelProps {
   leagues: League[];
   teams: Team[];
   games: Game[];
+  players: Player[];
+  venues: Venue[];
   user: any;
   onLogin: () => void;
   defaultLeagueId?: string;
@@ -31,7 +33,7 @@ interface AdminPanelProps {
 
 type Tab = 'leagues' | 'teams' | 'games' | 'venues' | 'players';
 
-export function AdminPanel({ leagues, teams, games, user, onLogin, defaultLeagueId }: AdminPanelProps) {
+export function AdminPanel({ leagues, teams, games, players, venues, user, onLogin, defaultLeagueId }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>(defaultLeagueId ? 'games' : 'leagues');
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -168,10 +170,15 @@ export function AdminPanel({ leagues, teams, games, user, onLogin, defaultLeague
   const handleAddPlayer = async () => {
     if (!playerForm.name || !playerForm.teamId) return;
     setLoading(true);
-    const path = 'players';
+    const path = editingId ? `players/${editingId}` : 'players';
     try {
-      await addDoc(collection(db, path), playerForm);
+      if (editingId) {
+        await updateDoc(doc(db, 'players', editingId), playerForm);
+      } else {
+        await addDoc(collection(db, 'players'), playerForm);
+      }
       setPlayerForm({ name: '', teamId: '', position: '', number: 0 });
+      setEditingId(null);
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, path);
     } finally {
@@ -179,18 +186,35 @@ export function AdminPanel({ leagues, teams, games, user, onLogin, defaultLeague
     }
   };
 
+  const startEditingPlayer = (p: Player) => {
+    setEditingId(p.id);
+    setPlayerForm({ name: p.name, teamId: p.teamId, position: p.position || '', number: p.number || 0 });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleAddVenue = async () => {
     if (!venueForm.name) return;
     setLoading(true);
-    const path = 'venues';
+    const path = editingId ? `venues/${editingId}` : 'venues';
     try {
-      await addDoc(collection(db, path), venueForm);
+      if (editingId) {
+        await updateDoc(doc(db, 'venues', editingId), venueForm);
+      } else {
+        await addDoc(collection(db, 'venues'), venueForm);
+      }
       setVenueForm({ name: '', city: '', capacity: 0 });
+      setEditingId(null);
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, path);
     } finally {
       setLoading(false);
     }
+  };
+
+  const startEditingVenue = (v: Venue) => {
+    setEditingId(v.id);
+    setVenueForm({ name: v.name, city: v.city || '', capacity: v.capacity || 0 });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const updateGameScore = async (gameId: string, home: number, away: number) => {
@@ -239,6 +263,8 @@ export function AdminPanel({ leagues, teams, games, user, onLogin, defaultLeague
   };
 
   const cancelEdit = () => {
+    setPlayerForm({ name: '', teamId: '', position: '', number: 0 });
+    setVenueForm({ name: '', city: '', capacity: 0 });
     setEditingId(null);
     setLeagueForm({ name: '', country: '', logo: '', description: '', history: [] });
     setHistoryForm({ season: '', winnerId: '', editingIndex: null });
@@ -315,36 +341,114 @@ export function AdminPanel({ leagues, teams, games, user, onLogin, defaultLeague
       <AnimatePresence mode="wait">
         {activeTab === 'players' && (
           <motion.div key="players-tab" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-            <AdminCard title="Add New Player" icon={<TargetIcon className="text-blue-600" />}>
+            <AdminCard title={editingId ? "Edit Player" : "Add New Player"} icon={<TargetIcon className="text-blue-600" />}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="Player Name" value={playerForm.name} onChange={v => setPlayerForm({ ...playerForm, name: v })} placeholder="e.g. Cristiano Ronaldo" />
-                <Select label="Assign to Team" value={playerForm.teamId} onChange={v => setPlayerForm({ ...playerForm, teamId: v })} options={teams.map(t => ({ label: t.name, value: t.id }))} />
+                <Select label="Assign to Team" value={playerForm.teamId} onChange={v => setPlayerForm({ ...playerForm, teamId: v })} options={teams.map(t => ({ label: `${t.name} (${leagues.find(l => l.id === t.leagueId)?.name})`, value: t.id }))} />
                 <Input label="Position" value={playerForm.position} onChange={v => setPlayerForm({ ...playerForm, position: v })} placeholder="e.g. Forward" />
                 <Input type="number" label="Shirt Number" value={playerForm.number} onChange={v => setPlayerForm({ ...playerForm, number: parseInt(v) })} />
-                <div className="sm:col-span-2 flex justify-end">
+                <div className="sm:col-span-2 flex justify-end gap-2">
+                   {editingId && (
+                    <button onClick={cancelEdit} className="px-6 h-[54px] bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all">
+                      Cancel
+                    </button>
+                  )}
                   <button onClick={handleAddPlayer} disabled={loading} className="px-8 h-[54px] bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">
-                    <PlusIcon size={20} /> Add Player
+                    {editingId ? <SaveIcon size={20} /> : <PlusIcon size={20} />}
+                    {editingId ? "Save Changes" : "Add Player"}
                   </button>
                 </div>
               </div>
             </AdminCard>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {players.map(p => (
+                <div key={p.id} className="p-4 bg-white rounded-3xl border border-gray-100 flex items-center justify-between group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center font-black text-gray-300">
+                      {p.number || '#'}
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm">{p.name}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">
+                        {teams.find(t => t.id === p.teamId)?.name} • {p.position}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => startEditingPlayer(p)} 
+                      className="p-3 text-blue-500 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-all"
+                      title="Edit Player"
+                    >
+                      <SaveIcon size={18} />
+                    </button>
+                    <button 
+                      onClick={() => handleDelete('players', p.id)} 
+                      className="p-3 text-red-500 bg-red-50 rounded-2xl hover:bg-red-100 transition-all"
+                      title="Delete Player"
+                    >
+                      <Trash2Icon size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </motion.div>
         )}
 
         {activeTab === 'venues' && (
           <motion.div key="venues-tab" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-            <AdminCard title="Add New Venue" icon={<MapPinIcon className="text-blue-600" />}>
+            <AdminCard title={editingId ? "Edit Venue" : "Add New Venue"} icon={<MapPinIcon className="text-blue-600" />}>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Input label="Venue Name" value={venueForm.name} onChange={v => setVenueForm({ ...venueForm, name: v })} placeholder="e.g. Old Trafford" />
                 <Input label="City" value={venueForm.city} onChange={v => setVenueForm({ ...venueForm, city: v })} placeholder="e.g. Manchester" />
                 <Input type="number" label="Capacity" value={venueForm.capacity} onChange={v => setVenueForm({ ...venueForm, capacity: parseInt(v) })} />
-                <div className="sm:col-span-3 flex justify-end">
+                <div className="sm:col-span-3 flex justify-end gap-2">
+                  {editingId && (
+                    <button onClick={cancelEdit} className="px-6 h-[54px] bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all">
+                      Cancel
+                    </button>
+                  )}
                   <button onClick={handleAddVenue} disabled={loading} className="px-8 h-[54px] bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">
-                    <PlusIcon size={20} /> Add Venue
+                    {editingId ? <SaveIcon size={20} /> : <PlusIcon size={20} />}
+                    {editingId ? "Save Changes" : "Add Venue"}
                   </button>
                 </div>
               </div>
             </AdminCard>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {venues.map(v => (
+                <div key={v.id} className="p-4 bg-white rounded-3xl border border-gray-100 flex items-center justify-between group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden">
+                      <MapPinIcon className="text-gray-300" size={18} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm">{v.name}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">{v.city} {v.capacity ? `• Cap: ${v.capacity.toLocaleString()}` : ''}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => startEditingVenue(v)} 
+                      className="p-3 text-blue-500 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-all"
+                      title="Edit Venue"
+                    >
+                      <SaveIcon size={18} />
+                    </button>
+                    <button 
+                      onClick={() => handleDelete('venues', v.id)} 
+                      className="p-3 text-red-500 bg-red-50 rounded-2xl hover:bg-red-100 transition-all"
+                      title="Delete Venue"
+                    >
+                      <Trash2Icon size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </motion.div>
         )}
         {activeTab === 'leagues' && (
@@ -555,32 +659,66 @@ export function AdminPanel({ leagues, teams, games, user, onLogin, defaultLeague
                     label="Home Team" 
                     value={gameForm.homeTeamId} 
                     onChange={v => setGameForm({ ...gameForm, homeTeamId: v, leagueId: teams.find(t => t.id === v)?.leagueId || '' })} 
-                    options={teams.map(t => ({ label: t.name, value: t.id }))} 
+                    options={teams.map(t => ({ label: `${t.name} (${leagues.find(l => l.id === t.leagueId)?.name})`, value: t.id }))} 
                   />
                   <div className="flex items-center justify-center pt-8 text-gray-300 font-black">VS</div>
                    <Select 
                     label="Away Team" 
                     value={gameForm.awayTeamId} 
                     onChange={v => setGameForm({ ...gameForm, awayTeamId: v })} 
-                    options={teams.map(t => ({ label: t.name, value: t.id }))} 
+                    options={teams.map(t => ({ label: `${t.name} (${leagues.find(l => l.id === t.leagueId)?.name})`, value: t.id }))} 
                   />
-                  <Input 
-                    type="datetime-local" 
-                    label="Date & Time" 
-                    value={gameForm.date} 
-                    onChange={v => setGameForm({ ...gameForm, date: v })} 
-                  />
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Date & Time</label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input 
+                          type="date"
+                          value={gameForm.date.split('T')[0]}
+                          onChange={e => {
+                            const time = gameForm.date.split('T')[1] || '12:00';
+                            setGameForm({ ...gameForm, date: `${e.target.value}T${time}` });
+                          }}
+                          className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 transition-all font-medium appearance-none"
+                        />
+                        <CalendarIcon className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={18} />
+                      </div>
+                      <div className="relative w-32">
+                        <input 
+                          type="time"
+                          value={gameForm.date.split('T')[1]?.slice(0, 5) || '12:00'}
+                          onChange={e => {
+                            const date = gameForm.date.split('T')[0];
+                            setGameForm({ ...gameForm, date: `${date}T${e.target.value}` });
+                          }}
+                          className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 transition-all font-medium appearance-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
                    <Select 
                     label="Initial Status" 
                     value={gameForm.status} 
                     onChange={v => setGameForm({ ...gameForm, status: v as any })} 
                     options={[{label: 'Scheduled', value: 'scheduled'}, {label: 'Live', value: 'live'}, {label: 'Finished', value: 'finished'}]} 
                   />
-                  <Input 
+                   <Select 
                     label="Round / Matchday" 
                     value={gameForm.round} 
                     onChange={v => setGameForm({ ...gameForm, round: v })}
-                    placeholder="e.g. Matchday 1"
+                    options={[
+                      { label: 'Matchday 1', value: 'Matchday 1' },
+                      { label: 'Matchday 2', value: 'Matchday 2' },
+                      { label: 'Quarter Final', value: 'Quarter Final' },
+                      { label: 'Semi Final', value: 'Semi Final' },
+                      { label: 'Final', value: 'Final' }
+                    ]}
+                  />
+                  <Select 
+                    label="Venue" 
+                    value={gameForm.venueId} 
+                    onChange={v => setGameForm({ ...gameForm, venueId: v })}
+                    options={venues.map(v => ({ label: `${v.name} (${v.city})`, value: v.id }))}
                   />
                   <div className="sm:pt-7 flex gap-2 sm:col-span-1">
                     {editingId && (

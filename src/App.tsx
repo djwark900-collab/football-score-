@@ -69,6 +69,7 @@ export default function App() {
   const [games, setGames] = useState<Game[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [venues, setVenues] = useState<Venue[]>([]);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
 
   // Auth Listener
@@ -112,6 +113,15 @@ export default function App() {
     const q = collection(db, path);
     return onSnapshot(q, (snapshot) => {
       setPlayers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Player)));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, path));
+  }, []);
+
+  // Firestore Sync - Venues
+  useEffect(() => {
+    const path = 'venues';
+    const q = collection(db, path);
+    return onSnapshot(q, (snapshot) => {
+      setVenues(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Venue)));
     }, (error) => handleFirestoreError(error, OperationType.LIST, path));
   }, []);
 
@@ -360,6 +370,8 @@ export default function App() {
               leagues={leagues}
               teams={teams}
               games={games}
+              players={players}
+              venues={venues}
               user={user}
               onLogin={handleLogin}
               defaultLeagueId={selectedLeagueId || undefined}
