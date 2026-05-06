@@ -52,7 +52,15 @@ service cloud.firestore {
              data.date is string &&
              data.status in ['scheduled', 'live', 'finished'] &&
              data.homeScore is number && data.homeScore >= 0 &&
-             data.awayScore is number && data.awayScore >= 0;
+             data.awayScore is number && data.awayScore >= 0 &&
+             (!('events' in data) || data.events is list) &&
+             (!('lineups' in data) || data.lineups is map);
+    }
+
+    function isValidAdministrator(data) {
+      return data.keys().hasAll(['email', 'role']) &&
+             data.email is string && data.email.size() > 0 &&
+             data.role in ['super', 'editor'];
     }
 
     function isValidPlayer(data) {
@@ -71,6 +79,10 @@ service cloud.firestore {
     }
 
     // Collection Rules
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
     match /leagues/{leagueId} {
       allow read: if true;
       allow create: if isAdmin() && isValidLeague(incoming());

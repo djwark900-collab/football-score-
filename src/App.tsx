@@ -35,7 +35,7 @@ import {
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from './firebase';
 import { cn } from './lib/utils';
-import { League, Game, Team, Player, Venue, Season } from './types';
+import { League, Game, Team, Player, Venue, Season, Administrator } from './types';
 
 // Components
 import { AdminPanel } from './components/AdminPanel';
@@ -70,6 +70,7 @@ export default function App() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [administrators, setAdministrators] = useState<Administrator[]>([]);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
 
   // Auth Listener
@@ -124,6 +125,30 @@ export default function App() {
       setVenues(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Venue)));
     }, (error) => handleFirestoreError(error, OperationType.LIST, path));
   }, []);
+
+  // Firestore Sync - Admins
+  useEffect(() => {
+    if (!user) {
+      setAdministrators([]);
+      return;
+    }
+    const path = 'admins';
+    const q = collection(db, path);
+    return onSnapshot(q, (snapshot) => {
+      setAdministrators(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Administrator)));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, path));
+  }, [user]);
+
+  // Admin Check
+  useEffect(() => {
+    if (user?.email) {
+      const isSystemAdmin = user.email === 'pitop6988@gmail.com';
+      const isAuthAdmin = administrators.some(admin => admin.email.toLowerCase() === user.email?.toLowerCase());
+      if (isSystemAdmin || isAuthAdmin) {
+        setIsAdmin(true);
+      }
+    }
+  }, [user, administrators]);
 
   const handleLogin = async () => {
     try {
@@ -323,6 +348,8 @@ export default function App() {
               teams={teams}
               games={games}
               leagues={leagues}
+              players={players}
+              venues={venues}
               onBack={() => navigateTo(previousView === 'league-details' ? 'league-details' : 'matches')}
               onTeamClick={(id) => {
                 setSelectedTeamId(id);
@@ -372,6 +399,7 @@ export default function App() {
               games={games}
               players={players}
               venues={venues}
+              administrators={administrators}
               user={user}
               onLogin={handleLogin}
               defaultLeagueId={selectedLeagueId || undefined}

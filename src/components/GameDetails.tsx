@@ -1,7 +1,20 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Game, Team, League } from '../types';
-import { ChevronLeft as ChevronLeftIcon, Share2 as Share2Icon, Shield as ShieldIcon, Minus as MinusIcon, Plus as PlusIcon, History as HistoryIcon, TrendingUp as TrendingUpIcon, Activity as ActivityIcon } from 'lucide-react';
+import { Game, Team, League, Player, Venue, MatchEvent } from '../types';
+import { 
+  ChevronLeft as ChevronLeftIcon, 
+  Share2 as Share2Icon, 
+  Shield as ShieldIcon, 
+  Minus as MinusIcon, 
+  Plus as PlusIcon, 
+  History as HistoryIcon, 
+  TrendingUp as TrendingUpIcon, 
+  Activity as ActivityIcon,
+  Users as UsersIcon,
+  Zap as ZapIcon,
+  MapPin as MapPinIcon,
+  Clock as ClockIcon
+} from 'lucide-react';
 import { cn } from '../lib/utils';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
@@ -12,17 +25,20 @@ interface GameDetailsProps {
   teams: Team[];
   games: Game[];
   leagues: League[];
+  players: Player[];
+  venues: Venue[];
   onBack: () => void;
   onTeamClick: (teamId: string) => void;
   isAdmin: boolean;
 }
 
-type Tab = 'stats' | 'standings' | 'h2h';
+type Tab = 'stats' | 'events' | 'lineups' | 'standings' | 'h2h';
 
-export function GameDetails({ game, teams, games, leagues, onBack, onTeamClick, isAdmin }: GameDetailsProps) {
+export function GameDetails({ game, teams, games, leagues, players, venues, onBack, onTeamClick, isAdmin }: GameDetailsProps) {
   const [activeTab, setActiveTab] = useState<Tab>('stats');
   const homeTeam = teams.find(t => t.id === game.homeTeamId);
   const awayTeam = teams.find(t => t.id === game.awayTeamId);
+  const venue = venues.find(v => v.id === game.venueId);
   const [pulse, setPulse] = useState<'home' | 'away' | null>(null);
   const [prevScores, setPrevScores] = useState({ h: game.homeScore, a: game.awayScore });
   const [loading, setLoading] = useState(false);
@@ -30,6 +46,10 @@ export function GameDetails({ game, teams, games, leagues, onBack, onTeamClick, 
   const league = leagues.find(l => l.id === game.leagueId);
   const leagueTeams = teams.filter(t => t.leagueId === game.leagueId);
   const leagueGames = games.filter(g => g.leagueId === game.leagueId);
+
+  const sortedEvents = useMemo(() => {
+    return [...(game.events || [])].sort((a, b) => b.minute - a.minute);
+  }, [game.events]);
 
   const h2hGames = useMemo(() => {
     return games.filter(g => 
@@ -242,6 +262,26 @@ export function GameDetails({ game, teams, games, leagues, onBack, onTeamClick, 
             Stats
           </button>
           <button 
+            onClick={() => setActiveTab('events')}
+            className={cn(
+              "flex-1 min-w-[100px] py-3 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all",
+              activeTab === 'events' ? "bg-gray-900 text-white" : "text-gray-400 hover:bg-gray-50"
+            )}
+          >
+            <ZapIcon size={16} />
+            Events
+          </button>
+          <button 
+            onClick={() => setActiveTab('lineups')}
+            className={cn(
+              "flex-1 min-w-[100px] py-3 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all",
+              activeTab === 'lineups' ? "bg-gray-900 text-white" : "text-gray-400 hover:bg-gray-50"
+            )}
+          >
+            <UsersIcon size={16} />
+            Lineups
+          </button>
+          <button 
             onClick={() => setActiveTab('standings')}
             className={cn(
               "flex-1 min-w-[100px] py-3 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all",
@@ -264,6 +304,129 @@ export function GameDetails({ game, teams, games, leagues, onBack, onTeamClick, 
         </div>
 
         <AnimatePresence mode="wait">
+          {activeTab === 'events' && (
+            <motion.div
+              key="events"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-6"
+            >
+              <div className="flex items-center justify-between px-2">
+                <h4 className="text-sm font-black uppercase tracking-widest text-gray-400">Match Events</h4>
+                <ClockIcon size={14} className="text-gray-300" />
+              </div>
+              
+              <div className="relative space-y-4 before:absolute before:left-1/2 before:top-0 before:bottom-0 before:w-px before:bg-gray-100 before:-translate-x-1/2">
+                {sortedEvents.length > 0 ? (
+                  sortedEvents.map((event, idx) => {
+                    const isHome = event.teamId === game.homeTeamId;
+                    const eventPlayer = players.find(p => p.id === event.playerId);
+                    const assistant = event.assistantId ? players.find(p => p.id === event.assistantId) : null;
+                    const pIn = event.playerInId ? players.find(p => p.id === event.playerInId) : null;
+                    const pOut = event.playerOutId ? players.find(p => p.id === event.playerOutId) : null;
+
+                    return (
+                      <div key={event.id || idx} className={cn(
+                        "flex items-center gap-4 relative z-10",
+                        isHome ? "flex-row" : "flex-row-reverse"
+                      )}>
+                        <div className={cn("flex-1", isHome ? "text-right" : "text-left")}>
+                          <p className="font-bold text-sm text-gray-900">{eventPlayer?.name || pIn?.name || 'Unknown'}</p>
+                          {event.type === 'goal' && assistant && (
+                            <p className="text-[10px] text-gray-400 font-medium">assist by {assistant.name}</p>
+                          )}
+                          {event.type === 'sub' && pOut && (
+                            <p className="text-[10px] text-red-400 font-medium tracking-tight">out: {pOut.name}</p>
+                          )}
+                        </div>
+                        
+                        <div className="w-10 h-10 rounded-full bg-white border-2 border-gray-50 flex items-center justify-center shadow-lg">
+                          <EventIcon type={event.type} />
+                        </div>
+
+                        <div className={cn("flex-1 flex items-center gap-2", isHome ? "flex-row" : "flex-row-reverse")}>
+                           <span className="font-black tabular-nums text-blue-600 text-sm">{event.minute}'</span>
+                           <div className="flex-1" />
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="py-20 text-center text-gray-400 relative z-10 bg-white">
+                    <ZapIcon className="w-12 h-12 mx-auto mb-4 opacity-10" />
+                    <p className="font-bold">No major events recorded yet.</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'lineups' && (
+            <motion.div
+              key="lineups"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-8"
+            >
+              {/* Stadium Info */}
+              <div className="p-6 bg-blue-50 rounded-[32px] flex items-center gap-4 border border-blue-100/50">
+                <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm">
+                  <MapPinIcon className="text-blue-600" size={20} />
+                </div>
+                <div>
+                  <h4 className="font-black text-blue-900 text-sm uppercase tracking-tight">{venue?.name || 'To Be Confirmed'}</h4>
+                  <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">
+                    {venue?.city || 'Location Unknown'} {venue?.capacity ? `• Capacity: ${venue.capacity.toLocaleString()}` : ''}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-8">
+                {/* Home Lineup */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 px-2">
+                    <div className="w-6 h-6 rounded-lg bg-gray-50 flex items-center justify-center p-1 border border-gray-100">
+                      {homeTeam?.logo ? <img src={homeTeam.logo} className="w-full h-full object-contain" /> : <ShieldIcon size={12} className="text-gray-300" />}
+                    </div>
+                    <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest truncate">{homeTeam?.name}</span>
+                  </div>
+                  <div className="space-y-3">
+                    {game.lineups?.home && game.lineups.home.length > 0 ? (
+                      game.lineups.home.map(pid => {
+                        const p = players.find(player => player.id === pid);
+                        return <LineupItem key={pid} player={p} />;
+                      })
+                    ) : (
+                      <p className="text-[10px] text-gray-400 italic px-2">Lineup not announced</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Away Lineup */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 flex-row-reverse px-2">
+                    <div className="w-6 h-6 rounded-lg bg-gray-50 flex items-center justify-center p-1 border border-gray-100">
+                      {awayTeam?.logo ? <img src={awayTeam.logo} className="w-full h-full object-contain" /> : <ShieldIcon size={12} className="text-gray-300" />}
+                    </div>
+                    <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest truncate text-right">{awayTeam?.name}</span>
+                  </div>
+                  <div className="space-y-3">
+                    {game.lineups?.away && game.lineups.away.length > 0 ? (
+                      game.lineups.away.map(pid => {
+                        const p = players.find(player => player.id === pid);
+                        return <LineupItem key={pid} player={p} isRight />;
+                      })
+                    ) : (
+                      <p className="text-[10px] text-gray-400 italic text-right px-2">Lineup not announced</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {activeTab === 'stats' && (
             <motion.div
               key="stats"
@@ -366,6 +529,49 @@ export function GameDetails({ game, teams, games, leagues, onBack, onTeamClick, 
         </AnimatePresence>
       </div>
     </motion.div>
+  );
+}
+
+function EventIcon({ type }: { type: MatchEvent['type'] }) {
+  switch (type) {
+    case 'goal':
+      return <ActivityIcon className="text-blue-600" size={16} />;
+    case 'yellow':
+      return <div className="w-3 h-4 bg-yellow-400 rounded-sm" />;
+    case 'red':
+      return <div className="w-3 h-4 bg-red-600 rounded-sm" />;
+    case 'sub':
+      return <div className="flex flex-col -gap-1">
+        <PlusIcon className="text-green-500" size={10} />
+        <MinusIcon className="text-red-500" size={10} />
+      </div>;
+    default:
+      return null;
+  }
+}
+
+interface LineupItemProps {
+  player?: Player;
+  isRight?: boolean;
+}
+
+function LineupItem({ player, isRight, ...props }: LineupItemProps & { key?: any }) {
+  if (!player) return null;
+  return (
+    <div 
+      {...props}
+      className={cn(
+      "flex items-center gap-3 p-2 bg-gray-50/50 rounded-2xl border border-gray-100/50",
+      isRight ? "flex-row-reverse" : "flex-row"
+    )}>
+      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-black text-gray-400 text-[10px] shadow-sm">
+        {player.number}
+      </div>
+      <div className={cn("flex-1 overflow-hidden", isRight ? "text-right" : "text-left")}>
+        <p className="text-xs font-bold text-gray-900 truncate">{player.name}</p>
+        <p className="text-[8px] font-black uppercase text-gray-400 tracking-tighter">{player.position}</p>
+      </div>
+    </div>
   );
 }
 

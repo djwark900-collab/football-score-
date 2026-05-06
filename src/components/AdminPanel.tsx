@@ -13,11 +13,12 @@ import {
   MapPin as MapPinIcon,
   Image as LucideImage,
   Shield as ShieldIcon,
-  Lock as LockIcon
+  Lock as LockIcon,
+  Zap as ZapIcon
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { League, Team, Game, Venue, Player } from '../types';
+import { League, Team, Game, Venue, Player, MatchEvent, Administrator } from '../types';
 import { cn } from '../lib/utils';
 
 interface AdminPanelProps {
@@ -26,14 +27,15 @@ interface AdminPanelProps {
   games: Game[];
   players: Player[];
   venues: Venue[];
+  administrators: Administrator[];
   user: any;
   onLogin: () => void;
   defaultLeagueId?: string;
 }
 
-type Tab = 'leagues' | 'teams' | 'games' | 'venues' | 'players';
+type Tab = 'leagues' | 'teams' | 'games' | 'venues' | 'players' | 'admins';
 
-export function AdminPanel({ leagues, teams, games, players, venues, user, onLogin, defaultLeagueId }: AdminPanelProps) {
+export function AdminPanel({ leagues, teams, games, players, venues, administrators, user, onLogin, defaultLeagueId }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>(defaultLeagueId ? 'games' : 'leagues');
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -52,20 +54,46 @@ export function AdminPanel({ leagues, teams, games, players, venues, user, onLog
     editingIndex: number | null;
   }>({ season: '', winnerId: '', editingIndex: null });
   const [teamForm, setTeamForm] = useState({ name: '', leagueId: defaultLeagueId || '', logo: '' });
-  const [gameForm, setGameForm] = useState({ 
+  const [gameForm, setGameForm] = useState<{
+    leagueId: string;
+    homeTeamId: string;
+    awayTeamId: string;
+    date: string;
+    status: 'scheduled' | 'live' | 'finished';
+    homeScore: number;
+    awayScore: number;
+    attendance: number;
+    venueId: string;
+    round: string;
+    events: MatchEvent[];
+    lineups: { home: string[]; away: string[]; };
+  }>({ 
     leagueId: defaultLeagueId || '', 
     homeTeamId: '', 
     awayTeamId: '', 
     date: new Date().toISOString().slice(0, 16),
-    status: 'scheduled' as const,
+    status: 'scheduled',
     homeScore: 0,
     awayScore: 0,
     attendance: 0,
     venueId: '',
-    round: ''
+    round: '',
+    events: [],
+    lineups: { home: [], away: [] }
   });
+  const [eventForm, setEventForm] = useState({
+    type: 'goal' as 'goal' | 'yellow' | 'red' | 'sub',
+    minute: 0,
+    playerId: '',
+    teamId: '',
+    assistantId: '',
+    playerInId: '',
+    playerOutId: ''
+  });
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [playerForm, setPlayerForm] = useState({ name: '', teamId: '', position: '', number: 0 });
   const [venueForm, setVenueForm] = useState({ name: '', city: '', capacity: 0 });
+  const [adminForm, setAdminForm] = useState({ email: '', role: 'editor' as 'editor' | 'super' });
 
   const handleAddLeague = async () => {
     if (!leagueForm.name) return;
@@ -154,10 +182,18 @@ export function AdminPanel({ leagues, teams, games, players, venues, user, onLog
         await addDoc(collection(db, 'games'), gameForm);
       }
       setGameForm({ 
-        leagueId: defaultLeagueId || '', homeTeamId: '', awayTeamId: '', 
+        leagueId: defaultLeagueId || '', 
+        homeTeamId: '', 
+        awayTeamId: '', 
         date: new Date().toISOString().slice(0, 16),
-        status: 'scheduled', homeScore: 0, awayScore: 0,
-        attendance: 0, venueId: '', round: ''
+        status: 'scheduled',
+        homeScore: 0,
+        awayScore: 0,
+        attendance: 0,
+        venueId: '',
+        round: '',
+        events: [],
+        lineups: { home: [], away: [] }
       });
       setEditingId(null);
     } catch (e) {
@@ -165,6 +201,88 @@ export function AdminPanel({ leagues, teams, games, players, venues, user, onLog
     } finally {
       setLoading(false);
     }
+  };
+
+  const addMatchEvent = () => {
+    if ((!eventForm.playerId && !eventForm.playerInId) || !eventForm.teamId) return;
+    
+    let newEvents = [...gameForm.events];
+    const eventData = {
+      ...eventForm,
+      playerId: eventForm.type === 'sub' ? (eventForm.playerInId || '') : eventForm.playerId
+    };
+
+    if (editingEventId) {
+      newEvents = newEvents.map(e => e.id === editingEventId ? { ...eventData, id: e.id } : e);
+    } else {
+      newEvents.push({
+        id: Math.random().toString(36).substr(2, 9),
+        ...eventData
+      });
+    }
+
+    setGameForm({
+      ...gameForm,
+      events: newEvents
+    });
+    setEventForm({
+      type: 'goal',
+      minute: 0,
+      playerId: '',
+      teamId: '',
+      assistantId: '',
+      playerInId: '',
+      playerOutId: ''
+    });
+    setEditingEventId(null);
+  };
+
+  const startEditingEvent = (e: MatchEvent) => {
+    setEditingEventId(e.id);
+    setEventForm({
+      type: e.type,
+      minute: e.minute,
+      playerId: e.type !== 'sub' ? e.playerId : '',
+      teamId: e.teamId,
+      assistantId: e.assistantId || '',
+      playerInId: e.playerInId || (e.type === 'sub' ? e.playerId : ''),
+      playerOutId: e.playerOutId || ''
+    });
+  };
+
+  const cancelEventEdit = () => {
+    setEditingEventId(null);
+    setEventForm({
+      type: 'goal',
+      minute: 0,
+      playerId: '',
+      teamId: '',
+      assistantId: '',
+      playerInId: '',
+      playerOutId: ''
+    });
+  };
+
+  const removeMatchEvent = (id: string) => {
+    setGameForm({
+      ...gameForm,
+      events: gameForm.events.filter(e => e.id !== id)
+    });
+  };
+
+  const toggleLineupPlayer = (teamType: 'home' | 'away', playerId: string) => {
+    const current = gameForm.lineups[teamType];
+    const updated = current.includes(playerId) 
+      ? current.filter(id => id !== playerId)
+      : [...current, playerId];
+    
+    setGameForm({
+      ...gameForm,
+      lineups: {
+        ...gameForm.lineups,
+        [teamType]: updated
+      }
+    });
   };
 
   const handleAddPlayer = async () => {
@@ -204,6 +322,20 @@ export function AdminPanel({ leagues, teams, games, players, venues, user, onLog
       }
       setVenueForm({ name: '', city: '', capacity: 0 });
       setEditingId(null);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, path);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddAdmin = async () => {
+    if (!adminForm.email) return;
+    setLoading(true);
+    const path = 'admins';
+    try {
+      await addDoc(collection(db, 'admins'), adminForm);
+      setAdminForm({ email: '', role: 'editor' });
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, path);
     } finally {
@@ -257,7 +389,9 @@ export function AdminPanel({ leagues, teams, games, players, venues, user, onLog
       awayScore: g.awayScore,
       attendance: g.attendance || 0,
       venueId: g.venueId || '',
-      round: g.round || ''
+      round: g.round || '',
+      events: g.events || [],
+      lineups: g.lineups || { home: [], away: [] }
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -273,7 +407,9 @@ export function AdminPanel({ leagues, teams, games, players, venues, user, onLog
       leagueId: defaultLeagueId || '', homeTeamId: '', awayTeamId: '', 
       date: new Date().toISOString().slice(0, 16),
       status: 'scheduled', homeScore: 0, awayScore: 0,
-      attendance: 0, venueId: '', round: ''
+      attendance: 0, venueId: '', round: '',
+      events: [],
+      lineups: { home: [], away: [] }
     });
   };
 
@@ -313,7 +449,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, user, onLog
             Sign in with Google
           </button>
         </div>
-      ) : user.email !== 'pitop6988@gmail.com' ? (
+      ) : (user.email !== 'pitop6988@gmail.com' && !administrators.some(a => a.email.toLowerCase() === user.email?.toLowerCase())) ? (
         <div className="p-12 text-center bg-white rounded-[40px] border border-gray-100 shadow-xl">
           <LockIcon className="w-16 h-16 mx-auto mb-6 text-red-100" />
           <h2 className="text-2xl font-black mb-2">Access Restricted</h2>
@@ -335,11 +471,63 @@ export function AdminPanel({ leagues, teams, games, players, venues, user, onLog
           <TabButton active={activeTab === 'games'} onClick={() => setActiveTab('games')} icon={<CalendarIcon size={18} />} label="Games" />
           <TabButton active={activeTab === 'players'} onClick={() => setActiveTab('players')} icon={<TargetIcon size={18} />} label="Players" />
           <TabButton active={activeTab === 'venues'} onClick={() => setActiveTab('venues')} icon={<MapPinIcon size={18} />} label="Venues" />
+          <TabButton active={activeTab === 'admins'} onClick={() => setActiveTab('admins')} icon={<ShieldIcon size={18} />} label="Admins" />
         </div>
       </div>
 
       <AnimatePresence mode="wait">
-        {activeTab === 'players' && (
+          {activeTab === 'admins' && (
+            <motion.div key="admins-tab" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+              <AdminCard title="Add Administrator" icon={<ShieldIcon className="text-blue-600" />}>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <Input label="Email Address" value={adminForm.email} onChange={v => setAdminForm({ ...adminForm, email: v })} placeholder="e.g. user@example.com" />
+                  <Select label="Role" value={adminForm.role} onChange={v => setAdminForm({ ...adminForm, role: v as 'editor' | 'super' })} options={[{ label: 'Editor', value: 'editor' }, { label: 'Super Admin', value: 'super' }]} />
+                  <div className="sm:pt-7">
+                    <button onClick={handleAddAdmin} disabled={loading} className="w-full h-[54px] bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">
+                      <PlusIcon size={20} />
+                      Add Admin
+                    </button>
+                  </div>
+                </div>
+              </AdminCard>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="p-4 bg-blue-50 border border-blue-100 rounded-3xl flex items-center justify-between">
+                   <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center">
+                      <ShieldIcon className="text-blue-600" size={18} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm">pitop6988@gmail.com</p>
+                      <p className="text-[10px] text-blue-400 font-bold uppercase">System Super Admin (Hardcoded)</p>
+                    </div>
+                  </div>
+                </div>
+                {administrators.map(admin => (
+                  <div key={admin.id} className="p-4 bg-white rounded-3xl border border-gray-100 flex items-center justify-between group">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center">
+                        <ShieldIcon className="text-gray-300" size={18} />
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm">{admin.email}</p>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase">{admin.role} Admin</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => handleDelete('admins', admin.id)} 
+                      className="p-3 text-red-500 bg-red-50 rounded-2xl hover:bg-red-100 transition-all"
+                      title="Remove Admin"
+                    >
+                      <Trash2Icon size={18} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'players' && (
           <motion.div key="players-tab" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
             <AdminCard title={editingId ? "Edit Player" : "Add New Player"} icon={<TargetIcon className="text-blue-600" />}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -720,6 +908,125 @@ export function AdminPanel({ leagues, teams, games, players, venues, user, onLog
                     onChange={v => setGameForm({ ...gameForm, venueId: v })}
                     options={venues.map(v => ({ label: `${v.name} (${v.city})`, value: v.id }))}
                   />
+
+                  {/* Enhanced Game Editor: Events and Lineups */}
+                  {editingId && (
+                    <div className="sm:col-span-3 mt-8 pt-8 border-t border-gray-100 space-y-8">
+                      <div className="flex items-center gap-2 mb-4">
+                        <ZapIcon className="text-blue-600" size={18} />
+                        <h4 className="font-black text-sm uppercase tracking-widest text-gray-900 line-clamp-1">Match Events & Lineups</h4>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* Events Manager */}
+                        <div className="space-y-4">
+                          <h5 className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{editingEventId ? 'Edit Event' : 'Add Event'}</h5>
+                          <div className="p-6 bg-gray-50 rounded-[32px] space-y-4">
+                             <div className="grid grid-cols-2 gap-4">
+                               <Select label="Type" value={eventForm.type} onChange={v => setEventForm({ ...eventForm, type: v as any })} options={[{label: 'Goal', value: 'goal'}, {label: 'Yellow Card', value: 'yellow'}, {label: 'Red Card', value: 'red'}, {label: 'Substitution', value: 'sub'}]} />
+                               <Input type="number" label="Minute" value={eventForm.minute} onChange={v => setEventForm({ ...eventForm, minute: parseInt(v) })} />
+                             </div>
+                             <Select label="Team" value={eventForm.teamId} onChange={v => setEventForm({ ...eventForm, teamId: v })} options={[{label: teams.find(t => t.id === gameForm.homeTeamId)?.name || 'Home', value: gameForm.homeTeamId}, {label: teams.find(t => t.id === gameForm.awayTeamId)?.name || 'Away', value: gameForm.awayTeamId}]} />
+                             
+                             {eventForm.type === 'sub' ? (
+                               <div className="grid grid-cols-2 gap-4">
+                                 <Select label="Player In" value={eventForm.playerInId} onChange={v => setEventForm({ ...eventForm, playerInId: v })} options={[{ label: 'Select Player', value: '' }, ...players.filter(p => p.teamId === eventForm.teamId).map(p => ({ label: p.name, value: p.id }))]} />
+                                 <Select label="Player Out" value={eventForm.playerOutId} onChange={v => setEventForm({ ...eventForm, playerOutId: v })} options={[{ label: 'Select Player', value: '' }, ...players.filter(p => p.teamId === eventForm.teamId).map(p => ({ label: p.name, value: p.id }))]} />
+                               </div>
+                             ) : (
+                               <div className="grid grid-cols-2 gap-4">
+                                 <Select label="Player" value={eventForm.playerId} onChange={v => setEventForm({ ...eventForm, playerId: v })} options={[{ label: 'Select Player', value: '' }, ...players.filter(p => p.teamId === eventForm.teamId).map(p => ({ label: p.name, value: p.id }))]} />
+                                 {eventForm.type === 'goal' && <Select label="Assistant" value={eventForm.assistantId} onChange={v => setEventForm({ ...eventForm, assistantId: v })} options={[{ label: 'No Assistant', value: '' }, ...players.filter(p => p.teamId === eventForm.teamId && p.id !== eventForm.playerId).map(p => ({ label: p.name, value: p.id }))]} />}
+                               </div>
+                             )}
+                             
+                             <div className="flex gap-2">
+                                {editingEventId && (
+                                  <button onClick={cancelEventEdit} className="px-4 h-12 bg-gray-200 text-gray-600 rounded-2xl font-bold transition-all">
+                                    Cancel
+                                  </button>
+                                )}
+                                <button onClick={addMatchEvent} className="flex-1 h-12 bg-gray-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all">
+                                  {editingEventId ? <SaveIcon size={16} /> : <PlusIcon size={16} />}
+                                  {editingEventId ? 'Update Event' : 'Add Event'}
+                                </button>
+                             </div>
+                          </div>
+
+                          <div className="space-y-2 max-h-[300px] overflow-y-auto px-1 pr-2 scrollbar-thin">
+                            {gameForm.events.sort((a,b) => b.minute - a.minute).map(e => {
+                               const p = players.find(player => player.id === e.playerId || player.id === e.playerInId);
+                               const t = teams.find(team => team.id === e.teamId);
+                               return (
+                                 <div key={e.id} className="p-3 bg-white border border-gray-100 rounded-2xl flex items-center justify-between">
+                                   <div className="flex items-center gap-3">
+                                     <span className="font-black text-blue-600 tabular-nums w-6">{e.minute}'</span>
+                                     <div>
+                                       <p className="text-xs font-bold">{p?.name} ({t?.name})</p>
+                                       <p className="text-[10px] text-gray-400 font-bold uppercase">{e.type}</p>
+                                     </div>
+                                   </div>
+                                   <div className="flex items-center gap-2">
+                                     <button onClick={() => startEditingEvent(e)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all">
+                                      <SaveIcon size={14} />
+                                     </button>
+                                     <button onClick={() => removeMatchEvent(e.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all">
+                                        <Trash2Icon size={14} />
+                                     </button>
+                                   </div>
+                                 </div>
+                               );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Lineups Manager */}
+                        <div className="space-y-4">
+                          <h5 className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">Lineups Selection</h5>
+                          <div className="grid grid-cols-2 gap-4">
+                             <div className="space-y-3">
+                               <h6 className="text-[10px] font-bold text-center uppercase tracking-widest text-gray-400">Home</h6>
+                               <div className="space-y-1 max-h-[400px] overflow-y-auto scrollbar-thin bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
+                                 {players.filter(p => p.teamId === gameForm.homeTeamId).map(p => (
+                                   <button 
+                                     key={p.id}
+                                     onClick={() => toggleLineupPlayer('home', p.id)}
+                                     className={cn(
+                                       "w-full p-2 rounded-xl text-left text-xs transition-all flex items-center justify-between",
+                                       gameForm.lineups.home.includes(p.id) ? "bg-blue-600 text-white font-bold shadow-md" : "hover:bg-gray-100 text-gray-600"
+                                     )}
+                                   >
+                                     <span>{p.name}</span>
+                                     <span className="opacity-50 text-[10px]">{p.position}</span>
+                                   </button>
+                                 ))}
+                               </div>
+                             </div>
+
+                             <div className="space-y-3">
+                               <h6 className="text-[10px] font-bold text-center uppercase tracking-widest text-gray-400">Away</h6>
+                               <div className="space-y-1 max-h-[400px] overflow-y-auto scrollbar-thin bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
+                                 {players.filter(p => p.teamId === gameForm.awayTeamId).map(p => (
+                                   <button 
+                                     key={p.id}
+                                     onClick={() => toggleLineupPlayer('away', p.id)}
+                                     className={cn(
+                                       "w-full p-2 rounded-xl text-left text-xs transition-all flex items-center justify-between",
+                                       gameForm.lineups.away.includes(p.id) ? "bg-blue-600 text-white font-bold shadow-md" : "hover:bg-gray-100 text-gray-600"
+                                     )}
+                                   >
+                                     <span>{p.name}</span>
+                                     <span className="opacity-50 text-[10px]">{p.position}</span>
+                                   </button>
+                                 ))}
+                               </div>
+                             </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="sm:pt-7 flex gap-2 sm:col-span-1">
                     {editingId && (
                       <button onClick={cancelEdit} className="px-6 h-[54px] bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all">
@@ -748,7 +1055,14 @@ export function AdminPanel({ leagues, teams, games, players, venues, user, onLog
                    </div>
                    <div className="flex flex-col items-center">
                     <span className="text-[10px] font-black uppercase text-gray-300 tracking-widest whitespace-nowrap">{g.status}</span>
-                    <div className="w-px h-4 bg-gray-100" />
+                    <div className="w-px h-2 bg-gray-100" />
+                    {g.events && g.events.length > 0 && (
+                      <div className="flex items-center gap-1 text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">
+                        <ZapIcon size={10} />
+                        <span className="text-[10px] font-black">{g.events.length}</span>
+                      </div>
+                    )}
+                    <div className="w-px h-2 bg-gray-100" />
                    </div>
                    <div className="flex-1 flex justify-start gap-2 items-center font-bold">
                     <input 

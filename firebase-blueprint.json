@@ -56,6 +56,21 @@
       },
       "required": ["name"]
     },
+    "MatchEvent": {
+      "title": "Match Event",
+      "description": "An event during a game",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["goal", "yellow", "red", "sub"] },
+        "minute": { "type": "number" },
+        "playerId": { "type": "string" },
+        "assistantId": { "type": "string" },
+        "playerInId": { "type": "string" },
+        "playerOutId": { "type": "string" },
+        "teamId": { "type": "string" }
+      },
+      "required": ["type", "minute", "playerId", "teamId"]
+    },
     "Game": {
       "title": "Game",
       "description": "A match between two teams",
@@ -70,9 +85,27 @@
         "status": { "type": "string", "enum": ["scheduled", "live", "finished"] },
         "date": { "type": "string", "format": "date-time" },
         "venueId": { "type": "string" },
-        "attendance": { "type": "number" }
+        "attendance": { "type": "number" },
+        "events": { "type": "array", "items": { "type": "object" } },
+        "lineups": {
+          "type": "object",
+          "properties": {
+            "home": { "type": "array", "items": { "type": "string" } },
+            "away": { "type": "array", "items": { "type": "string" } }
+          }
+        }
       },
       "required": ["leagueId", "homeTeamId", "awayTeamId", "date"]
+    },
+    "Administrator": {
+      "title": "Administrator",
+      "description": "A user with administrative privileges",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["super", "editor"] }
+      },
+      "required": ["email", "role"]
     }
   },
   "firestore": {
@@ -81,6 +114,7 @@
     "/teams/{teamId}": { "schema": "Team", "description": "Teams in the system" },
     "/teams/{teamId}/players/{playerId}": { "schema": "Player", "description": "Players per team" },
     "/venues/{venueId}": { "schema": "Venue", "description": "Venues/Stadiums" },
-    "/games/{gameId}": { "schema": "Game", "description": "All matches" }
+    "/games/{gameId}": { "schema": "Game", "description": "All matches" },
+    "/admins/{adminId}": { "schema": "Administrator", "description": "Authorized administrators" }
   }
 }
