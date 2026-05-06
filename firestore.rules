@@ -65,10 +65,14 @@ service cloud.firestore {
 
     function isValidPlayer(data) {
       return data.keys().hasAll(['name', 'teamId', 'position', 'number']) &&
-             data.name is string && data.name.size() > 0 &&
-             data.teamId is string && 
-             data.position is string &&
-             data.number is number;
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.teamId is string && isValidId(data.teamId) &&
+             data.position is string && data.position.size() <= 50 &&
+             data.number is number &&
+             (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 2000)) &&
+             (!('overview' in data) || (data.overview is string && data.overview.size() <= 5000)) &&
+             (!('career' in data) || (data.career is string && data.career.size() <= 10000)) &&
+             (!('transferHistory' in data) || (data.transferHistory is string && data.transferHistory.size() <= 10000));
     }
 
     function isValidVenue(data) {
@@ -78,11 +82,31 @@ service cloud.firestore {
              data.capacity is number;
     }
 
+    function isValidTransfer(data) {
+      return data.keys().hasAll(['playerId', 'fromTeamId', 'toTeamId', 'date', 'type']) &&
+             isValidId(data.playerId) &&
+             isValidId(data.fromTeamId) &&
+             isValidId(data.toTeamId) &&
+             data.date is string &&
+             data.type in ['permanent', 'loan', 'free'] &&
+             (!('fee' in data) || data.fee is string);
+    }
+
     // Collection Rules
+    match /test/connection {
+      allow read: if true;
+    }
+
     match /admins/{adminId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
+
+    match /transfers/{transferId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidTransfer(incoming());
+    }
+
     match /leagues/{leagueId} {
       allow read: if true;
       allow create: if isAdmin() && isValidLeague(incoming());
@@ -132,6 +156,16 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read, write: if isSignedIn() && request.auth.uid == userId;
+      
+      match /favorites/{favoriteId} {
+        allow read: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn() && request.auth.uid == userId && 
+                      incoming().keys().hasAll(['teamId']) &&
+                      incoming().teamId is string &&
+                      isValidId(incoming().teamId);
+        allow update: if false; // Favorites are usually static refs
+        allow delete: if isSignedIn() && request.auth.uid == userId;
+      }
     }
   }
 }

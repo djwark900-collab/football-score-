@@ -103,40 +103,83 @@ export function Standings({ leagues, teams, games, onTeamClick }: StandingsProps
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {standings.map((team, index) => (
-              <tr key={team.id} className="group hover:bg-gray-50/80 transition-colors">
-                <td className="px-6 sm:px-8 py-5 text-center sm:text-left">
-                  <span className={cn(
-                    "font-black tabular-nums transition-colors",
-                    index < 4 ? "text-blue-600" : "text-gray-300 group-hover:text-gray-900"
-                  )}>
-                    {index + 1}
-                  </span>
-                </td>
-                <td 
+            {standings.map((team, index) => {
+              const liveGame = games.find(g => g.status === 'live' && (g.homeTeamId === team.id || g.awayTeamId === team.id));
+              
+              return (
+                <tr 
+                  key={team.id} 
                   className={cn(
-                    "px-2 sm:px-4 py-5 font-bold flex items-center gap-2 sm:gap-4",
-                    onTeamClick && "cursor-pointer hover:text-blue-600 transition-colors"
+                    "group transition-colors",
+                    index === 4 ? "bg-yellow-50 hover:bg-yellow-100/80" : "hover:bg-gray-50/80"
                   )}
-                  onClick={() => onTeamClick?.(team.id)}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-inner border border-gray-100">
-                    {team.logo ? <img src={team.logo} alt="" className="w-5 h-5 sm:w-6 sm:h-6 object-contain" /> : <ShieldIcon size={16} className="text-gray-200" />}
-                  </div>
-                  <span className="text-xs sm:text-sm font-black text-gray-900">{team.name}</span>
-                </td>
-                <td className="px-2 sm:px-4 py-5 text-center text-xs sm:text-sm font-medium tabular-nums text-gray-600">{team.played}</td>
-                <td className="px-2 sm:px-4 py-5 text-center text-xs sm:text-sm font-medium tabular-nums text-gray-900">{team.won}</td>
-                <td className="px-2 sm:px-4 py-5 text-center text-xs sm:text-sm font-medium tabular-nums text-gray-900">{team.drawn}</td>
-                <td className="px-2 sm:px-4 py-5 text-center text-xs sm:text-sm font-medium tabular-nums text-gray-900">{team.lost}</td>
-                <td className="hidden lg:table-cell px-4 py-5 text-center text-xs sm:text-sm font-medium tabular-nums text-gray-400">
-                  {team.gf - team.ga > 0 ? `+${team.gf - team.ga}` : team.gf - team.ga}
-                </td>
-                <td className="px-4 sm:px-6 py-5 text-center">
-                  <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg font-black tabular-nums text-xs sm:text-sm">
-                    {team.points}
-                  </span>
-                </td>
+                  <td className="px-6 sm:px-8 py-5 text-center sm:text-left">
+                    <div className={cn(
+                      "inline-flex items-center justify-center w-8 h-8 rounded-full font-black tabular-nums transition-all",
+                      index < 4 ? "bg-green-500 text-white shadow-lg shadow-green-100" :
+                      index === 4 ? "bg-yellow-400 text-yellow-950 scale-110 shadow-lg shadow-yellow-100" :
+                      index === 11 ? "bg-red-500 text-white shadow-lg shadow-red-100" : 
+                      "text-gray-300 group-hover:text-gray-900"
+                    )}>
+                      {index + 1}
+                    </div>
+                  </td>
+                  <td 
+                    className={cn(
+                      "px-2 sm:px-4 py-5 font-bold flex items-center gap-2 sm:gap-4",
+                      onTeamClick && "cursor-pointer hover:text-blue-600 transition-colors"
+                    )}
+                    onClick={() => onTeamClick?.(team.id)}
+                  >
+                    <div className={cn(
+                      "w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0 shadow-inner border",
+                      index === 4 ? "bg-yellow-200 border-yellow-300" : "bg-gray-50 border-gray-100"
+                    )}>
+                      {team.logo ? <img src={team.logo} alt="" className="w-5 h-5 sm:w-6 sm:h-6 object-contain" /> : <ShieldIcon size={16} className="text-gray-200" />}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className={cn(
+                        "text-xs sm:text-sm font-black",
+                        index === 4 ? "text-yellow-900" : "text-gray-900"
+                      )}>
+                        {team.name}
+                      </span>
+                      {liveGame && (
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className={cn(
+                            "flex h-1.5 w-1.5 rounded-full animate-pulse",
+                            ((liveGame.homeTeamId === team.id && liveGame.homeScore > liveGame.awayScore) || (liveGame.awayTeamId === team.id && liveGame.awayScore > liveGame.homeScore)) ? "bg-green-500" :
+                            ((liveGame.homeTeamId === team.id && liveGame.homeScore < liveGame.awayScore) || (liveGame.awayTeamId === team.id && liveGame.awayScore < liveGame.homeScore)) ? "bg-red-500" :
+                            "bg-orange-500"
+                          )} />
+                          <span className={cn(
+                            "text-[10px] font-black uppercase tracking-tighter",
+                            ((liveGame.homeTeamId === team.id && liveGame.homeScore > liveGame.awayScore) || (liveGame.awayTeamId === team.id && liveGame.awayScore > liveGame.homeScore)) ? "text-green-600" :
+                            ((liveGame.homeTeamId === team.id && liveGame.homeScore < liveGame.awayScore) || (liveGame.awayTeamId === team.id && liveGame.awayScore < liveGame.homeScore)) ? "text-red-600" :
+                            "text-orange-600"
+                          )}>
+                            Live {liveGame.homeScore}-{liveGame.awayScore}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className={cn("px-2 sm:px-4 py-5 text-center text-xs sm:text-sm font-medium tabular-nums", index === 4 ? "text-yellow-700" : "text-gray-600")}>{team.played}</td>
+                  <td className={cn("px-2 sm:px-4 py-5 text-center text-xs sm:text-sm font-bold tabular-nums", index === 4 ? "text-green-700" : "text-green-600")}>{team.won}</td>
+                  <td className={cn("px-2 sm:px-4 py-5 text-center text-xs sm:text-sm font-medium tabular-nums", index === 4 ? "text-yellow-900" : "text-gray-900")}>{team.drawn}</td>
+                  <td className={cn("px-2 sm:px-4 py-5 text-center text-xs sm:text-sm font-bold tabular-nums", index === 4 ? "text-red-700" : "text-red-600")}>{team.lost}</td>
+                  <td className={cn("hidden lg:table-cell px-4 py-5 text-center text-xs sm:text-sm font-medium tabular-nums", index === 4 ? "text-yellow-600" : "text-gray-400")}>
+                    {team.gf - team.ga > 0 ? `+${team.gf - team.ga}` : team.gf - team.ga}
+                  </td>
+                  <td className="px-4 sm:px-6 py-5 text-center">
+                    <span className={cn(
+                      "px-3 py-1 rounded-lg font-black tabular-nums text-xs sm:text-sm",
+                      index === 4 ? "bg-yellow-400 text-yellow-950" : "bg-blue-50 text-blue-600"
+                    )}>
+                      {team.points}
+                    </span>
+                  </td>
                 <td className="hidden md:table-cell px-6 py-5">
                   <div className="flex items-center justify-center gap-1">
                     {team.form.slice(-5).map((res, i) => (
@@ -156,8 +199,9 @@ export function Standings({ leagues, teams, games, onTeamClick }: StandingsProps
                   </div>
                 </td>
               </tr>
-            ))}
-          </tbody>
+            );
+          })}
+        </tbody>
         </table>
       </div>
     </div>

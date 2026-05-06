@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Game, Team } from '../types';
+import { Game, Team, League } from '../types';
 import { Shield as ShieldIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -8,14 +8,16 @@ interface GameCardProps {
   key?: string | number;
   game: Game;
   teams: Team[];
+  leagues: League[];
   onClick: () => void;
   onTeamClick?: (teamId: string) => void;
   isLive?: boolean;
 }
 
-export function GameCard({ game, teams, onClick, onTeamClick, isLive }: GameCardProps) {
+export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive }: GameCardProps) {
   const homeTeam = teams.find(t => t.id === game.homeTeamId);
   const awayTeam = teams.find(t => t.id === game.awayTeamId);
+  const league = leagues.find(l => l.id === game.leagueId);
   const [pulse, setPulse] = useState<'home' | 'away' | null>(null);
 
   useEffect(() => {
@@ -79,10 +81,13 @@ export function GameCard({ game, teams, onClick, onTeamClick, isLive }: GameCard
 
       {game.round && (
         <div className={cn(
-          "absolute top-4 left-6 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
+          "absolute top-4 left-6 flex items-center gap-2 px-2 py-0.5 rounded-full",
           isLive ? "bg-white/10 text-white" : "bg-gray-100 text-gray-400"
         )}>
-          {game.round}
+          {league?.logo && <img src={league.logo} alt="" className="w-3 h-3 rounded-full object-cover" />}
+          <span className="text-[8px] font-black uppercase tracking-widest">
+            {league?.name} • {game.round}
+          </span>
         </div>
       )}
 

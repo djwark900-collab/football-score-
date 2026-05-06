@@ -8,7 +8,8 @@ import {
   Info as InfoIcon,
   Calendar as CalendarIcon,
   Users as UsersIcon,
-  Trophy as TrophyIcon
+  Trophy as TrophyIcon,
+  Heart as HeartIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { GameCard } from './GameCard';
@@ -21,11 +22,25 @@ interface TeamDetailsProps {
   leagues: League[];
   onBack: () => void;
   onGameClick: (gameId: string) => void;
+  onPlayerClick?: (playerId: string) => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
 }
 
 type Tab = 'fixtures' | 'squad' | 'details';
 
-export function TeamDetails({ team, teams, games, players, leagues, onBack, onGameClick }: TeamDetailsProps) {
+export function TeamDetails({ 
+  team, 
+  teams, 
+  games, 
+  players, 
+  leagues, 
+  onBack, 
+  onGameClick, 
+  onPlayerClick,
+  isFavorite,
+  onToggleFavorite
+}: TeamDetailsProps) {
   const [activeTab, setActiveTab] = useState<Tab>('fixtures');
 
   const teamGames = useMemo(() => 
@@ -76,6 +91,18 @@ export function TeamDetails({ team, teams, games, players, leagues, onBack, onGa
             </div>
           </div>
         </div>
+
+        <button 
+          onClick={onToggleFavorite}
+          className={cn(
+            "p-4 rounded-2xl transition-all shadow-sm border relative z-10 sm:ml-auto",
+            isFavorite 
+              ? "bg-pink-50 border-pink-100 text-pink-600" 
+              : "bg-gray-50 border-gray-100 text-gray-400 hover:text-pink-600"
+          )}
+        >
+          <HeartIcon size={24} className={cn(isFavorite && "fill-current")} />
+        </button>
       </div>
 
       {/* Tabs */}
@@ -115,6 +142,7 @@ export function TeamDetails({ team, teams, games, players, leagues, onBack, onGa
                   key={game.id}
                   game={game} 
                   teams={teams}
+                  leagues={leagues}
                   onClick={() => onGameClick(game.id)}
                   isLive={game.status === 'live'}
                 />
@@ -135,15 +163,23 @@ export function TeamDetails({ team, teams, games, players, leagues, onBack, onGa
           >
             {teamPlayers.length > 0 ? (
               teamPlayers.map(player => (
-                <div key={player.id} className="bg-white p-6 rounded-[32px] border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
-                  <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center font-black text-blue-600 text-lg">
-                    {player.number}
+                <button 
+                  key={player.id} 
+                  onClick={() => onPlayerClick?.(player.id)}
+                  className="bg-white p-6 rounded-[32px] border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow group text-left w-full"
+                >
+                  <div className="w-12 h-12 bg-blue-50 group-hover:bg-blue-600 rounded-2xl flex items-center justify-center font-black text-blue-600 group-hover:text-white text-lg transition-colors overflow-hidden">
+                    {player.imageUrl ? (
+                      <img src={player.imageUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      player.number
+                    )}
                   </div>
                   <div>
-                    <h4 className="font-bold text-gray-900">{player.name}</h4>
+                    <h4 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{player.name}</h4>
                     <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{player.position}</p>
                   </div>
-                </div>
+                </button>
               ))
             ) : (
               <div className="col-span-full">

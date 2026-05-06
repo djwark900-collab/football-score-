@@ -29,12 +29,13 @@ interface GameDetailsProps {
   venues: Venue[];
   onBack: () => void;
   onTeamClick: (teamId: string) => void;
+  onPlayerClick?: (playerId: string) => void;
   isAdmin: boolean;
 }
 
 type Tab = 'stats' | 'events' | 'lineups' | 'standings' | 'h2h';
 
-export function GameDetails({ game, teams, games, leagues, players, venues, onBack, onTeamClick, isAdmin }: GameDetailsProps) {
+export function GameDetails({ game, teams, games, leagues, players, venues, onBack, onTeamClick, onPlayerClick, isAdmin }: GameDetailsProps) {
   const [activeTab, setActiveTab] = useState<Tab>('stats');
   const homeTeam = teams.find(t => t.id === game.homeTeamId);
   const awayTeam = teams.find(t => t.id === game.awayTeamId);
@@ -83,16 +84,30 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
     }
   };
 
-  // Default stats for demo if none exist
-  const stats = game.stats || {
-    possession: { home: 48, away: 52 },
-    shots: { home: 12, away: 15 },
-    shotsOnGoal: { home: 5, away: 7 },
-    corners: { home: 4, away: 6 },
-    yellowCards: { home: 2, away: 1 },
-    crosses: { home: 18, away: 22 },
-    goalKicks: { home: 8, away: 10 },
-  };
+  // Improved stats fallback logic
+  const stats = useMemo(() => {
+    const base = {
+      possession: { home: 50, away: 50 },
+      shots: { home: 0, away: 0 },
+      shotsOnGoal: { home: 0, away: 0 },
+      corners: { home: 0, away: 0 },
+      yellowCards: { home: 0, away: 0 },
+      crosses: { home: 0, away: 0 },
+      goalKicks: { home: 0, away: 0 },
+    };
+
+    if (!game.stats) return base;
+
+    return {
+      possession: game.stats.possession || base.possession,
+      shots: game.stats.shots || base.shots,
+      shotsOnGoal: game.stats.shotsOnGoal || base.shotsOnGoal,
+      corners: game.stats.corners || base.corners,
+      yellowCards: game.stats.yellowCards || base.yellowCards,
+      crosses: game.stats.crosses || base.crosses,
+      goalKicks: game.stats.goalKicks || base.goalKicks,
+    };
+  }, [game.stats]);
 
   return (
     <motion.div
@@ -328,11 +343,11 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
 
                     return (
                       <div key={event.id || idx} className={cn(
-                        "flex items-center gap-4 relative z-10",
+                        "flex items-center gap-4 relative z-10 select-none cursor-pointer group/event",
                         isHome ? "flex-row" : "flex-row-reverse"
-                      )}>
+                      )} onClick={() => eventPlayer && onPlayerClick?.(eventPlayer.id)}>
                         <div className={cn("flex-1", isHome ? "text-right" : "text-left")}>
-                          <p className="font-bold text-sm text-gray-900">{eventPlayer?.name || pIn?.name || 'Unknown'}</p>
+                          <p className="font-bold text-sm text-gray-900 group-hover/event:text-blue-600 transition-colors uppercase tracking-tight">{eventPlayer?.name || pIn?.name || 'Unknown'}</p>
                           {event.type === 'goal' && assistant && (
                             <p className="text-[10px] text-gray-400 font-medium">assist by {assistant.name}</p>
                           )}
@@ -396,7 +411,7 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
                     {game.lineups?.home && game.lineups.home.length > 0 ? (
                       game.lineups.home.map(pid => {
                         const p = players.find(player => player.id === pid);
-                        return <LineupItem key={pid} player={p} />;
+                        return <LineupItem key={pid} player={p} onClick={() => onPlayerClick?.(pid)} />;
                       })
                     ) : (
                       <p className="text-[10px] text-gray-400 italic px-2">Lineup not announced</p>
@@ -416,7 +431,7 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
                     {game.lineups?.away && game.lineups.away.length > 0 ? (
                       game.lineups.away.map(pid => {
                         const p = players.find(player => player.id === pid);
-                        return <LineupItem key={pid} player={p} isRight />;
+                        return <LineupItem key={pid} player={p} isRight onClick={() => onPlayerClick?.(pid)} />;
                       })
                     ) : (
                       <p className="text-[10px] text-gray-400 italic text-right px-2">Lineup not announced</p>
@@ -435,32 +450,41 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
               exit={{ opacity: 0, y: -10 }}
               className="space-y-6"
             >
-              <StatProgress 
-                label="Shots on goal" 
-                homeValue={stats.shotsOnGoal.home} 
-                awayValue={stats.shotsOnGoal.away} 
-              />
-              <StatProgress 
-                label="Shots" 
-                homeValue={stats.shots.home} 
-                awayValue={stats.shots.away} 
-              />
-              <StatProgress 
-                label="Possession %" 
-                homeValue={stats.possession.home} 
-                awayValue={stats.possession.away} 
-                isPercent
-              />
-              <StatProgress 
-                label="Yellow card" 
-                homeValue={stats.yellowCards.home} 
-                awayValue={stats.yellowCards.away} 
-              />
-              <StatProgress 
-                label="Corner kicks" 
-                homeValue={stats.corners.home} 
-                awayValue={stats.corners.away} 
-              />
+              {game.status === 'scheduled' && !game.stats ? (
+                <div className="py-20 text-center text-gray-400">
+                  <ActivityIcon className="w-12 h-12 mx-auto mb-4 opacity-10" />
+                  <p className="font-bold">Match stats will appear once the game kicks off.</p>
+                </div>
+              ) : (
+                <>
+                  <StatProgress 
+                    label="Shots on goal" 
+                    homeValue={stats.shotsOnGoal.home} 
+                    awayValue={stats.shotsOnGoal.away} 
+                  />
+                  <StatProgress 
+                    label="Shots" 
+                    homeValue={stats.shots.home} 
+                    awayValue={stats.shots.away} 
+                  />
+                  <StatProgress 
+                    label="Possession %" 
+                    homeValue={stats.possession.home} 
+                    awayValue={stats.possession.away} 
+                    isPercent
+                  />
+                  <StatProgress 
+                    label="Yellow card" 
+                    homeValue={stats.yellowCards.home} 
+                    awayValue={stats.yellowCards.away} 
+                  />
+                  <StatProgress 
+                    label="Corner kicks" 
+                    homeValue={stats.corners.home} 
+                    awayValue={stats.corners.away} 
+                  />
+                </>
+              )}
             </motion.div>
           )}
 
@@ -555,20 +579,20 @@ interface LineupItemProps {
   isRight?: boolean;
 }
 
-function LineupItem({ player, isRight, ...props }: LineupItemProps & { key?: any }) {
+function LineupItem({ player, isRight, ...props }: LineupItemProps & { key?: any; onClick?: () => void }) {
   if (!player) return null;
   return (
     <div 
       {...props}
       className={cn(
-      "flex items-center gap-3 p-2 bg-gray-50/50 rounded-2xl border border-gray-100/50",
+      "flex items-center gap-3 p-2 bg-gray-50/50 rounded-2xl border border-gray-100/50 cursor-pointer hover:bg-white hover:shadow-md transition-all group",
       isRight ? "flex-row-reverse" : "flex-row"
     )}>
-      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-black text-gray-400 text-[10px] shadow-sm">
+      <div className="w-8 h-8 rounded-full bg-white group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center font-black text-gray-400 text-[10px] shadow-sm transition-colors">
         {player.number}
       </div>
       <div className={cn("flex-1 overflow-hidden", isRight ? "text-right" : "text-left")}>
-        <p className="text-xs font-bold text-gray-900 truncate">{player.name}</p>
+        <p className="text-xs font-bold text-gray-900 group-hover:text-blue-600 transition-colors truncate">{player.name}</p>
         <p className="text-[8px] font-black uppercase text-gray-400 tracking-tighter">{player.position}</p>
       </div>
     </div>

@@ -30,6 +30,10 @@ export interface Player {
   teamId: string;
   position: string;
   number: number;
+  imageUrl?: string;
+  overview?: string;
+  career?: string;
+  transferHistory?: string;
 }
 
 export interface Venue {
@@ -84,4 +88,14 @@ export interface Administrator {
   id: string;
   email: string;
   role: 'super' | 'editor';
+}
+
+export interface Transfer {
+  id: string;
+  playerId: string;
+  fromTeamId: string;
+  toTeamId: string;
+  date: string;
+  fee?: string;
+  type: 'permanent' | 'loan' | 'free';
 }

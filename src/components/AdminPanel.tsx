@@ -14,11 +14,12 @@ import {
   Image as LucideImage,
   Shield as ShieldIcon,
   Lock as LockIcon,
-  Zap as ZapIcon
+  Zap as ZapIcon,
+  ArrowLeftRight as TransferIcon
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { League, Team, Game, Venue, Player, MatchEvent, Administrator } from '../types';
+import { League, Team, Game, Venue, Player, MatchEvent, Administrator, Transfer } from '../types';
 import { cn } from '../lib/utils';
 
 interface AdminPanelProps {
@@ -27,15 +28,16 @@ interface AdminPanelProps {
   games: Game[];
   players: Player[];
   venues: Venue[];
+  transfers: Transfer[];
   administrators: Administrator[];
   user: any;
   onLogin: () => void;
   defaultLeagueId?: string;
 }
 
-type Tab = 'leagues' | 'teams' | 'games' | 'venues' | 'players' | 'admins';
+type Tab = 'leagues' | 'teams' | 'games' | 'venues' | 'players' | 'admins' | 'transfers';
 
-export function AdminPanel({ leagues, teams, games, players, venues, administrators, user, onLogin, defaultLeagueId }: AdminPanelProps) {
+export function AdminPanel({ leagues, teams, games, players, venues, transfers, administrators, user, onLogin, defaultLeagueId }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>(defaultLeagueId ? 'games' : 'leagues');
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -91,9 +93,26 @@ export function AdminPanel({ leagues, teams, games, players, venues, administrat
     playerOutId: ''
   });
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
-  const [playerForm, setPlayerForm] = useState({ name: '', teamId: '', position: '', number: 0 });
+  const [playerForm, setPlayerForm] = useState({ 
+    name: '', 
+    teamId: '', 
+    position: '', 
+    number: 0,
+    imageUrl: '',
+    overview: '',
+    career: '',
+    transferHistory: '' 
+  });
   const [venueForm, setVenueForm] = useState({ name: '', city: '', capacity: 0 });
   const [adminForm, setAdminForm] = useState({ email: '', role: 'editor' as 'editor' | 'super' });
+  const [transferForm, setTransferForm] = useState({
+    playerId: '',
+    fromTeamId: '',
+    toTeamId: '',
+    date: new Date().toISOString().slice(0, 10),
+    fee: '',
+    type: 'permanent' as 'permanent' | 'loan' | 'free'
+  });
 
   const handleAddLeague = async () => {
     if (!leagueForm.name) return;
@@ -153,7 +172,10 @@ export function AdminPanel({ leagues, teams, games, players, venues, administrat
   };
 
   const handleAddTeam = async () => {
-    if (!teamForm.name || !teamForm.leagueId) return;
+    if (!teamForm.name.trim() || !teamForm.leagueId) {
+      alert('Please enter a team name and select a league.');
+      return;
+    }
     setLoading(true);
     const path = editingId ? `teams/${editingId}` : 'teams';
     try {
@@ -295,7 +317,16 @@ export function AdminPanel({ leagues, teams, games, players, venues, administrat
       } else {
         await addDoc(collection(db, 'players'), playerForm);
       }
-      setPlayerForm({ name: '', teamId: '', position: '', number: 0 });
+      setPlayerForm({ 
+        name: '', 
+        teamId: '', 
+        position: '', 
+        number: 0,
+        imageUrl: '',
+        overview: '',
+        career: '',
+        transferHistory: '' 
+      });
       setEditingId(null);
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, path);
@@ -306,7 +337,16 @@ export function AdminPanel({ leagues, teams, games, players, venues, administrat
 
   const startEditingPlayer = (p: Player) => {
     setEditingId(p.id);
-    setPlayerForm({ name: p.name, teamId: p.teamId, position: p.position || '', number: p.number || 0 });
+    setPlayerForm({ 
+      name: p.name, 
+      teamId: p.teamId, 
+      position: p.position || '', 
+      number: p.number || 0,
+      imageUrl: p.imageUrl || '',
+      overview: p.overview || '',
+      career: p.career || '',
+      transferHistory: p.transferHistory || ''
+    });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -341,6 +381,52 @@ export function AdminPanel({ leagues, teams, games, players, venues, administrat
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAddTransfer = async () => {
+    if (!transferForm.playerId || !transferForm.fromTeamId || !transferForm.toTeamId) return;
+    setLoading(true);
+    const path = editingId ? `transfers/${editingId}` : 'transfers';
+    try {
+      if (editingId) {
+        await updateDoc(doc(db, 'transfers', editingId), transferForm);
+      } else {
+        await addDoc(collection(db, 'transfers'), transferForm);
+        // Bonus: Update player's team automatically? 
+        // For a simple app, we can just leave it as historical record, 
+        // but maybe the user expects the player to move.
+        const player = players.find(p => p.id === transferForm.playerId);
+        if (player) {
+          await updateDoc(doc(db, 'players', player.id), { teamId: transferForm.toTeamId });
+        }
+      }
+      setTransferForm({
+        playerId: '',
+        fromTeamId: '',
+        toTeamId: '',
+        date: new Date().toISOString().slice(0, 10),
+        fee: '',
+        type: 'permanent'
+      });
+      setEditingId(null);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, path);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startEditingTransfer = (t: Transfer) => {
+    setEditingId(t.id);
+    setTransferForm({
+      playerId: t.playerId,
+      fromTeamId: t.fromTeamId,
+      toTeamId: t.toTeamId,
+      date: t.date,
+      fee: t.fee || '',
+      type: t.type
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const startEditingVenue = (v: Venue) => {
@@ -397,7 +483,16 @@ export function AdminPanel({ leagues, teams, games, players, venues, administrat
   };
 
   const cancelEdit = () => {
-    setPlayerForm({ name: '', teamId: '', position: '', number: 0 });
+    setPlayerForm({ 
+      name: '', 
+      teamId: '', 
+      position: '', 
+      number: 0,
+      imageUrl: '',
+      overview: '',
+      career: '',
+      transferHistory: '' 
+    });
     setVenueForm({ name: '', city: '', capacity: 0 });
     setEditingId(null);
     setLeagueForm({ name: '', country: '', logo: '', description: '', history: [] });
@@ -470,6 +565,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, administrat
           <TabButton active={activeTab === 'teams'} onClick={() => setActiveTab('teams')} icon={<UsersIcon size={18} />} label="Teams" />
           <TabButton active={activeTab === 'games'} onClick={() => setActiveTab('games')} icon={<CalendarIcon size={18} />} label="Games" />
           <TabButton active={activeTab === 'players'} onClick={() => setActiveTab('players')} icon={<TargetIcon size={18} />} label="Players" />
+          <TabButton active={activeTab === 'transfers'} onClick={() => setActiveTab('transfers')} icon={<TransferIcon size={18} />} label="Transfers" />
           <TabButton active={activeTab === 'venues'} onClick={() => setActiveTab('venues')} icon={<MapPinIcon size={18} />} label="Venues" />
           <TabButton active={activeTab === 'admins'} onClick={() => setActiveTab('admins')} icon={<ShieldIcon size={18} />} label="Admins" />
         </div>
@@ -527,7 +623,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, administrat
             </motion.div>
           )}
 
-          {activeTab === 'players' && (
+        {activeTab === 'players' && (
           <motion.div key="players-tab" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
             <AdminCard title={editingId ? "Edit Player" : "Add New Player"} icon={<TargetIcon className="text-blue-600" />}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -535,6 +631,55 @@ export function AdminPanel({ leagues, teams, games, players, venues, administrat
                 <Select label="Assign to Team" value={playerForm.teamId} onChange={v => setPlayerForm({ ...playerForm, teamId: v })} options={teams.map(t => ({ label: `${t.name} (${leagues.find(l => l.id === t.leagueId)?.name})`, value: t.id }))} />
                 <Input label="Position" value={playerForm.position} onChange={v => setPlayerForm({ ...playerForm, position: v })} placeholder="e.g. Forward" />
                 <Input type="number" label="Shirt Number" value={playerForm.number} onChange={v => setPlayerForm({ ...playerForm, number: parseInt(v) })} />
+                
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Player Image (File or URL)</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text"
+                      value={playerForm.imageUrl}
+                      onChange={e => setPlayerForm({ ...playerForm, imageUrl: e.target.value })}
+                      placeholder="Paste image URL..."
+                      className="flex-1 p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 transition-all font-medium"
+                    />
+                    <label className="p-4 bg-gray-100 rounded-2xl cursor-pointer hover:bg-gray-200 transition-colors flex items-center justify-center min-w-[54px]">
+                      <LucideImage size={20} className="text-gray-500" />
+                      <input type="file" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, (b) => setPlayerForm({ ...playerForm, imageUrl: b }))} />
+                    </label>
+                  </div>
+                  {playerForm.imageUrl && <img src={playerForm.imageUrl} alt="Preview" className="h-12 w-12 rounded-xl object-cover bg-gray-50 p-1 mt-2 border" />}
+                </div>
+
+                <div className="sm:col-span-2 space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Overview</label>
+                    <textarea 
+                      value={playerForm.overview}
+                      onChange={e => setPlayerForm({ ...playerForm, overview: e.target.value })}
+                      placeholder="Player performance summary, key traits..."
+                      className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 transition-all font-medium min-h-[100px]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Career History</label>
+                    <textarea 
+                      value={playerForm.career}
+                      onChange={e => setPlayerForm({ ...playerForm, career: e.target.value })}
+                      placeholder="Previous clubs, major achievements..."
+                      className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 transition-all font-medium min-h-[100px]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Transfer History</label>
+                    <textarea 
+                      value={playerForm.transferHistory}
+                      onChange={e => setPlayerForm({ ...playerForm, transferHistory: e.target.value })}
+                      placeholder="e.g. 2023: Team A -> Team B ($50M)..."
+                      className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 transition-all font-medium min-h-[100px]"
+                    />
+                  </div>
+                </div>
+
                 <div className="sm:col-span-2 flex justify-end gap-2">
                    {editingId && (
                     <button onClick={cancelEdit} className="px-6 h-[54px] bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all">
@@ -553,17 +698,21 @@ export function AdminPanel({ leagues, teams, games, players, venues, administrat
               {players.map(p => (
                 <div key={p.id} className="p-4 bg-white rounded-3xl border border-gray-100 flex items-center justify-between group">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center font-black text-gray-300">
-                      {p.number || '#'}
+                    <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center font-black text-gray-300 overflow-hidden">
+                      {p.imageUrl ? (
+                        <img src={p.imageUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        p.number || '#'
+                      )}
                     </div>
                     <div>
-                      <p className="font-bold text-sm">{p.name}</p>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase">
+                      <p className="font-bold text-sm line-clamp-1">{p.name}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase line-clamp-1">
                         {teams.find(t => t.id === p.teamId)?.name} • {p.position}
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 shrink-0">
                     <button 
                       onClick={() => startEditingPlayer(p)} 
                       className="p-3 text-blue-500 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-all"
@@ -581,6 +730,64 @@ export function AdminPanel({ leagues, teams, games, players, venues, administrat
                   </div>
                 </div>
               ))}
+            </div>
+          </motion.div>
+        )}
+
+        {activeTab === 'transfers' && (
+          <motion.div key="transfers-tab" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+            <AdminCard title={editingId ? "Edit Transfer" : "Add New Transfer"} icon={<TransferIcon className="text-blue-600" />}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <Select label="Player" value={transferForm.playerId} onChange={v => setTransferForm({ ...transferForm, playerId: v })} options={players.map(p => ({ label: p.name, value: p.id }))} />
+                <Select label="From Team" value={transferForm.fromTeamId} onChange={v => setTransferForm({ ...transferForm, fromTeamId: v })} options={teams.map(t => ({ label: t.name, value: t.id }))} />
+                <Select label="To Team" value={transferForm.toTeamId} onChange={v => setTransferForm({ ...transferForm, toTeamId: v })} options={teams.map(t => ({ label: t.name, value: t.id }))} />
+                <Input type="date" label="Transfer Date" value={transferForm.date} onChange={v => setTransferForm({ ...transferForm, date: v })} />
+                <Input label="Transfer Fee" value={transferForm.fee} onChange={v => setTransferForm({ ...transferForm, fee: v })} placeholder="e.g. $50M" />
+                <Select label="Transfer Type" value={transferForm.type} onChange={v => setTransferForm({ ...transferForm, type: v as any })} options={[{ label: 'Permanent', value: 'permanent' }, { label: 'Loan', value: 'loan' }, { label: 'Free', value: 'free' }]} />
+                
+                <div className="lg:col-span-3 flex justify-end gap-2">
+                  {editingId && (
+                    <button onClick={cancelEdit} className="px-6 h-[54px] bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all">
+                      Cancel
+                    </button>
+                  )}
+                  <button onClick={handleAddTransfer} disabled={loading} className="px-8 h-[54px] bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">
+                    {editingId ? <SaveIcon size={20} /> : <PlusIcon size={20} />}
+                    {editingId ? "Save Changes" : "Record Transfer"}
+                  </button>
+                </div>
+              </div>
+            </AdminCard>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {transfers.map(t => {
+                const p = players.find(player => player.id === t.playerId);
+                const from = teams.find(team => team.id === t.fromTeamId);
+                const to = teams.find(team => team.id === t.toTeamId);
+                return (
+                  <div key={t.id} className="p-6 bg-white rounded-3xl border border-gray-100 flex items-center justify-between group">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center overflow-hidden border">
+                         {p?.imageUrl ? <img src={p.imageUrl} alt="" className="w-full h-full object-cover" /> : <UsersIcon className="text-gray-200" />}
+                      </div>
+                      <div>
+                        <p className="font-bold">{p?.name || 'Unknown'}</p>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase">
+                          {from?.name} → {to?.name}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => startEditingTransfer(t)} className="p-3 text-blue-500 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-all">
+                        <SaveIcon size={18} />
+                      </button>
+                      <button onClick={() => handleDelete('transfers', t.id)} className="p-3 text-red-500 bg-red-50 rounded-2xl hover:bg-red-100 transition-all">
+                        <Trash2Icon size={18} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </motion.div>
         )}

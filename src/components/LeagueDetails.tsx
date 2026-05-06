@@ -19,6 +19,7 @@ interface LeagueDetailsProps {
   league: League;
   teams: Team[];
   games: Game[];
+  leagues: League[];
   onBack: () => void;
   onGameClick: (gameId: string) => void;
   onTeamClick: (teamId: string) => void;
@@ -28,7 +29,7 @@ interface LeagueDetailsProps {
 
 type Tab = 'matches' | 'table' | 'history';
 
-export function LeagueDetails({ league, teams, games, onBack, onGameClick, onTeamClick, isAdmin, onAddGame }: LeagueDetailsProps) {
+export function LeagueDetails({ league, teams, games, leagues, onBack, onGameClick, onTeamClick, isAdmin, onAddGame }: LeagueDetailsProps) {
   const [activeTab, setActiveTab] = useState<Tab>('matches');
 
   const leagueTeams = useMemo(() => 
@@ -156,6 +157,7 @@ export function LeagueDetails({ league, teams, games, onBack, onGameClick, onTea
                         key={game.id}
                         game={game} 
                         teams={teams}
+                        leagues={leagues}
                         onClick={() => onGameClick(game.id)}
                         onTeamClick={onTeamClick}
                         isLive={game.status === 'live'}
