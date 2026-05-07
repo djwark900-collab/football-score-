@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { League, Team, Game } from '../types';
-import { Shield as ShieldIcon, TrendingUp as TrendingUpIcon } from 'lucide-react';
+import { Shield as ShieldIcon, TrendingUp as TrendingUpIcon, ChevronDown as ChevronDownIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface StandingsProps {
@@ -11,6 +11,8 @@ interface StandingsProps {
 }
 
 export function Standings({ leagues, teams, games, onTeamClick }: StandingsProps) {
+  const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(leagues[0]?.id || null);
+
   const standings = useMemo(() => {
     const table: Record<string, {
       name: string;
@@ -25,15 +27,20 @@ export function Standings({ leagues, teams, games, onTeamClick }: StandingsProps
       form: ('W' | 'D' | 'L')[];
     }> = {};
 
-    teams.forEach(t => {
+    if (!selectedLeagueId) return [];
+
+    const leagueTeams = teams.filter(t => t.leagueId === selectedLeagueId);
+    
+    leagueTeams.forEach(t => {
       table[t.id] = { name: t.name, logo: t.logo, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0, form: [] };
     });
 
-    const finishedAndLiveGames = [...games]
-      .filter(g => g.status === 'finished' || g.status === 'live')
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const filteredGames = games.filter(g => 
+      g.leagueId === selectedLeagueId && 
+      (g.status === 'finished' || g.status === 'live')
+    ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    finishedAndLiveGames.forEach(g => {
+    filteredGames.forEach(g => {
       const home = table[g.homeTeamId];
       const away = table[g.awayTeamId];
 
@@ -71,21 +78,45 @@ export function Standings({ leagues, teams, games, onTeamClick }: StandingsProps
     return Object.entries(table)
       .sort((a, b) => b[1].points - a[1].points || (b[1].gf - b[1].ga) - (a[1].gf - a[1].ga))
       .map(([id, data]) => ({ id, ...data }));
-  }, [teams, games]);
+  }, [teams, games, selectedLeagueId]);
+
+  const currentLeague = leagues.find(l => l.id === selectedLeagueId);
 
   return (
-    <div className="bg-white rounded-[40px] border border-gray-100 shadow-xl overflow-hidden">
-      <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-white to-gray-50">
-        <div className="flex items-center gap-3">
-            <div className="p-3 bg-gray-900 rounded-2xl shadow-lg shadow-gray-200">
-                <TrendingUpIcon className="text-white" size={24} />
-            </div>
-            <div>
-              <h2 className="text-2xl font-black">League Standings</h2>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Season 2023/2024</p>
-            </div>
+    <div className="space-y-6">
+      {/* League Selector */}
+      <div className="max-w-xs">
+        <div className="relative group">
+          <select 
+            value={selectedLeagueId || ''} 
+            onChange={(e) => setSelectedLeagueId(e.target.value)}
+            className="w-full p-4 pl-12 bg-white rounded-2xl border border-gray-100 shadow-sm appearance-none font-black text-gray-900 focus:ring-2 focus:ring-blue-600 outline-none cursor-pointer transition-all"
+          >
+            {leagues.map(l => (
+              <option key={l.id} value={l.id}>{l.name}</option>
+            ))}
+          </select>
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 p-1.5 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+            <ShieldIcon className="text-blue-600" size={16} />
+          </div>
+          <ChevronDownIcon className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" size={18} />
         </div>
       </div>
+
+      <div className="bg-white rounded-[40px] border border-gray-100 shadow-xl overflow-hidden">
+        <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-white to-gray-50">
+          <div className="flex items-center gap-3">
+              <div className="p-3 bg-gray-900 rounded-2xl shadow-lg shadow-gray-200">
+                  <TrendingUpIcon className="text-white" size={24} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-black">{currentLeague?.name || 'Standings'}</h2>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+                  Overall Standings
+                </p>
+              </div>
+          </div>
+        </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-left">
@@ -188,7 +219,7 @@ export function Standings({ leagues, teams, games, onTeamClick }: StandingsProps
                         className={cn(
                           "w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-black text-white",
                           res === 'W' ? "bg-green-500 shadow-sm shadow-green-100" : 
-                          res === 'D' ? "bg-gray-400 shadow-sm shadow-gray-100" : 
+                          res === 'D' ? "bg-yellow-500 shadow-sm shadow-yellow-100" : 
                           "bg-red-500 shadow-sm shadow-red-100"
                         )}
                         title={res === 'W' ? 'Win' : res === 'D' ? 'Draw' : 'Loss'}
@@ -205,5 +236,6 @@ export function Standings({ leagues, teams, games, onTeamClick }: StandingsProps
         </table>
       </div>
     </div>
+  </div>
   );
 }

@@ -48,8 +48,11 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
     country: string;
     logo: string;
     description: string;
+    type: 'league' | 'cup';
+    currentSeasonId: string;
     history: { season: string; winnerId: string; }[];
-  }>({ name: '', country: '', logo: '', description: '', history: [] });
+  }>({ name: '', country: '', logo: '', description: '', type: 'league', currentSeasonId: '', history: [] });
+  
   const [historyForm, setHistoryForm] = useState<{
     season: string;
     winnerId: string;
@@ -67,6 +70,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
     attendance: number;
     venueId: string;
     round: string;
+    currentTime: string;
     events: MatchEvent[];
     lineups: { home: string[]; away: string[]; };
   }>({ 
@@ -80,6 +84,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
     attendance: 0,
     venueId: '',
     round: '',
+    currentTime: '',
     events: [],
     lineups: { home: [], away: [] }
   });
@@ -124,7 +129,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
       } else {
         await addDoc(collection(db, 'leagues'), leagueForm);
       }
-      setLeagueForm({ name: '', country: '', logo: '', description: '', history: [] });
+      setLeagueForm({ name: '', country: '', logo: '', description: '', type: 'league', currentSeasonId: '', history: [] });
       setEditingId(null);
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, path);
@@ -214,6 +219,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
         attendance: 0,
         venueId: '',
         round: '',
+        currentTime: '',
         events: [],
         lineups: { home: [], away: [] }
       });
@@ -451,6 +457,8 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
       country: l.country || '', 
       logo: l.logo || '', 
       description: l.description || '',
+      type: l.type || 'league',
+      currentSeasonId: l.currentSeasonId || '',
       history: l.history || []
     });
     setHistoryForm({ season: '', winnerId: '', editingIndex: null });
@@ -469,6 +477,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
       leagueId: g.leagueId, 
       homeTeamId: g.homeTeamId, 
       awayTeamId: g.awayTeamId, 
+      seasonId: g.seasonId || '',
       date: g.date, 
       status: g.status, 
       homeScore: g.homeScore, 
@@ -476,6 +485,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
       attendance: g.attendance || 0,
       venueId: g.venueId || '',
       round: g.round || '',
+      currentTime: g.currentTime || '',
       events: g.events || [],
       lineups: g.lineups || { home: [], away: [] }
     });
@@ -495,14 +505,15 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
     });
     setVenueForm({ name: '', city: '', capacity: 0 });
     setEditingId(null);
-    setLeagueForm({ name: '', country: '', logo: '', description: '', history: [] });
+    setLeagueForm({ name: '', country: '', logo: '', description: '', currentSeasonId: '', history: [] });
     setHistoryForm({ season: '', winnerId: '', editingIndex: null });
     setTeamForm({ name: '', leagueId: defaultLeagueId || '', logo: '' });
     setGameForm({ 
-      leagueId: defaultLeagueId || '', homeTeamId: '', awayTeamId: '', 
+      leagueId: defaultLeagueId || '', homeTeamId: '', awayTeamId: '',
       date: new Date().toISOString().slice(0, 16),
       status: 'scheduled', homeScore: 0, awayScore: 0,
       attendance: 0, venueId: '', round: '',
+      currentTime: '',
       events: [],
       lineups: { home: [], away: [] }
     });
@@ -558,17 +569,68 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
         </div>
       ) : (
         <>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h2 className="text-3xl font-black">Management</h2>
         <div className="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm overflow-x-auto scrollbar-none w-full sm:w-auto">
-          <TabButton active={activeTab === 'leagues'} onClick={() => setActiveTab('leagues')} icon={<GlobeIcon size={18} />} label="Leagues" />
-          <TabButton active={activeTab === 'teams'} onClick={() => setActiveTab('teams')} icon={<UsersIcon size={18} />} label="Teams" />
-          <TabButton active={activeTab === 'games'} onClick={() => setActiveTab('games')} icon={<CalendarIcon size={18} />} label="Games" />
-          <TabButton active={activeTab === 'players'} onClick={() => setActiveTab('players')} icon={<TargetIcon size={18} />} label="Players" />
-          <TabButton active={activeTab === 'transfers'} onClick={() => setActiveTab('transfers')} icon={<TransferIcon size={18} />} label="Transfers" />
-          <TabButton active={activeTab === 'venues'} onClick={() => setActiveTab('venues')} icon={<MapPinIcon size={18} />} label="Venues" />
-          <TabButton active={activeTab === 'admins'} onClick={() => setActiveTab('admins')} icon={<ShieldIcon size={18} />} label="Admins" />
+          <TabButton active={activeTab === 'leagues'} onClick={() => { setActiveTab('leagues'); cancelEdit(); }} icon={<GlobeIcon size={18} />} label="Leagues" />
+          <TabButton active={activeTab === 'teams'} onClick={() => { setActiveTab('teams'); cancelEdit(); }} icon={<UsersIcon size={18} />} label="Teams" />
+          <TabButton active={activeTab === 'games'} onClick={() => { setActiveTab('games'); cancelEdit(); }} icon={<CalendarIcon size={18} />} label="Games" />
+          <TabButton active={activeTab === 'players'} onClick={() => { setActiveTab('players'); cancelEdit(); }} icon={<TargetIcon size={18} />} label="Players" />
+          <TabButton active={activeTab === 'transfers'} onClick={() => { setActiveTab('transfers'); cancelEdit(); }} icon={<TransferIcon size={18} />} label="Transfers" />
+          <TabButton active={activeTab === 'venues'} onClick={() => { setActiveTab('venues'); cancelEdit(); }} icon={<MapPinIcon size={18} />} label="Venues" />
+          <TabButton active={activeTab === 'admins'} onClick={() => { setActiveTab('admins'); cancelEdit(); }} icon={<ShieldIcon size={18} />} label="Admins" />
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <button 
+          onClick={() => { setActiveTab('leagues'); cancelEdit(); }}
+          className="p-6 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-3 text-center"
+        >
+          <div className="p-3 bg-blue-50 rounded-2xl">
+            <PlusIcon className="text-blue-600" />
+          </div>
+          <div>
+            <p className="font-black text-sm">Add League</p>
+            <p className="text-[10px] text-gray-400 font-bold uppercase">Create League</p>
+          </div>
+        </button>
+        <button 
+          onClick={() => { setActiveTab('games'); cancelEdit(); }}
+          className="p-6 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-3 text-center"
+        >
+          <div className="p-3 bg-green-50 rounded-2xl">
+            <PlusIcon className="text-green-600" />
+          </div>
+          <div>
+            <p className="font-black text-sm">Add Game</p>
+            <p className="text-[10px] text-gray-400 font-bold uppercase">Schedule Match</p>
+          </div>
+        </button>
+        <button 
+          onClick={() => { setActiveTab('teams'); cancelEdit(); }}
+          className="p-6 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-3 text-center"
+        >
+          <div className="p-3 bg-purple-50 rounded-2xl">
+            <PlusIcon className="text-purple-600" />
+          </div>
+          <div>
+            <p className="font-black text-sm">Add Team</p>
+            <p className="text-[10px] text-gray-400 font-bold uppercase">Register Club</p>
+          </div>
+        </button>
+        <button 
+          onClick={() => { setActiveTab('players'); cancelEdit(); }}
+          className="p-6 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-3 text-center"
+        >
+          <div className="p-3 bg-orange-50 rounded-2xl">
+            <PlusIcon className="text-orange-600" />
+          </div>
+          <div>
+            <p className="font-black text-sm">Add Player</p>
+            <p className="text-[10px] text-gray-400 font-bold uppercase">New Signing</p>
+          </div>
+        </button>
       </div>
 
       <AnimatePresence mode="wait">
@@ -851,6 +913,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
             <AdminCard title={editingId ? "Edit League" : "Add New League"} icon={<TrophyIcon className="text-blue-600" />}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="League Name" value={leagueForm.name} onChange={v => setLeagueForm({ ...leagueForm, name: v })} placeholder="e.g. Premier League" />
+                <Select label="Type" value={leagueForm.type} onChange={v => setLeagueForm({ ...leagueForm, type: v as any })} options={[{ label: 'Standard League', value: 'league' }, { label: 'Cup / Tournament', value: 'cup' }]} />
                 <Input label="Country" value={leagueForm.country} onChange={v => setLeagueForm({ ...leagueForm, country: v })} placeholder="e.g. England" />
                 <div className="sm:col-span-2">
                    <Input label="Description" value={leagueForm.description} onChange={v => setLeagueForm({ ...leagueForm, description: v })} placeholder="League history and details..." />
@@ -948,10 +1011,12 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
                     <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden">
                       {l.logo ? <img src={l.logo} alt="" className="w-full h-full object-contain" /> : <GlobeIcon className="text-gray-300" />}
                     </div>
-                    <div>
-                      <p className="font-bold text-sm">{l.name}</p>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase">{l.country}</p>
-                    </div>
+                    <span className={cn(
+                      "text-[8px] font-black uppercase px-2 py-0.5 rounded-full ml-2",
+                      l.type === 'cup' ? "bg-purple-50 text-purple-600" : "bg-blue-50 text-blue-600"
+                    )}>
+                      {l.type || 'league'}
+                    </span>
                   </div>
                   <div className="flex gap-2">
                     <button 
@@ -1102,11 +1167,13 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
                     value={gameForm.round} 
                     onChange={v => setGameForm({ ...gameForm, round: v })}
                     options={[
+                      { label: 'Group Stage', value: 'Group Stage' },
+                      { label: 'Playoff', value: 'Playoff' },
+                      { label: 'Quarter-final', value: 'Quarter-final' },
+                      { label: 'Semi-final', value: 'Semi-final' },
+                      { label: 'Final', value: 'Final' },
                       { label: 'Matchday 1', value: 'Matchday 1' },
-                      { label: 'Matchday 2', value: 'Matchday 2' },
-                      { label: 'Quarter Final', value: 'Quarter Final' },
-                      { label: 'Semi Final', value: 'Semi Final' },
-                      { label: 'Final', value: 'Final' }
+                      { label: 'Matchday 2', value: 'Matchday 2' }
                     ]}
                   />
                   <Select 
@@ -1115,6 +1182,14 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
                     onChange={v => setGameForm({ ...gameForm, venueId: v })}
                     options={venues.map(v => ({ label: `${v.name} (${v.city})`, value: v.id }))}
                   />
+                  {gameForm.status === 'live' && (
+                    <Input 
+                      label="Match Time (e.g. 45' or HT)" 
+                      value={gameForm.currentTime} 
+                      onChange={v => setGameForm({ ...gameForm, currentTime: v })} 
+                      placeholder="e.g. 12', 45+2, HT"
+                    />
+                  )}
 
                   {/* Enhanced Game Editor: Events and Lineups */}
                   {editingId && (
@@ -1130,7 +1205,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
                           <h5 className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-2">{editingEventId ? 'Edit Event' : 'Add Event'}</h5>
                           <div className="p-6 bg-gray-50 rounded-[32px] space-y-4">
                              <div className="grid grid-cols-2 gap-4">
-                               <Select label="Type" value={eventForm.type} onChange={v => setEventForm({ ...eventForm, type: v as any })} options={[{label: 'Goal', value: 'goal'}, {label: 'Yellow Card', value: 'yellow'}, {label: 'Red Card', value: 'red'}, {label: 'Substitution', value: 'sub'}]} />
+                               <Select label="Type" value={eventForm.type} onChange={v => setEventForm({ ...eventForm, type: v as any })} options={[{label: 'Goal', value: 'goal'}, {label: 'Penalty', value: 'penalty'}, {label: 'Yellow Card', value: 'yellow'}, {label: 'Red Card', value: 'red'}, {label: 'Substitution', value: 'sub'}]} />
                                <Input type="number" label="Minute" value={eventForm.minute} onChange={v => setEventForm({ ...eventForm, minute: parseInt(v) })} />
                              </div>
                              <Select label="Team" value={eventForm.teamId} onChange={v => setEventForm({ ...eventForm, teamId: v })} options={[{label: teams.find(t => t.id === gameForm.homeTeamId)?.name || 'Home', value: gameForm.homeTeamId}, {label: teams.find(t => t.id === gameForm.awayTeamId)?.name || 'Away', value: gameForm.awayTeamId}]} />

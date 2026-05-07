@@ -21,7 +21,9 @@ import {
   History as HistoryIcon,
   Layout as LayoutIcon,
   Heart as HeartIcon,
-  ArrowLeftRight as TransferIcon
+  ArrowLeftRight as TransferIcon,
+  Bell as BellIcon,
+  X as XIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -32,12 +34,15 @@ import {
   doc, 
   query, 
   where,
-  getDocFromServer
+  getDocFromServer,
+  collectionGroup,
+  limit,
+  orderBy
 } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from './firebase';
 import { cn } from './lib/utils';
-import { League, Game, Team, Player, Venue, Season, Administrator, Transfer } from './types';
+import { League, Game, Team, Player, Venue, Administrator, Transfer, AppNotification } from './types';
 
 // Components
 import { AdminPanel } from './components/AdminPanel';
@@ -76,9 +81,57 @@ export default function App() {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [administrators, setAdministrators] = useState<Administrator[]>([]);
   const [favorites, setFavorites] = useState<{ id: string; teamId: string }[]>([]);
-  const [transfers, setTransfers] = useState<any[]>([]);
+  const [followedGames, setFollowedGames] = useState<{ id: string; gameId: string }[]>([]);
+  const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
   const [showOnlyLive, setShowOnlyLive] = useState(false);
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
+  const [activeBanner, setActiveBanner] = useState<AppNotification | null>(null);
+  const [transferFilter, setTransferFilter] = useState<'worldwide' | 'domestic' | 'top'>('worldwide');
+
+  // Settings state
+  const [prefNotifications, setPrefNotifications] = useState(() => {
+    return localStorage.getItem('pref_notifications') === 'true';
+  });
+  const [prefMobileBanners, setPrefMobileBanners] = useState(() => {
+    return localStorage.getItem('pref_mobile_banners') === 'true';
+  });
+  const [prefTimeFormat, setPrefTimeFormat] = useState<'12h' | '24h'>(() => {
+    return (localStorage.getItem('pref_time_format') as any) || '24h';
+  });
+  const [prefTheme, setPrefTheme] = useState<'system' | 'light' | 'dark'>(() => {
+    return (localStorage.getItem('pref_theme') as any) || 'system';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('pref_notifications', prefNotifications.toString());
+  }, [prefNotifications]);
+
+  useEffect(() => {
+    localStorage.setItem('pref_mobile_banners', prefMobileBanners.toString());
+  }, [prefMobileBanners]);
+
+  useEffect(() => {
+    localStorage.setItem('pref_time_format', prefTimeFormat);
+  }, [prefTimeFormat]);
+
+  useEffect(() => {
+    localStorage.setItem('pref_theme', prefTheme);
+    
+    // Apply theme
+    const root = window.document.documentElement;
+    if (prefTheme === 'dark') {
+      root.classList.add('dark');
+    } else if (prefTheme === 'light') {
+      root.classList.remove('dark');
+    } else {
+      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (systemDark) root.classList.add('dark');
+      else root.classList.remove('dark');
+    }
+  }, [prefTheme]);
 
   // Auth Listener
   useEffect(() => {
@@ -86,6 +139,40 @@ export default function App() {
       setUser(u);
     });
   }, []);
+
+  // Match Notifications Sync
+  useEffect(() => {
+    if (!user) {
+      setFollowedGames([]);
+      return;
+    }
+    const path = `users/${user.uid}/matchNotifications`;
+    const q = collection(db, path);
+    return onSnapshot(q, (snapshot) => {
+      setFollowedGames(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as { id: string; gameId: string })));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, path));
+  }, [user]);
+
+  const toggleMatchFollow = async (gameId: string) => {
+    if (!user) {
+      handleLogin();
+      return;
+    }
+
+    const existingFollow = followedGames.find(f => f.gameId === gameId);
+    const path = `users/${user.uid}/matchNotifications`;
+
+    try {
+      if (existingFollow) {
+        const { deleteDoc: firestoreDeleteDoc } = await import('firebase/firestore');
+        await firestoreDeleteDoc(doc(db, path, existingFollow.id));
+      } else {
+        await addDoc(collection(db, path), { gameId });
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  };
 
   // Favorites Sync
   useEffect(() => {
@@ -124,35 +211,50 @@ export default function App() {
   // Firestore Sync - Leagues
   useEffect(() => {
     const path = 'leagues';
-    const q = collection(db, path);
+    const q = query(collection(db, path), orderBy('name', 'asc'));
     return onSnapshot(q, (snapshot) => {
       setLeagues(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as League)));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, path));
+    }, (error) => {
+      if (error.message.includes('Quota limit exceeded')) setQuotaExceeded(true);
+      handleFirestoreError(error, OperationType.LIST, path);
+    });
   }, []);
 
   // Firestore Sync - Games
   useEffect(() => {
     const path = 'games';
-    const q = collection(db, path);
+    const q = query(
+      collection(db, path), 
+      orderBy('date', 'desc'),
+      limit(50)
+    );
     return onSnapshot(q, (snapshot) => {
       const g = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Game));
-      setGames(g.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, path));
+      setGames(g);
+    }, (error) => {
+      if (error.message.includes('Quota limit exceeded')) setQuotaExceeded(true);
+      handleFirestoreError(error, OperationType.LIST, path);
+    });
   }, []);
 
   // Firestore Sync - Teams
   useEffect(() => {
     const path = 'teams';
-    const q = collection(db, path);
+    const q = query(collection(db, path), orderBy('name', 'asc'));
     return onSnapshot(q, (snapshot) => {
       setTeams(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, path));
+    }, (error) => {
+      if (error.message.includes('Quota limit exceeded')) setQuotaExceeded(true);
+      handleFirestoreError(error, OperationType.LIST, path);
+    });
   }, []);
 
   // Firestore Sync - Players
   useEffect(() => {
     const path = 'players';
-    const q = collection(db, path);
+    // Limiting to 100 players for now to save quota. 
+    // Ideally pagination or searching should be used.
+    const q = query(collection(db, path), limit(100));
     return onSnapshot(q, (snapshot) => {
       setPlayers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Player)));
     }, (error) => handleFirestoreError(error, OperationType.LIST, path));
@@ -161,7 +263,7 @@ export default function App() {
   // Firestore Sync - Venues
   useEffect(() => {
     const path = 'venues';
-    const q = collection(db, path);
+    const q = query(collection(db, path), orderBy('name', 'asc'));
     return onSnapshot(q, (snapshot) => {
       setVenues(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Venue)));
     }, (error) => handleFirestoreError(error, OperationType.LIST, path));
@@ -170,10 +272,14 @@ export default function App() {
   // Firestore Sync - Transfers
   useEffect(() => {
     const path = 'transfers';
-    const q = collection(db, path);
+    const q = query(
+      collection(db, path), 
+      orderBy('date', 'desc'),
+      limit(20)
+    );
     return onSnapshot(q, (snapshot) => {
       const t = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transfer));
-      setTransfers(t.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      setTransfers(t);
     }, (error) => handleFirestoreError(error, OperationType.LIST, path));
   }, []);
 
@@ -200,6 +306,81 @@ export default function App() {
       }
     }
   }, [user, administrators]);
+
+  // Real-time Match Event Tracking for Notifications
+  const lastEventsRef = React.useRef<Record<string, number>>({});
+  
+  useEffect(() => {
+    if (games.length === 0) return;
+    
+    const newNotifications: AppNotification[] = [];
+    
+    games.forEach(game => {
+      const prevCount = lastEventsRef.current[game.id] || 0;
+      const currentEvents = game.events || [];
+      const isFollowed = followedGames.some(f => f.gameId === game.id);
+      
+      if (currentEvents.length > prevCount) {
+        // New events detected
+        const newEvents = currentEvents.slice(prevCount);
+        newEvents.forEach(event => {
+          const team = teams.find(t => t.id === event.teamId);
+          const player = players.find(p => p.id === event.playerId);
+          const opponent = teams.find(t => t.id === (game.homeTeamId === event.teamId ? game.awayTeamId : game.homeTeamId));
+          
+          let title = '';
+          let message = '';
+          
+          switch(event.type) {
+            case 'goal':
+              title = 'GOAL! ⚽️';
+              message = `${player?.name || 'Player'} scores for ${team?.name || 'Team'} vs ${opponent?.name || 'Opponent'}!`;
+              break;
+            case 'penalty':
+              title = 'PENALTY! 🥅';
+              message = `Penalty awarded to ${team?.name || 'Team'} at ${event.minute}' minute!`;
+              break;
+            case 'red':
+              title = 'RED CARD! 🟥';
+              message = `${player?.name || 'Player'} (${team?.name}) sent off!`;
+              break;
+            case 'yellow':
+              title = 'YELLOW CARD! 🟨';
+              message = `${player?.name || 'Player'} (${team?.name}) booked.`;
+              break;
+          }
+          
+          if (title && prefNotifications) {
+            // Only notify if followed OR major event
+            if (isFollowed || ['goal', 'red'].includes(event.type)) {
+              const notif: AppNotification = {
+                id: Math.random().toString(36).substr(2, 9),
+                type: event.type as any,
+                title,
+                message,
+                gameId: game.id,
+                timestamp: new Date().toISOString(),
+                isRead: false
+              };
+              newNotifications.push(notif);
+              
+              if (prefMobileBanners) {
+                setActiveBanner(notif);
+                setTimeout(() => setActiveBanner(null), 5000);
+              }
+            }
+          }
+        });
+      }
+      
+      // Update ref
+      lastEventsRef.current[game.id] = currentEvents.length;
+    });
+    
+    if (newNotifications.length > 0) {
+      setNotifications(prev => [...newNotifications, ...prev].slice(0, 50));
+    }
+  }, [games, teams, players]);
 
   const handleLogin = async () => {
     try {
@@ -262,6 +443,57 @@ export default function App() {
           navigateTo('player-details');
         }}
       />
+
+      {quotaExceeded && (
+        <div className="bg-orange-500 text-white px-4 py-2 text-center text-xs font-bold animate-pulse">
+          Firestore Quota Exceeded. Data may be stale or partially loaded. Limits reset at midnight PT.
+        </div>
+      )}
+
+      {/* Floating Mobile Banner */}
+      <AnimatePresence>
+        {activeBanner && (
+          <motion.div
+            initial={{ y: -100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -100, opacity: 0 }}
+            onClick={() => {
+              if (activeBanner.gameId) {
+                setSelectedGameId(activeBanner.gameId);
+                navigateTo('game-details');
+              }
+              setActiveBanner(null);
+            }}
+            className="fixed top-4 left-4 right-4 z-[100] cursor-pointer"
+          >
+            <div className="bg-white/90 dark:bg-gray-900/90 text-gray-900 dark:text-white p-3.5 rounded-[28px] shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex items-center gap-4 border border-white/20 backdrop-blur-2xl ring-1 ring-black/5">
+               <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-blue-200">
+                 {activeBanner.type === 'goal' ? '⚽️' : activeBanner.type === 'penalty' ? '🥅' : activeBanner.type === 'red' ? '🟥' : '🟨'}
+               </div>
+               <div className="flex-1 overflow-hidden">
+                 <div className="flex items-center gap-2 mb-0.5">
+                   <p className="font-black text-[13px] leading-none">{activeBanner.title}</p>
+                   <span className="text-[10px] text-gray-400 font-bold">• Just now</span>
+                 </div>
+                 <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 truncate tracking-tight">{activeBanner.message}</p>
+               </div>
+               <div className="w-1 h-8 bg-gray-100 rounded-full mx-1" />
+               <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveBanner(null);
+                }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-all"
+               >
+                 <XIcon size={16} className="text-gray-400" />
+               </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+      </AnimatePresence>
 
       <main className="max-w-4xl mx-auto px-4 pt-6">
         <AnimatePresence mode="wait">
@@ -339,6 +571,8 @@ export default function App() {
                           navigateTo('team-details');
                         }}
                         isLive
+                        isFollowing={followedGames.some(f => f.gameId === game.id)}
+                        onToggleFollow={() => toggleMatchFollow(game.id)}
                       />
                     ))}
                   </div>
@@ -371,6 +605,8 @@ export default function App() {
                           setSelectedTeamId(id);
                           navigateTo('team-details');
                         }}
+                        isFollowing={followedGames.some(f => f.gameId === game.id)}
+                        onToggleFollow={() => toggleMatchFollow(game.id)}
                       />
                     ))}
                   </div>
@@ -395,6 +631,8 @@ export default function App() {
                           setSelectedTeamId(id);
                           navigateTo('team-details');
                         }}
+                        isFollowing={followedGames.some(f => f.gameId === game.id)}
+                        onToggleFollow={() => toggleMatchFollow(game.id)}
                       />
                     ))
                   ) : (
@@ -450,6 +688,7 @@ export default function App() {
               teams={teams}
               games={games}
               leagues={leagues}
+              players={players}
               onBack={() => navigateTo('leagues')}
               onGameClick={(id) => {
                 setSelectedGameId(id);
@@ -459,8 +698,14 @@ export default function App() {
                 setSelectedTeamId(id);
                 navigateTo('team-details');
               }}
+              onPlayerClick={(id) => {
+                setSelectedPlayerId(id);
+                navigateTo('player-details');
+              }}
               isAdmin={isAdmin}
               onAddGame={() => navigateTo('admin')}
+              followedGames={followedGames.map(f => f.gameId)}
+              onToggleFollowMatch={toggleMatchFollow}
             />
           )}
 
@@ -477,11 +722,21 @@ export default function App() {
                 setSelectedTeamId(id);
                 navigateTo('team-details');
               }}
+              onLeagueClick={(id) => {
+                setSelectedLeagueId(id);
+                navigateTo('league-details');
+              }}
+              onGameClick={(id) => {
+                setSelectedGameId(id);
+                navigateTo('game-details');
+              }}
               onPlayerClick={(id) => {
                 setSelectedPlayerId(id);
                 navigateTo('player-details');
               }}
               isAdmin={isAdmin}
+              isFollowing={followedGames.some(f => f.gameId === selectedGameId)}
+              onToggleFollow={() => toggleMatchFollow(selectedGameId)}
             />
           )}
 
@@ -513,6 +768,12 @@ export default function App() {
               isFavorite={favorites.some(f => f.teamId === selectedTeamId)}
               onToggleFavorite={() => toggleFavorite(selectedTeamId)}
               onBack={() => navigateTo(previousView === 'team-details' ? 'matches' : previousView)}
+              onTeamClick={(id) => {
+                setSelectedTeamId(id);
+                navigateTo('team-details');
+              }}
+              followedGames={followedGames.map(f => f.gameId)}
+              onToggleFollowMatch={toggleMatchFollow}
               onGameClick={(id) => {
                 setSelectedGameId(id);
                 navigateTo('game-details');
@@ -540,18 +801,74 @@ export default function App() {
               exit={{ opacity: 0 }}
               className="space-y-6"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <h2 className="text-2xl font-black flex items-center gap-3">
                   <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-100">
                     <TransferIcon className="text-white" size={24} />
                   </div>
                   Transfer Market
                 </h2>
+                <div className="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm w-full sm:w-auto">
+                  <button 
+                    onClick={() => setTransferFilter('worldwide')}
+                    className={cn(
+                      "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-black transition-all",
+                      transferFilter === 'worldwide' ? "bg-gray-900 text-white shadow-lg" : "text-gray-400 hover:text-gray-600"
+                    )}
+                  >
+                    Worldwide
+                  </button>
+                  <button 
+                    onClick={() => setTransferFilter('top')}
+                    className={cn(
+                      "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-black transition-all",
+                      transferFilter === 'top' ? "bg-gray-900 text-white shadow-lg" : "text-gray-400 hover:text-gray-600"
+                    )}
+                  >
+                    Top Leagues
+                  </button>
+                  <button 
+                    onClick={() => setTransferFilter('domestic')}
+                    className={cn(
+                      "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-black transition-all",
+                      transferFilter === 'domestic' ? "bg-gray-900 text-white shadow-lg" : "text-gray-400 hover:text-gray-600"
+                    )}
+                  >
+                    Domestic
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-4">
-                {transfers.length > 0 ? (
-                  transfers.map((t, idx) => {
+                {(() => {
+                  const filtered = transfers.filter(t => {
+                    if (transferFilter === 'worldwide') return true;
+                    const fromTeam = teams.find(team => team.id === t.fromTeamId);
+                    const toTeam = teams.find(team => team.id === t.toTeamId);
+                    const fromLeague = leagues.find(l => l.id === fromTeam?.leagueId);
+                    const toLeague = leagues.find(l => l.id === toTeam?.leagueId);
+
+                    if (transferFilter === 'domestic') {
+                      return fromLeague?.country && toLeague?.country && fromLeague.country === toLeague.country;
+                    }
+                    if (transferFilter === 'top') {
+                      const topCountries = ['England', 'Spain', 'Germany', 'Italy', 'France', 'Portugal', 'Netherlands', 'Saudi Arabia', 'USA'];
+                      return (fromLeague?.country && topCountries.includes(fromLeague.country)) || 
+                             (toLeague?.country && topCountries.includes(toLeague.country));
+                    }
+                    return true;
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="p-12 text-center bg-white rounded-[40px] border border-gray-100 text-gray-400">
+                        <TransferIcon className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                        <p className="font-bold">No transfers found in this category.</p>
+                      </div>
+                    );
+                  }
+
+                  return filtered.map((t, idx) => {
                     const player = players.find(p => p.id === t.playerId);
                     const fromTeam = teams.find(team => team.id === t.fromTeamId);
                     const toTeam = teams.find(team => team.id === t.toTeamId);
@@ -617,13 +934,8 @@ export default function App() {
                         </div>
                       </motion.div>
                     );
-                  })
-                ) : (
-                  <div className="p-12 text-center bg-white rounded-[40px] border border-gray-100 text-gray-400">
-                    <TransferIcon className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                    <p>No transfer activities recorded yet.</p>
-                  </div>
-                )}
+                  });
+                })()}
               </div>
             </motion.div>
           )}
@@ -646,31 +958,138 @@ export default function App() {
           {view === 'settings' && (
             <motion.div
               key="settings"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               className="space-y-6"
             >
-              <h2 className="text-2xl font-bold">Preferences</h2>
-              <div className="bg-white rounded-3xl p-6 border border-gray-100 space-y-4">
-                <div className="flex justify-between items-center p-2">
-                  <div>
-                    <p className="font-medium">Dark Mode</p>
-                    <p className="text-sm text-gray-500">Coming soon</p>
+              <div className="flex items-center gap-4 mb-2">
+                <div className="p-3 bg-gray-900 rounded-2xl shadow-lg ring-4 ring-gray-50">
+                  <SettingsIcon className="text-white" size={24} />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black">Preferences</h2>
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest leading-none">App Configuration</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-[40px] p-8 border border-gray-100 shadow-sm space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Notifications</h3>
+                  
+                  <div className="flex justify-between items-center group">
+                    <div>
+                      <p className="font-black text-gray-900">Allow Notifications</p>
+                      <p className="text-xs text-gray-500 font-medium">Get real-time alerts for match events</p>
+                    </div>
+                    <button 
+                      onClick={() => setPrefNotifications(!prefNotifications)}
+                      className={cn(
+                        "w-14 h-8 rounded-full transition-all relative",
+                        prefNotifications ? "bg-blue-600 shadow-lg shadow-blue-100" : "bg-gray-100"
+                      )}
+                    >
+                      <div className={cn(
+                        "absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm",
+                        prefNotifications ? "left-7" : "left-1"
+                      )} />
+                    </button>
                   </div>
-                  <div className="w-12 h-6 bg-gray-200 rounded-full relative">
-                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full translate-x-0 transition-transform" />
+
+                  <div className="flex justify-between items-center group pt-4 border-t border-gray-50">
+                    <div>
+                      <p className="font-black text-gray-900">Banners mobile</p>
+                      <p className="text-xs text-gray-500 font-medium">Show match updates as floating top banners</p>
+                    </div>
+                    <button 
+                      onClick={() => setPrefMobileBanners(!prefMobileBanners)}
+                      className={cn(
+                        "w-14 h-8 rounded-full transition-all relative",
+                        prefMobileBanners ? "bg-blue-600 shadow-lg shadow-blue-100" : "bg-gray-100"
+                      )}
+                    >
+                      <div className={cn(
+                        "absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm",
+                        prefMobileBanners ? "left-7" : "left-1"
+                      )} />
+                    </button>
                   </div>
                 </div>
-                <div className="flex justify-between items-center p-2 border-t border-gray-50">
-                  <div>
-                    <p className="font-medium">Notifications</p>
-                    <p className="text-sm text-gray-500">Alerts for goals and kickoffs</p>
-                  </div>
-                   <div className="w-12 h-6 bg-blue-600 rounded-full relative">
-                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full translate-x-6 transition-transform" />
+
+                <div className="pt-6 border-t border-gray-100">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">Interface</h3>
+                  
+                  <div className="space-y-6">
+                    <div className="flex justify-between items-center group">
+                      <div>
+                        <p className="font-black text-gray-900">Time Format</p>
+                        <p className="text-xs text-gray-500 font-medium">Choose how match times are displayed</p>
+                      </div>
+                      <div className="flex bg-gray-50 p-1 rounded-2xl border border-gray-100">
+                        <button 
+                          onClick={() => setPrefTimeFormat('12h')}
+                          className={cn(
+                            "px-4 py-2 rounded-xl text-[10px] font-black transition-all",
+                            prefTimeFormat === '12h' ? "bg-white text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                          )}
+                        >
+                          AM/PM
+                        </button>
+                        <button 
+                          onClick={() => setPrefTimeFormat('24h')}
+                          className={cn(
+                            "px-4 py-2 rounded-xl text-[10px] font-black transition-all",
+                            prefTimeFormat === '24h' ? "bg-white text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                          )}
+                        >
+                          24H
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center group pt-4 border-t border-gray-50">
+                      <div>
+                        <p className="font-black text-gray-900">Theme Mode</p>
+                        <p className="text-xs text-gray-500 font-medium">Select your interface appearance</p>
+                      </div>
+                      <div className="flex bg-gray-50 p-1 rounded-2xl border border-gray-100">
+                        {(['system', 'light', 'dark'] as const).map(t => (
+                          <button 
+                            key={t}
+                            onClick={() => setPrefTheme(t)}
+                            className={cn(
+                              "px-3 py-2 rounded-xl text-[10px] font-black uppercase transition-all",
+                              prefTheme === t ? "bg-white text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                            )}
+                          >
+                            {t}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
+
+              {isAdmin && (
+                <div className="p-6 bg-blue-50 rounded-[32px] border border-blue-100 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-blue-600 rounded-xl text-white">
+                      <ShieldIcon size={20} />
+                    </div>
+                    <div>
+                      <p className="font-black text-blue-900">Admin Mode Active</p>
+                      <p className="text-xs text-blue-600 font-bold">You have full database access</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => navigateTo('admin')}
+                    className="px-4 py-2 bg-white text-blue-600 rounded-xl font-black text-xs shadow-sm hover:shadow-md transition-all"
+                  >
+                    Open Panel
+                  </button>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

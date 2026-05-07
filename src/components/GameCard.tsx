@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Game, Team, League } from '../types';
-import { Shield as ShieldIcon } from 'lucide-react';
+import { Shield as ShieldIcon, Bell as BellIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface GameCardProps {
@@ -12,9 +12,11 @@ interface GameCardProps {
   onClick: () => void;
   onTeamClick?: (teamId: string) => void;
   isLive?: boolean;
+  isFollowing?: boolean;
+  onToggleFollow?: () => void;
 }
 
-export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive }: GameCardProps) {
+export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, isFollowing, onToggleFollow }: GameCardProps) {
   const homeTeam = teams.find(t => t.id === game.homeTeamId);
   const awayTeam = teams.find(t => t.id === game.awayTeamId);
   const league = leagues.find(l => l.id === game.leagueId);
@@ -29,6 +31,34 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive }:
   // Use a ref-like approach or compare props to trigger pulse
   // For simplicity, we just watch the score values themselves
   const [prevScores, setPrevScores] = useState({ h: game.homeScore, a: game.awayScore });
+  const [timeLeft, setTimeLeft] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (game.status !== 'scheduled') {
+      setTimeLeft(null);
+      return;
+    }
+
+    const calculateTimeLeft = () => {
+      const difference = new Date(game.date).getTime() - new Date().getTime();
+      if (difference <= 0) return "Kickoff";
+      const hours = Math.floor(difference / (1000 * 60 * 60));
+      const minutes = Math.floor((difference / 1000 / 60) % 60);
+      const seconds = Math.floor((difference / 1000) % 60);
+
+      if (hours > 24) {
+        const days = Math.floor(hours / 24);
+        return `${days}d ${hours % 24}h`;
+      }
+      if (hours > 0) return `${hours}h ${minutes}m`;
+      if (minutes > 0) return `${minutes}m ${seconds}s`;
+      return `${seconds}s`;
+    };
+
+    const timer = setInterval(() => setTimeLeft(calculateTimeLeft()), 1000);
+    setTimeLeft(calculateTimeLeft());
+    return () => clearInterval(timer);
+  }, [game.date, game.status]);
 
   useEffect(() => {
     if (game.homeScore > prevScores.h) {
@@ -74,22 +104,27 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive }:
 
       {isLive && (
         <div className="absolute top-4 right-6 flex items-center gap-2">
+          {isFollowing && <BellIcon size={12} className="text-white fill-white mr-1" />}
           <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
           <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Live</span>
         </div>
       )}
 
-      {game.round && (
-        <div className={cn(
-          "absolute top-4 left-6 flex items-center gap-2 px-2 py-0.5 rounded-full",
-          isLive ? "bg-white/10 text-white" : "bg-gray-100 text-gray-400"
-        )}>
-          {league?.logo && <img src={league.logo} alt="" className="w-3 h-3 rounded-full object-cover" />}
-          <span className="text-[8px] font-black uppercase tracking-widest">
-            {league?.name} • {game.round}
-          </span>
+      {!isLive && isFollowing && (
+        <div className="absolute top-4 right-6">
+          <BellIcon size={12} className="text-blue-600 fill-blue-600" />
         </div>
       )}
+
+      <div className={cn(
+        "absolute top-4 left-6 flex items-center gap-2 px-2 py-0.5 rounded-full",
+        isLive ? "bg-white/10 text-white" : "bg-gray-100 text-gray-400"
+      )}>
+        {league?.logo && <img src={league.logo} alt="" className="w-3 h-3 rounded-full object-cover" />}
+        <span className="text-[8px] font-black uppercase tracking-widest">
+          {league?.name} {game.round ? `• ${game.round}` : ''}
+        </span>
+      </div>
 
       <div className="flex justify-between items-center">
         <div 
@@ -126,11 +161,28 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive }:
               {game.awayScore}
             </motion.span>
           </div>
-          <div className={cn(
-            "mt-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider",
-            isLive ? "bg-white/10 text-white" : "bg-gray-50 text-gray-400"
-          )}>
-            {game.status === 'live' ? 'Playing' : game.status === 'finished' ? 'Final' : new Date(game.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          <div className="flex flex-col items-center mt-3">
+            <div className={cn(
+              "px-2 py-0.5 rounded-full font-black uppercase tracking-widest text-[10px] shadow-sm transition-all",
+              isLive 
+                ? "bg-white text-blue-600 animate-pulse" 
+                : "bg-gray-100 text-gray-900 border border-gray-200"
+            )}>
+              {game.status === 'live' ? (game.currentTime || 'Playing') : game.status === 'finished' ? 'Final' : new Date(game.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: localStorage.getItem('pref_time_format') === '12h' })}
+            </div>
+            
+            {!isLive && game.status === 'scheduled' && (
+               <div className="flex flex-col items-center gap-1 mt-2">
+                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                   {new Date(game.date).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
+                 </p>
+                 {timeLeft && (
+                   <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 uppercase tracking-tighter">
+                     {timeLeft === 'Kickoff' ? 'SOON' : timeLeft}
+                   </span>
+                 )}
+               </div>
+            )}
           </div>
         </div>
 

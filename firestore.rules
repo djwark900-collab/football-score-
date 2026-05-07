@@ -34,7 +34,15 @@ service cloud.firestore {
       return data.keys().hasAll(['name']) &&
              data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
              (!('logo' in data) || (data.logo is string && data.logo.size() <= 1000000)) &&
-             (!('country' in data) || (data.country is string && data.country.size() <= 100));
+             (!('country' in data) || (data.country is string && data.country.size() <= 100)) &&
+             (!('currentSeasonId' in data) || (data.currentSeasonId is string && isValidId(data.currentSeasonId)));
+    }
+
+    function isValidSeason(data) {
+      return data.keys().hasAll(['leagueId', 'year', 'status']) &&
+             data.leagueId is string && isValidId(data.leagueId) &&
+             data.year is string && data.year.size() > 0 &&
+             data.status in ['active', 'finished', 'upcoming'];
     }
 
     function isValidTeam(data) {
@@ -112,6 +120,11 @@ service cloud.firestore {
       allow create: if isAdmin() && isValidLeague(incoming());
       allow update: if isAdmin() && isValidLeague(incoming());
       allow delete: if isAdmin();
+
+      match /seasons/{seasonId} {
+        allow read: if true;
+        allow write: if isAdmin() && isValidSeason(incoming());
+      }
     }
 
     match /teams/{teamId} {

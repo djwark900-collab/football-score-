@@ -9,10 +9,12 @@ import {
   Calendar as CalendarIcon,
   Users as UsersIcon,
   Trophy as TrophyIcon,
-  Heart as HeartIcon
+  Heart as HeartIcon,
+  TrendingUp as TrendingUpIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { GameCard } from './GameCard';
+import { Standings } from './Standings';
 
 interface TeamDetailsProps {
   team: Team;
@@ -21,13 +23,16 @@ interface TeamDetailsProps {
   players: Player[];
   leagues: League[];
   onBack: () => void;
+  onTeamClick: (teamId: string) => void;
   onGameClick: (gameId: string) => void;
   onPlayerClick?: (playerId: string) => void;
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
+  followedGames: string[];
+  onToggleFollowMatch: (gameId: string) => void;
 }
 
-type Tab = 'fixtures' | 'squad' | 'details';
+type Tab = 'fixtures' | 'squad' | 'standings' | 'details';
 
 export function TeamDetails({ 
   team, 
@@ -36,10 +41,13 @@ export function TeamDetails({
   players, 
   leagues, 
   onBack, 
+  onTeamClick,
   onGameClick, 
   onPlayerClick,
   isFavorite,
-  onToggleFavorite
+  onToggleFavorite,
+  followedGames,
+  onToggleFollowMatch
 }: TeamDetailsProps) {
   const [activeTab, setActiveTab] = useState<Tab>('fixtures');
 
@@ -54,7 +62,9 @@ export function TeamDetails({
     [players, team.id]
   );
 
-  const teamLeague = leagues.find(l => l.id === team.leagueId);
+  const league = leagues.find(l => l.id === team.leagueId);
+  const leagueTeams = teams.filter(t => t.leagueId === team.leagueId);
+  const leagueGames = games.filter(g => g.leagueId === team.leagueId);
 
   return (
     <div className="space-y-6">
@@ -84,10 +94,37 @@ export function TeamDetails({
             <div className="flex items-center gap-3 mt-1">
               <div className="flex items-center gap-1.5 bg-blue-50 px-3 py-1 rounded-full">
                 <TrophyIcon size={10} className="text-blue-600" />
-                <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{teamLeague?.name}</span>
+                <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{league?.name}</span>
               </div>
-              <span className="text-xs text-gray-300 font-bold">•</span>
-              <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">{teamLeague?.country}</span>
+              <div className="flex items-center gap-1 ml-2">
+                {(() => {
+                  const finishedGames = games.filter(g => (g.homeTeamId === team.id || g.awayTeamId === team.id) && g.status === 'finished')
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .slice(0, 5);
+                  
+                  return finishedGames.reverse().map((g, i) => {
+                    const isHome = g.homeTeamId === team.id;
+                    const result = isHome 
+                      ? (g.homeScore > g.awayScore ? 'W' : g.homeScore < g.awayScore ? 'L' : 'D')
+                      : (g.awayScore > g.homeScore ? 'W' : g.awayScore < g.homeScore ? 'L' : 'D');
+                    
+                    return (
+                      <div 
+                        key={i} 
+                        className={cn(
+                          "w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-black text-white shadow-sm",
+                          result === 'W' ? "bg-green-500 shadow-green-100" : 
+                          result === 'D' ? "bg-yellow-500 shadow-yellow-100" : 
+                          "bg-red-500 shadow-red-100"
+                        )}
+                        title={result === 'W' ? 'Win' : result === 'D' ? 'Draw' : 'Loss'}
+                      >
+                        {result}
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
             </div>
           </div>
         </div>
@@ -120,6 +157,12 @@ export function TeamDetails({
           label="Squad" 
         />
         <TabButton 
+          active={activeTab === 'standings'} 
+          onClick={() => setActiveTab('standings')} 
+          icon={<TrendingUpIcon size={18} />} 
+          label="Table" 
+        />
+        <TabButton 
           active={activeTab === 'details'} 
           onClick={() => setActiveTab('details')} 
           icon={<InfoIcon size={18} />} 
@@ -134,22 +177,87 @@ export function TeamDetails({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="grid gap-4"
+            className="space-y-8"
           >
-            {teamGames.length > 0 ? (
-              teamGames.map(game => (
-                <GameCard 
-                  key={game.id}
-                  game={game} 
-                  teams={teams}
-                  leagues={leagues}
-                  onClick={() => onGameClick(game.id)}
-                  isLive={game.status === 'live'}
-                />
-              ))
-            ) : (
-              <EmptyState icon={<CalendarIcon />} message="No matches scheduled." />
-            )}
+            {/* Recent Form List */}
+            {(() => {
+              const recentResults = teamGames.filter(g => g.status === 'finished').slice(0, 5);
+              if (recentResults.length === 0) return null;
+              
+              return (
+                <div className="space-y-4">
+                   <div className="flex items-center justify-between px-2">
+                     <h3 className="text-sm font-black uppercase tracking-widest text-gray-400">Recent Form</h3>
+                     <TrendingUpIcon size={14} className="text-gray-300" />
+                   </div>
+                   <div className="grid gap-3">
+                     {recentResults.map(g => {
+                       const isHome = g.homeTeamId === team.id;
+                       const result = isHome 
+                         ? (g.homeScore > g.awayScore ? 'W' : g.homeScore < g.awayScore ? 'L' : 'D')
+                         : (g.awayScore > g.homeScore ? 'W' : g.awayScore < g.homeScore ? 'L' : 'D');
+                       
+                       return (
+                         <div 
+                           key={g.id}
+                           onClick={() => onGameClick(g.id)}
+                           className="bg-white p-4 rounded-[28px] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between group"
+                         >
+                            <div className="flex items-center gap-3">
+                               <div className={cn(
+                                 "w-10 h-10 rounded-2xl flex items-center justify-center text-xs font-black text-white",
+                                 result === 'W' ? "bg-green-500" : result === 'L' ? "bg-red-500" : "bg-yellow-500"
+                               )}>
+                                 {result}
+                               </div>
+                               <div>
+                                 <p className="text-[10px] font-black uppercase text-gray-400 tracking-tight">
+                                   {new Date(g.date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                                 </p>
+                                 <p className="text-xs font-bold text-gray-900">
+                                   vs {teams.find(t => t.id === (isHome ? g.awayTeamId : g.homeTeamId))?.name}
+                                 </p>
+                               </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                               <div className="text-right">
+                                  <p className="text-xs font-black text-gray-900">{g.homeScore} - {g.awayScore}</p>
+                                  <p className="text-[10px] font-bold text-gray-400">{isHome ? 'Home' : 'Away'}</p>
+                               </div>
+                               <ChevronLeftIcon size={14} className="text-gray-300 rotate-180 group-hover:text-blue-600 transition-colors" />
+                            </div>
+                         </div>
+                       );
+                     })}
+                   </div>
+                </div>
+              );
+            })()}
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-2">
+                <h3 className="text-sm font-black uppercase tracking-widest text-gray-400">All Matches</h3>
+                <CalendarIcon size={14} className="text-gray-300" />
+              </div>
+              <div className="grid gap-4">
+                {teamGames.length > 0 ? (
+                  teamGames.map(game => (
+                    <GameCard 
+                      key={game.id}
+                      game={game} 
+                      teams={teams}
+                      leagues={leagues}
+                      onClick={() => onGameClick(game.id)}
+                      isLive={game.status === 'live'}
+                      isFollowing={followedGames.includes(game.id)}
+                      onToggleFollow={() => onToggleFollowMatch(game.id)}
+                    />
+                  ))
+                ) : (
+                  <EmptyState icon={<CalendarIcon />} message="No matches scheduled." />
+                )}
+              </div>
+            </div>
           </motion.div>
         )}
 
@@ -189,6 +297,26 @@ export function TeamDetails({
           </motion.div>
         )}
 
+        {activeTab === 'standings' && (
+          <motion.div
+            key="standings"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <Standings 
+              leagues={leagues}
+              teams={leagueTeams}
+              games={leagueGames}
+              onTeamClick={(id) => {
+                if (id !== team.id) {
+                  onTeamClick(id);
+                }
+              }}
+            />
+          </motion.div>
+        )}
+
         {activeTab === 'details' && (
           <motion.div
             key="details"
@@ -207,8 +335,8 @@ export function TeamDetails({
               
               <div className="space-y-4">
                 <DetailRow label="Full Name" value={team.name} />
-                <DetailRow label="Main Competition" value={teamLeague?.name || 'N/A'} />
-                <DetailRow label="Country" value={teamLeague?.country || 'N/A'} />
+                <DetailRow label="Main Competition" value={league?.name || 'N/A'} />
+                <DetailRow label="Country" value={league?.country || 'N/A'} />
                 <DetailRow label="Squad Size" value={`${teamPlayers.length} players`} />
               </div>
             </div>
@@ -216,21 +344,54 @@ export function TeamDetails({
             <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-blue-50 rounded-2xl">
-                  <TrophyIcon className="text-blue-600" size={24} />
+                  <TrendingUpIcon size={24} className="text-blue-600" />
                 </div>
                 <h3 className="text-xl font-black">Performance</h3>
               </div>
               
-              <div className="grid grid-cols-3 gap-4">
-                 <StatBox label="WL" value={teamGames.filter(g => g.status === 'finished').length} />
-                 <StatBox label="Wins" value={teamGames.filter(g => {
-                   if (g.status !== 'finished') return false;
-                   const isHome = g.homeTeamId === team.id;
-                   return isHome ? g.homeScore > g.awayScore : g.awayScore > g.homeScore;
-                 }).length} />
-                 <StatBox label="Goals" value={teamGames.reduce((acc, g) => {
-                   return acc + (g.homeTeamId === team.id ? g.homeScore : g.awayScore);
-                 }, 0)} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Recent Form</p>
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const finishedGames = games.filter(g => (g.homeTeamId === team.id || g.awayTeamId === team.id) && g.status === 'finished')
+                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                        .slice(0, 5);
+                      
+                      return finishedGames.reverse().map((g, i) => {
+                        const isHome = g.homeTeamId === team.id;
+                        const result = isHome 
+                          ? (g.homeScore > g.awayScore ? 'W' : g.homeScore < g.awayScore ? 'L' : 'D')
+                          : (g.awayScore > g.homeScore ? 'W' : g.awayScore < g.homeScore ? 'L' : 'D');
+                        
+                        return (
+                          <div 
+                            key={i} 
+                            className={cn(
+                              "w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black text-white shadow-md",
+                              result === 'W' ? "bg-green-500 shadow-green-100" : 
+                              result === 'D' ? "bg-yellow-500 shadow-yellow-100" : 
+                              "bg-red-500 shadow-red-100"
+                            )}
+                          >
+                            {result}
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                   <StatBox label="Wins" value={teamGames.filter(g => {
+                     if (g.status !== 'finished') return false;
+                     const isHome = g.homeTeamId === team.id;
+                     return isHome ? g.homeScore > g.awayScore : g.awayScore > g.homeScore;
+                   }).length} />
+                   <StatBox label="Goals" value={teamGames.reduce((acc, g) => {
+                     return acc + (g.homeTeamId === team.id ? g.homeScore : g.awayScore);
+                   }, 0)} />
+                </div>
               </div>
             </div>
           </motion.div>

@@ -1,5 +1,5 @@
 import { User } from 'firebase/auth';
-import { Search as SearchIcon, Plus as PlusIcon, User as UserIcon, Trophy as TrophyIcon, Lock as LockIcon, X as XIcon, Users as UsersIcon, Target as TargetIcon } from 'lucide-react';
+import { Search as SearchIcon, Plus as PlusIcon, User as UserIcon, Trophy as TrophyIcon, Lock as LockIcon, X as XIcon, Users as UsersIcon, Target as TargetIcon, Bell as BellIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useState, useRef, useEffect } from 'react';
 import { League, Team, Player } from '../types';

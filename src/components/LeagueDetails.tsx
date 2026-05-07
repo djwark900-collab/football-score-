@@ -9,27 +9,33 @@ import {
   Plus as PlusIcon,
   Shield as ShieldIcon,
   BookOpen as BookOpenIcon,
-  History as HistoryIcon
+  History as HistoryIcon,
+  Target as TargetIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { GameCard } from './GameCard';
 import { Standings } from './Standings';
+import { Player } from '../types';
 
 interface LeagueDetailsProps {
   league: League;
   teams: Team[];
   games: Game[];
   leagues: League[];
+  players: Player[];
   onBack: () => void;
   onGameClick: (gameId: string) => void;
   onTeamClick: (teamId: string) => void;
+  onPlayerClick?: (playerId: string) => void;
   isAdmin: boolean;
   onAddGame: () => void;
+  followedGames: string[];
+  onToggleFollowMatch: (gameId: string) => void;
 }
 
-type Tab = 'matches' | 'table' | 'history';
+type Tab = 'matches' | 'table' | 'stats' | 'history';
 
-export function LeagueDetails({ league, teams, games, leagues, onBack, onGameClick, onTeamClick, isAdmin, onAddGame }: LeagueDetailsProps) {
+export function LeagueDetails({ league, teams, games, leagues, players, onBack, onGameClick, onTeamClick, onPlayerClick, isAdmin, onAddGame, followedGames, onToggleFollowMatch }: LeagueDetailsProps) {
   const [activeTab, setActiveTab] = useState<Tab>('matches');
 
   const leagueTeams = useMemo(() => 
@@ -44,13 +50,31 @@ export function LeagueDetails({ league, teams, games, leagues, onBack, onGameCli
 
   const gamesByRound = useMemo(() => {
     const grouped: Record<string, Game[]> = {};
+    const roundsOrder = ['Group Stage', 'Playoff', 'Quarter-final', 'Semi-final', 'Final'];
+    
     leagueGames.forEach(g => {
       const round = g.round || 'Other';
       if (!grouped[round]) grouped[round] = [];
       grouped[round].push(g);
     });
+    
+    // Sort keys based on predefined order if it's a cup
+    if (league.type === 'cup') {
+      const sortedKeys = Object.keys(grouped).sort((a, b) => {
+        const idxA = roundsOrder.indexOf(a);
+        const idxB = roundsOrder.indexOf(b);
+        if (idxA === -1 && idxB === -1) return a.localeCompare(b);
+        if (idxA === -1) return 1;
+        if (idxB === -1) return -1;
+        return idxA - idxB;
+      });
+      const sorted: Record<string, Game[]> = {};
+      sortedKeys.forEach(k => sorted[k] = grouped[k]);
+      return sorted;
+    }
+    
     return grouped;
-  }, [leagueGames]);
+  }, [leagueGames, league.type]);
 
   return (
     <div className="space-y-6">
@@ -68,15 +92,23 @@ export function LeagueDetails({ league, teams, games, leagues, onBack, onGameCli
         </button>
         
         <div className="flex items-center gap-4 flex-1 relative z-10">
-          <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center p-3 shadow-inner">
+          <div className={cn(
+            "w-16 h-16 rounded-2xl flex items-center justify-center p-3 shadow-inner",
+            league.type === 'cup' ? "bg-purple-50" : "bg-blue-50"
+          )}>
              {league.logo ? (
                <img src={league.logo} alt={league.name} className="w-full h-full object-contain" />
              ) : (
-               <TrophyIcon className="text-blue-600 w-8 h-8" />
+               <TrophyIcon className={cn("w-8 h-8", league.type === 'cup' ? "text-purple-600" : "text-blue-600")} />
              )}
           </div>
           <div>
-            <h2 className="text-2xl font-black text-gray-900 leading-tight">{league.name}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-2xl font-black text-gray-900 leading-tight">{league.name}</h2>
+              {league.type === 'cup' && (
+                <span className="px-3 py-1 bg-purple-600 text-white text-[8px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-purple-200">Cup</span>
+              )}
+            </div>
             <div className="flex items-center gap-3 mt-1">
               <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
@@ -123,6 +155,16 @@ export function LeagueDetails({ league, teams, games, leagues, onBack, onGameCli
           Standings
         </button>
         <button 
+          onClick={() => setActiveTab('stats')}
+          className={cn(
+            "flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap",
+            activeTab === 'stats' ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "text-gray-400 hover:text-gray-600"
+          )}
+        >
+          <TargetIcon size={18} />
+          Stats
+        </button>
+        <button 
           onClick={() => setActiveTab('history')}
           className={cn(
             "flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap",
@@ -161,6 +203,8 @@ export function LeagueDetails({ league, teams, games, leagues, onBack, onGameCli
                         onClick={() => onGameClick(game.id)}
                         onTeamClick={onTeamClick}
                         isLive={game.status === 'live'}
+                        isFollowing={followedGames.includes(game.id)}
+                        onToggleFollow={() => onToggleFollowMatch(game.id)}
                       />
                     ))}
                   </div>
@@ -188,6 +232,96 @@ export function LeagueDetails({ league, teams, games, leagues, onBack, onGameCli
               games={leagueGames}
               onTeamClick={onTeamClick}
             />
+          </motion.div>
+        )}
+
+        {activeTab === 'stats' && (
+          <motion.div
+            key="stats-tab"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-6"
+          >
+            <div className="bg-white rounded-[40px] border border-gray-100 shadow-xl overflow-hidden">
+               <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-white to-gray-50">
+                  <div className="flex items-center gap-3">
+                      <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-100">
+                          <TargetIcon className="text-white" size={24} />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-black">Top Scorers</h2>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Goal Rankings</p>
+                      </div>
+                  </div>
+               </div>
+               
+               <div className="divide-y divide-gray-50">
+                  {(() => {
+                    const goalMap: Record<string, number> = {};
+                    leagueGames.forEach(game => {
+                      game.events?.forEach(event => {
+                        if (event.type === 'goal') {
+                          goalMap[event.playerId] = (goalMap[event.playerId] || 0) + 1;
+                        }
+                      });
+                    });
+
+                    const scorers = Object.entries(goalMap)
+                      .map(([playerId, goals]) => ({ playerId, goals }))
+                      .sort((a, b) => b.goals - a.goals)
+                      .slice(0, 10);
+
+                    if (scorers.length === 0) {
+                      return (
+                        <div className="p-12 text-center text-gray-400">
+                          <p>No goals recorded yet this league.</p>
+                        </div>
+                      );
+                    }
+
+                    return scorers.map((s, i) => {
+                      const player = players.find(p => p.id === s.playerId);
+                      const team = teams.find(t => t.id === player?.teamId);
+                      return (
+                        <div 
+                          key={s.playerId} 
+                          className="flex items-center justify-between p-6 hover:bg-gray-50 transition-colors cursor-pointer group"
+                          onClick={() => onPlayerClick?.(s.playerId)}
+                        >
+                          <div className="flex items-center gap-4">
+                            <span className={cn(
+                              "w-8 h-8 flex items-center justify-center rounded-xl font-black text-sm transition-all",
+                              i === 0 ? "bg-yellow-400 text-yellow-950 scale-110 shadow-lg shadow-yellow-100" :
+                              i === 1 ? "bg-gray-300 text-gray-700" :
+                              i === 2 ? "bg-orange-300 text-orange-900" :
+                              "text-gray-300 group-hover:text-gray-900"
+                            )}>
+                              {i + 1}
+                            </span>
+                            <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 overflow-hidden">
+                              {player?.imageUrl ? <img src={player.imageUrl} className="w-full h-full object-cover" /> : <ShieldIcon className="p-2 text-gray-200" />}
+                            </div>
+                            <div>
+                               <p className="font-black text-gray-900">{player?.name || 'Unknown'}</p>
+                               <div className="flex items-center gap-2 mt-0.5">
+                                 <div className="w-3 h-3">
+                                   {team?.logo && <img src={team.logo} className="w-full h-full object-contain" />}
+                                 </div>
+                                 <span className="text-[10px] font-bold text-gray-400 uppercase">{team?.name || 'No Team'}</span>
+                               </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                             <span className="text-xl font-black text-blue-600">{s.goals}</span>
+                             <span className="text-[10px] font-black uppercase text-gray-300">Goals</span>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+               </div>
+            </div>
           </motion.div>
         )}
 

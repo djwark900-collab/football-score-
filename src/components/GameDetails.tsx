@@ -13,12 +13,15 @@ import {
   Users as UsersIcon,
   Zap as ZapIcon,
   MapPin as MapPinIcon,
-  Clock as ClockIcon
+  Clock as ClockIcon,
+  Bell as BellIcon,
+  RefreshCw as RefreshCwIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Standings } from './Standings';
+import { GameCard } from './GameCard';
 
 interface GameDetailsProps {
   game: Game;
@@ -29,13 +32,17 @@ interface GameDetailsProps {
   venues: Venue[];
   onBack: () => void;
   onTeamClick: (teamId: string) => void;
+  onLeagueClick: (leagueId: string) => void;
+  onGameClick: (gameId: string) => void;
   onPlayerClick?: (playerId: string) => void;
   isAdmin: boolean;
+  isFollowing?: boolean;
+  onToggleFollow?: () => void;
 }
 
 type Tab = 'stats' | 'events' | 'lineups' | 'standings' | 'h2h';
 
-export function GameDetails({ game, teams, games, leagues, players, venues, onBack, onTeamClick, onPlayerClick, isAdmin }: GameDetailsProps) {
+export function GameDetails({ game, teams, games, leagues, players, venues, onBack, onTeamClick, onLeagueClick, onGameClick, onPlayerClick, isAdmin, isFollowing, onToggleFollow }: GameDetailsProps) {
   const [activeTab, setActiveTab] = useState<Tab>('stats');
   const homeTeam = teams.find(t => t.id === game.homeTeamId);
   const awayTeam = teams.find(t => t.id === game.awayTeamId);
@@ -43,6 +50,42 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
   const [pulse, setPulse] = useState<'home' | 'away' | null>(null);
   const [prevScores, setPrevScores] = useState({ h: game.homeScore, a: game.awayScore });
   const [loading, setLoading] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<string | null>(null);
+  const [selectedEventPlayer, setSelectedEventPlayer] = useState<string | null>(null);
+  const [selectedPlayerOut, setSelectedPlayerOut] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (game.status !== 'scheduled') {
+      setTimeLeft(null);
+      return;
+    }
+
+    const calculateTimeLeft = () => {
+      const difference = new Date(game.date).getTime() - new Date().getTime();
+      
+      if (difference <= 0) {
+        return "Kickoff";
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((difference / 1000 / 60) % 60);
+      const seconds = Math.floor((difference / 1000) % 60);
+
+      if (days > 0) return `${days}d ${hours}h`;
+      if (hours > 0) return `${hours}h ${minutes}m`;
+      if (minutes > 0) return `${minutes}m ${seconds}s`;
+      return `${seconds}s`;
+    };
+
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 1000);
+
+    setTimeLeft(calculateTimeLeft());
+
+    return () => clearInterval(timer);
+  }, [game.date, game.status]);
 
   const league = leagues.find(l => l.id === game.leagueId);
   const leagueTeams = teams.filter(t => t.leagueId === game.leagueId);
@@ -122,10 +165,25 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
           <ChevronLeftIcon size={24} />
         </button>
         <div className="flex flex-col items-center">
-          <span className="font-bold text-gray-900 text-sm sm:text-base truncate max-w-[150px] sm:max-w-none">Game Center</span>
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Match Information</span>
+          <div 
+            className="flex items-center gap-2 cursor-pointer hover:opacity-70 transition-opacity"
+            onClick={() => league && onLeagueClick(league.id)}
+          >
+            {league?.logo && <img src={league.logo} alt="" className="w-4 h-4 rounded-full object-contain" />}
+            <span className="font-bold text-gray-900 text-sm sm:text-base truncate max-w-[150px] sm:max-w-none">{league?.name || 'Game Center'}</span>
+          </div>
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{game.round ? `${game.round} • ` : ''}Match Information</span>
         </div>
         <div className="flex gap-2">
+            <button 
+              onClick={onToggleFollow}
+              className={cn(
+                "p-3 rounded-full transition-all",
+                isFollowing ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "bg-gray-50 text-gray-900 hover:bg-gray-100"
+              )}
+            >
+              <BellIcon size={20} className={isFollowing ? "fill-white" : ""} />
+            </button>
             <button className="p-3 bg-gray-50 rounded-full text-gray-900"><Share2Icon size={20} /></button>
         </div>
       </div>
@@ -159,28 +217,52 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
               <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Home</span>
            </div>
 
-           <div className="flex flex-col items-center gap-2 px-2 sm:px-8 shrink-0">
-              <div className="flex items-center gap-2 sm:gap-4">
+           <div className="flex flex-col items-center gap-4 px-2 sm:px-8 shrink-0">
+              <div className="flex flex-col items-center mt-2">
+                  <div className={cn(
+                  "px-4 py-1 rounded-full font-black uppercase tracking-widest text-[10px] shadow-sm transition-all border-2 border-white mb-2",
+                  game.status === 'live' ? "bg-red-500 text-white animate-pulse" : "bg-blue-600 text-white"
+                )}>
+                  {game.status === 'live' ? (game.currentTime || '90:00 LIVE') : game.status === 'finished' ? 'FINISHED' : new Date(game.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: localStorage.getItem('pref_time_format') === '12h' })}
+                </div>
+                
+                {game.status === 'scheduled' && (
+                   <div className="flex flex-col items-center mt-1">
+                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                       {new Date(game.date).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+                     </p>
+                     {timeLeft && (
+                       <div className="mt-2 flex items-center gap-1.5 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+                         <ClockIcon size={10} className="text-blue-600" />
+                         <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.1em]">{timeLeft}</span>
+                       </div>
+                     )}
+                   </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-4 sm:gap-8 mt-2">
                 <motion.span 
                   animate={pulse === 'home' ? { scale: [1, 1.3, 1], y: [0, -20, 0] } : {}}
-                  className="text-4xl sm:text-6xl font-black tabular-nums"
+                  className="text-5xl sm:text-7xl font-black tabular-nums drop-shadow-sm"
                 >
                   {game.homeScore}
                 </motion.span>
-                <span className="text-xl sm:text-2xl text-gray-200 font-black">:</span>
+                <span className="text-2xl sm:text-3xl text-gray-200 font-black opacity-30">:</span>
                 <motion.span 
                   animate={pulse === 'away' ? { scale: [1, 1.3, 1], y: [0, -20, 0] } : {}}
-                  className="text-4xl sm:text-6xl font-black tabular-nums"
+                  className="text-5xl sm:text-7xl font-black tabular-nums drop-shadow-sm"
                 >
                   {game.awayScore}
                 </motion.span>
               </div>
-              <div className={cn(
-                "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest",
-                game.status === 'live' ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"
-              )}>
-                {game.status === 'live' ? '90:00 LIVE' : game.status === 'finished' ? 'FINISHED' : 'KICKOFF'}
-              </div>
+
+              {venue && (
+                <div className="flex items-center gap-1.5 text-[9px] font-black text-gray-400 uppercase tracking-wider mt-4">
+                  <MapPinIcon size={12} className="text-blue-500" />
+                  <span>{venue.name}</span>
+                </div>
+              )}
            </div>
 
            <div 
@@ -258,6 +340,21 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
                   ))}
                 </div>
               </div>
+
+              {game.status === 'live' && (
+                <div className="bg-gray-50 p-4 rounded-3xl flex items-center justify-between gap-4">
+                  <span className="text-xs font-black uppercase tracking-tighter">Match Time</span>
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="text" 
+                      value={game.currentTime || ''} 
+                      onChange={(e) => updateGame({ currentTime: e.target.value })}
+                      placeholder="e.g. 45', HT"
+                      className="w-24 h-10 bg-white rounded-xl text-center font-bold text-xs border-none shadow-sm"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -327,6 +424,151 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
               exit={{ opacity: 0, y: -10 }}
               className="space-y-6"
             >
+              {isAdmin && (
+                <div className="space-y-4">
+                  {/* Status Control */}
+                  <div className="p-6 bg-gray-900 rounded-[32px] border border-gray-800 shadow-2xl flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-600 rounded-xl">
+                        <ZapIcon size={16} className="text-white" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase text-blue-400 tracking-widest">Global Status</p>
+                        <p className="text-xs font-bold text-white capitalize">{game.status}</p>
+                      </div>
+                    </div>
+                    <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
+                      {(['scheduled', 'live', 'finished'] as const).map(s => (
+                        <button
+                          key={s}
+                          onClick={() => updateGame({ status: s })}
+                          className={cn(
+                            "px-3 py-2 rounded-xl text-[10px] font-black uppercase transition-all",
+                            game.status === s ? "bg-blue-600 text-white shadow-lg" : "text-gray-500 hover:text-white"
+                          )}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="p-6 bg-blue-50 rounded-[32px] border border-blue-100 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-900">Live Events Control</h4>
+                      <div className="flex gap-2">
+                        <select 
+                          className="bg-white border border-blue-100 rounded-lg text-[9px] font-bold px-2 py-1 outline-none max-w-[100px]"
+                          value={selectedEventPlayer || ''}
+                          onChange={(e) => setSelectedEventPlayer(e.target.value)}
+                        >
+                          <option value="">Main Player</option>
+                          <optgroup label={homeTeam?.name || 'Home'}>
+                            {players.filter(p => p.teamId === game.homeTeamId).map(p => (
+                              <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                          </optgroup>
+                          <optgroup label={awayTeam?.name || 'Away'}>
+                            {players.filter(p => p.teamId === game.awayTeamId).map(p => (
+                              <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                          </optgroup>
+                        </select>
+                        <select 
+                          className="bg-white border border-blue-100 rounded-lg text-[9px] font-bold px-2 py-1 outline-none max-w-[100px]"
+                          value={selectedPlayerOut || ''}
+                          onChange={(e) => setSelectedPlayerOut(e.target.value)}
+                        >
+                          <option value="">Sub Out (Optional)</option>
+                          <optgroup label={homeTeam?.name || 'Home'}>
+                            {players.filter(p => p.teamId === game.homeTeamId).map(p => (
+                              <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                          </optgroup>
+                          <optgroup label={awayTeam?.name || 'Away'}>
+                            {players.filter(p => p.teamId === game.awayTeamId).map(p => (
+                              <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                          </optgroup>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <button 
+                        onClick={() => {
+                          const minute = parseInt(game.currentTime || '0');
+                          const teamId = selectedEventPlayer ? players.find(p => p.id === selectedEventPlayer)?.teamId || game.homeTeamId : game.homeTeamId;
+                          const playerId = selectedEventPlayer || players.find(p => p.teamId === teamId)?.id || 'unknown';
+                          const newEvent: MatchEvent = { id: Math.random().toString(36).substr(2,9), type: 'goal', minute, teamId, playerId };
+                          updateGame({ 
+                            [teamId === game.homeTeamId ? 'homeScore' : 'awayScore']: (teamId === game.homeTeamId ? game.homeScore : game.awayScore) + 1,
+                            events: [...(game.events || []), newEvent]
+                          });
+                        }}
+                        className="bg-white p-3 rounded-2xl border border-blue-100 flex flex-col items-center justify-center gap-2 hover:shadow-md transition-all group"
+                      >
+                        <ActivityIcon size={16} className="text-blue-600" />
+                        <span className="text-[10px] font-black uppercase text-blue-900">Goal</span>
+                      </button>
+                      <button 
+                        onClick={() => {
+                          const minute = parseInt(game.currentTime || '0');
+                          const teamId = selectedEventPlayer ? players.find(p => p.id === selectedEventPlayer)?.teamId || game.homeTeamId : game.homeTeamId;
+                          const playerId = selectedEventPlayer || players.find(p => p.teamId === teamId)?.id || 'unknown';
+                          const newEvent: MatchEvent = { id: Math.random().toString(36).substr(2,9), type: 'yellow', minute, teamId, playerId };
+                          updateGame({ 
+                            events: [...(game.events || []), newEvent]
+                          });
+                        }}
+                        className="bg-white p-3 rounded-2xl border border-blue-100 flex flex-col items-center justify-center gap-2 hover:shadow-md transition-all"
+                      >
+                        <div className="w-3 h-4 bg-yellow-400 rounded-sm" />
+                        <span className="text-[10px] font-black uppercase text-blue-900">Yellow</span>
+                      </button>
+                      <button 
+                        onClick={() => {
+                          const minute = parseInt(game.currentTime || '0');
+                          const teamId = selectedEventPlayer ? players.find(p => p.id === selectedEventPlayer)?.teamId || game.homeTeamId : game.homeTeamId;
+                          const playerId = selectedEventPlayer || players.find(p => p.teamId === teamId)?.id || 'unknown';
+                          const newEvent: MatchEvent = { id: Math.random().toString(36).substr(2,9), type: 'red', minute, teamId, playerId };
+                          updateGame({ 
+                            events: [...(game.events || []), newEvent]
+                          });
+                        }}
+                        className="bg-white p-3 rounded-2xl border border-blue-100 flex flex-col items-center justify-center gap-2 hover:shadow-md transition-all"
+                      >
+                        <div className="w-3 h-4 bg-red-600 rounded-sm" />
+                        <span className="text-[10px] font-black uppercase text-blue-900">Red Card</span>
+                      </button>
+                      <button 
+                        onClick={() => {
+                          const minute = parseInt(game.currentTime || '0');
+                          const teamId = selectedEventPlayer ? players.find(p => p.id === selectedEventPlayer)?.teamId || game.homeTeamId : game.homeTeamId;
+                          const playerInId = selectedEventPlayer || players.find(p => p.teamId === teamId)?.id || 'unknown';
+                          const playerOutId = selectedPlayerOut || 'unknown';
+                          const newEvent: MatchEvent = { 
+                            id: Math.random().toString(36).substr(2,9), 
+                            type: 'sub', 
+                            minute, 
+                            teamId, 
+                            playerId: playerInId,
+                            playerInId,
+                            playerOutId
+                          };
+                          updateGame({ 
+                            events: [...(game.events || []), newEvent]
+                          });
+                        }}
+                        className="bg-white p-3 rounded-2xl border border-blue-100 flex flex-col items-center justify-center gap-2 hover:shadow-md transition-all"
+                      >
+                        <RefreshCwIcon size={16} className="text-blue-600" />
+                        <span className="text-[10px] font-black uppercase text-blue-900">Sub</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center justify-between px-2">
                 <h4 className="text-sm font-black uppercase tracking-widest text-gray-400">Match Events</h4>
                 <ClockIcon size={14} className="text-gray-300" />
@@ -515,32 +757,18 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
               <h4 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6 px-2">Head to Head History</h4>
               {h2hGames.length > 0 ? (
                 h2hGames.map(g => {
-                  const h = teams.find(t => t.id === g.homeTeamId);
-                  const a = teams.find(t => t.id === g.awayTeamId);
-                  return (
-                    <div key={g.id} className="p-4 bg-gray-50 rounded-3xl flex items-center justify-between border border-gray-100">
-                      <div className="flex items-center gap-2 flex-1">
-                        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center p-1 shadow-sm">
-                          {h?.logo ? <img src={h.logo} className="w-full h-full object-contain" /> : <ShieldIcon size={16} className="text-gray-300" />}
-                        </div>
-                        <span className="text-xs font-bold truncate max-w-[80px]">{h?.name}</span>
-                      </div>
-                      <div className="flex flex-col items-center gap-1 px-4">
-                        <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-full shadow-sm border border-gray-100">
-                          <span className="font-black tabular-nums text-sm">{g.homeScore}</span>
-                          <span className="text-gray-300 font-bold">-</span>
-                          <span className="font-black tabular-nums text-sm">{g.awayScore}</span>
-                        </div>
-                        <span className="text-[8px] font-bold text-gray-400 uppercase">{new Date(g.date).toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex items-center gap-2 flex-1 justify-end">
-                        <span className="text-xs font-bold truncate max-w-[80px] text-right">{a?.name}</span>
-                        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center p-1 shadow-sm">
-                          {a?.logo ? <img src={a.logo} className="w-full h-full object-contain" /> : <ShieldIcon size={16} className="text-gray-300" />}
-                        </div>
-                      </div>
-                    </div>
-                  );
+                   // Using the GameCard component for a richer list view in H2H
+                   return (
+                     <div key={g.id} className="transform scale-[0.98] origin-center">
+                        <GameCard 
+                          game={g}
+                          teams={teams}
+                          leagues={leagues}
+                          onClick={() => onGameClick(g.id)} 
+                          isLive={g.status === 'live'}
+                        />
+                     </div>
+                   );
                 })
               ) : (
                 <div className="p-12 text-center text-gray-400">
@@ -558,6 +786,10 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
 
 function EventIcon({ type }: { type: MatchEvent['type'] }) {
   switch (type) {
+    case 'penalty':
+      return <div className="flex items-center justify-center p-1 bg-yellow-400 rounded-lg shadow-sm border border-yellow-300">
+        <ZapIcon className="text-white" size={14} />
+      </div>;
     case 'goal':
       return <ActivityIcon className="text-blue-600" size={16} />;
     case 'yellow':

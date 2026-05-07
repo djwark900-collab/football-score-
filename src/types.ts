@@ -4,6 +4,8 @@ export interface League {
   logo?: string;
   country?: string;
   description?: string;
+  type?: 'league' | 'cup';
+  currentSeasonId?: string;
   history?: {
     season: string;
     winnerId: string;
@@ -45,7 +47,7 @@ export interface Venue {
 
 export interface MatchEvent {
   id: string;
-  type: 'goal' | 'yellow' | 'red' | 'sub';
+  type: 'goal' | 'yellow' | 'red' | 'sub' | 'penalty';
   minute: number;
   playerId: string;
   assistantId?: string;
@@ -63,10 +65,11 @@ export interface Game {
   homeScore: number;
   awayScore: number;
   status: 'scheduled' | 'live' | 'finished';
+  currentTime?: string;
   date: string;
   venueId?: string;
   attendance?: number;
-  round?: string;
+  round?: 'Group Stage' | 'Playoff' | 'Quarter-final' | 'Semi-final' | 'Final' | string;
   // Stats
   stats?: {
     possession: { home: number; away: number };
@@ -82,6 +85,16 @@ export interface Game {
     home: string[];
     away: string[];
   };
+}
+
+export interface AppNotification {
+  id: string;
+  type: 'goal' | 'penalty' | 'red' | 'yellow' | 'info';
+  title: string;
+  message: string;
+  gameId?: string;
+  timestamp: string;
+  isRead: boolean;
 }
 
 export interface Administrator {
