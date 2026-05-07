@@ -41,18 +41,16 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
 
     const calculateTimeLeft = () => {
       const difference = new Date(game.date).getTime() - new Date().getTime();
-      if (difference <= 0) return "Kickoff";
+      if (difference <= 0) return "LIVE NOW";
       const hours = Math.floor(difference / (1000 * 60 * 60));
       const minutes = Math.floor((difference / 1000 / 60) % 60);
       const seconds = Math.floor((difference / 1000) % 60);
 
-      if (hours > 24) {
+      if (hours >= 24) {
         const days = Math.floor(hours / 24);
-        return `${days}d ${hours % 24}h`;
+        return `${days}d ${hours % 24}h ${minutes}m`;
       }
-      if (hours > 0) return `${hours}h ${minutes}m`;
-      if (minutes > 0) return `${minutes}m ${seconds}s`;
-      return `${seconds}s`;
+      return `${hours}h ${minutes}m ${seconds}s`;
     };
 
     const timer = setInterval(() => setTimeLeft(calculateTimeLeft()), 1000);
@@ -161,9 +159,9 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
               {game.awayScore}
             </motion.span>
           </div>
-          <div className="flex flex-col items-center mt-3">
+            <div className="flex flex-col items-center mt-3">
             <div className={cn(
-              "px-2 py-0.5 rounded-full font-black uppercase tracking-widest text-[10px] shadow-sm transition-all",
+              "px-2 py-0.5 rounded-full font-black uppercase tracking-widest text-[9px] shadow-sm transition-all",
               isLive 
                 ? "bg-white text-blue-600 animate-pulse" 
                 : "bg-gray-100 text-gray-900 border border-gray-200"
@@ -171,16 +169,11 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
               {game.status === 'live' ? (game.currentTime || 'Playing') : game.status === 'finished' ? 'Final' : new Date(game.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: localStorage.getItem('pref_time_format') === '12h' })}
             </div>
             
-            {!isLive && game.status === 'scheduled' && (
-               <div className="flex flex-col items-center gap-1 mt-2">
-                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
-                   {new Date(game.date).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
-                 </p>
-                 {timeLeft && (
-                   <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 uppercase tracking-tighter">
-                     {timeLeft === 'Kickoff' ? 'SOON' : timeLeft}
-                   </span>
-                 )}
+            {!isLive && game.status === 'scheduled' && timeLeft && (
+               <div className="mt-1 flex items-center">
+                 <span className="text-[8px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md border border-blue-100/50 uppercase tracking-tighter">
+                   {timeLeft}
+                 </span>
                </div>
             )}
           </div>

@@ -64,7 +64,7 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
       const difference = new Date(game.date).getTime() - new Date().getTime();
       
       if (difference <= 0) {
-        return "Kickoff";
+        return "LIVE NOW";
       }
 
       const days = Math.floor(difference / (1000 * 60 * 60 * 24));
@@ -72,10 +72,8 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
       const minutes = Math.floor((difference / 1000 / 60) % 60);
       const seconds = Math.floor((difference / 1000) % 60);
 
-      if (days > 0) return `${days}d ${hours}h`;
-      if (hours > 0) return `${hours}h ${minutes}m`;
-      if (minutes > 0) return `${minutes}m ${seconds}s`;
-      return `${seconds}s`;
+      if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+      return `${hours}h ${minutes}m ${seconds}s`;
     };
 
     const timer = setInterval(() => {
@@ -232,9 +230,20 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
                        {new Date(game.date).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
                      </p>
                      {timeLeft && (
-                       <div className="mt-2 flex items-center gap-1.5 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-                         <ClockIcon size={10} className="text-blue-600" />
-                         <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.1em]">{timeLeft}</span>
+                       <div className="mt-4 flex flex-col items-center gap-1.5 pt-4 border-t border-gray-50 w-full">
+                         <span className="text-[8px] font-black text-gray-300 uppercase tracking-[0.3em]">
+                           {timeLeft === 'LIVE NOW' ? 'Match Started' : 'Live Countdown'}
+                         </span>
+                         <div className={cn(
+                           "flex items-center gap-3 bg-gray-900 px-8 py-3 rounded-[24px] shadow-2xl shadow-blue-100 border border-gray-800 ring-4 ring-white transition-all",
+                           timeLeft === 'LIVE NOW' && "px-4 py-1.5 ring-2"
+                         )}>
+                           <ClockIcon size={timeLeft === 'LIVE NOW' ? 10 : 14} className="text-blue-400 animate-pulse" />
+                           <span className={cn(
+                             "font-black text-white tabular-nums tracking-tighter",
+                             timeLeft === 'LIVE NOW' ? "text-[10px] tracking-widest" : "text-[18px]"
+                           )}>{timeLeft}</span>
+                         </div>
                        </div>
                      )}
                    </div>
@@ -754,22 +763,43 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
               exit={{ opacity: 0, y: -10 }}
               className="space-y-4"
             >
-              <h4 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6 px-2">Head to Head History</h4>
+              <div className="flex items-center justify-between px-2 mb-2">
+                <h4 className="text-sm font-black uppercase tracking-widest text-gray-400">Head to Head History</h4>
+                <HistoryIcon size={14} className="text-gray-300" />
+              </div>
               {h2hGames.length > 0 ? (
-                h2hGames.map(g => {
-                   // Using the GameCard component for a richer list view in H2H
-                   return (
-                     <div key={g.id} className="transform scale-[0.98] origin-center">
-                        <GameCard 
-                          game={g}
-                          teams={teams}
-                          leagues={leagues}
-                          onClick={() => onGameClick(g.id)} 
-                          isLive={g.status === 'live'}
-                        />
-                     </div>
-                   );
-                })
+                <div className="grid gap-3">
+                  {h2hGames.map(g => {
+                    const isHomeOutcome = g.homeTeamId === game.homeTeamId;
+                    return (
+                      <div 
+                        key={g.id} 
+                        onClick={() => onGameClick(g.id)}
+                        className="bg-white p-4 rounded-[28px] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between group"
+                      >
+                         <div className="flex items-center gap-4">
+                            <span className="text-[10px] font-black text-gray-400 w-12">{new Date(g.date).getFullYear()}</span>
+                            <div className="flex items-center gap-3">
+                               <div className="flex flex-col items-end">
+                                 <span className={cn("text-[11px] font-bold", isHomeOutcome ? "text-gray-900" : "text-gray-500")}>
+                                   {teams.find(t => t.id === g.homeTeamId)?.name}
+                                 </span>
+                               </div>
+                               <div className="bg-gray-50 px-3 py-1 rounded-xl border border-gray-100 font-black text-xs tabular-nums">
+                                 {g.homeScore} - {g.awayScore}
+                               </div>
+                               <div className="flex flex-col items-start">
+                                 <span className={cn("text-[11px] font-bold", !isHomeOutcome ? "text-gray-900" : "text-gray-500")}>
+                                   {teams.find(t => t.id === g.awayTeamId)?.name}
+                                 </span>
+                               </div>
+                            </div>
+                         </div>
+                         <ChevronLeftIcon size={14} className="text-gray-300 rotate-180 group-hover:text-blue-600 transition-colors" />
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
                 <div className="p-12 text-center text-gray-400">
                   <HistoryIcon className="w-12 h-12 mx-auto mb-4 opacity-10" />
