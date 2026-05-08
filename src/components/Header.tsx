@@ -17,6 +17,7 @@ interface HeaderProps {
   onLeagueClick: (id: string) => void;
   onTeamClick: (id: string) => void;
   onPlayerClick: (id: string) => void;
+  t: (key: string) => string;
 }
 
 export function Header({ 
@@ -30,7 +31,8 @@ export function Header({
   players,
   onLeagueClick,
   onTeamClick,
-  onPlayerClick
+  onPlayerClick,
+  t
 }: HeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -72,7 +74,7 @@ export function Header({
             <input 
               autoFocus={isSearchOpen}
               type="text"
-              placeholder="Search leagues, teams, players..."
+              placeholder={t('search_placeholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-12 pl-12 pr-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-600 font-medium text-sm transition-all shadow-sm"
@@ -166,7 +168,7 @@ export function Header({
             )}
           >
             {isAdmin ? <PlusIcon size={18} /> : <LockIcon size={18} />}
-            <span className="hidden sm:inline">{isAdmin ? 'Admin Panel' : 'Admin'}</span>
+            <span className="hidden sm:inline">{isAdmin ? t('admin_panel') : t('admin')}</span>
           </button>
 
           <button 

@@ -253,14 +253,19 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
               <div className="flex items-center gap-4 sm:gap-8 mt-2">
                 <motion.span 
                   animate={pulse === 'home' ? { scale: [1, 1.3, 1], y: [0, -20, 0] } : {}}
-                  className="text-5xl sm:text-7xl font-black tabular-nums drop-shadow-sm"
+                  className="text-5xl sm:text-7xl font-black tabular-nums drop-shadow-sm transition-all duration-500"
                 >
                   {game.homeScore}
                 </motion.span>
-                <span className="text-2xl sm:text-3xl text-gray-200 font-black opacity-30">:</span>
+                <span className={cn(
+                  "text-2xl sm:text-3xl font-black transition-all opacity-30",
+                  game.status === 'live' ? "text-white" : "text-gray-200"
+                )}>
+                  :
+                </span>
                 <motion.span 
                   animate={pulse === 'away' ? { scale: [1, 1.3, 1], y: [0, -20, 0] } : {}}
-                  className="text-5xl sm:text-7xl font-black tabular-nums drop-shadow-sm"
+                  className="text-5xl sm:text-7xl font-black tabular-nums drop-shadow-sm transition-all duration-500"
                 >
                   {game.awayScore}
                 </motion.span>

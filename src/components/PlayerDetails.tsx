@@ -10,7 +10,7 @@ import {
   TrendingUp as TrendingUpIcon,
   Calendar as CalendarIcon,
   User as UserIcon,
-  Zap as ZapIcon
+  Save as SaveIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -18,11 +18,13 @@ interface PlayerDetailsProps {
   player: Player;
   team?: Team;
   onBack: () => void;
+  isAdmin?: boolean;
+  onEdit?: (playerId: string) => void;
 }
 
 type Tab = 'overview' | 'career';
 
-export function PlayerDetails({ player, team, onBack }: PlayerDetailsProps) {
+export function PlayerDetails({ player, team, onBack, isAdmin, onEdit }: PlayerDetailsProps) {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
   return (
@@ -55,7 +57,18 @@ export function PlayerDetails({ player, team, onBack }: PlayerDetailsProps) {
                 <TargetIcon size={12} className="text-white/70" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-white">#{player.number} • {player.position}</span>
               </div>
-              <h2 className="text-4xl sm:text-5xl font-black mb-2 tracking-tight">{player.name}</h2>
+              <div className="flex items-center justify-center sm:justify-start gap-4">
+                <h2 className="text-4xl sm:text-5xl font-black mb-2 tracking-tight">{player.name}</h2>
+                {isAdmin && (
+                  <button 
+                    onClick={() => onEdit?.(player.id)}
+                    className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white transition-all shadow-lg"
+                    title="Edit Player"
+                  >
+                    <SaveIcon size={20} />
+                  </button>
+                )}
+              </div>
               {team && (
                 <div className="flex items-center justify-center sm:justify-start gap-3">
                    <div className="w-6 h-6 bg-white/90 rounded-lg flex items-center justify-center p-1">
@@ -100,7 +113,7 @@ export function PlayerDetails({ player, team, onBack }: PlayerDetailsProps) {
               <div className="md:col-span-2 bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-blue-50 rounded-2xl">
-                    <ZapIcon className="text-blue-600" size={24} />
+                    <InfoIcon className="text-blue-600" size={24} />
                   </div>
                   <h3 className="text-xl font-black">Player Summary</h3>
                 </div>

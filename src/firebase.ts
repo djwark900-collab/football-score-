@@ -14,8 +14,13 @@ async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
     console.log("Firestore connection successful");
-  } catch (error) {
-    console.error("Firestore connection failed:", error);
+  } catch (error: any) {
+    const errorMsg = error?.message || String(error);
+    if (errorMsg.includes('Quota limit exceeded') || errorMsg.includes('Quota exceeded')) {
+      console.warn("Firestore Limit Exceeded detected during connection test.");
+    } else {
+      console.error("Firestore connection failed:", error);
+    }
   }
 }
 testConnection();
@@ -40,9 +45,18 @@ export interface FirestoreErrorInfo {
   }
 }
 
+let lastQuotaErrorTime = 0;
+const QUOTA_ERROR_THROTTLE = 600000; // 10 minutes
+
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errorMsg = error instanceof Error ? error.message : String(error);
+  const isQuotaError = errorMsg.includes('Quota limit exceeded') || errorMsg.includes('Quota exceeded');
+  const isNetworkError = errorMsg.includes('Could not reach Cloud Firestore backend') || 
+                         errorMsg.includes('client is offline') || 
+                         errorMsg.includes('unavailable');
+  
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errorMsg,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
@@ -51,6 +65,18 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+
+  // Log everything to console as per guidelines for system diagnosis
+  if (isQuotaError || isNetworkError) {
+    const now = Date.now();
+    if (now - lastQuotaErrorTime > QUOTA_ERROR_THROTTLE) {
+      console.info(isQuotaError ? 'Firestore Limit reached. Using offline/stale data mode.' : 'Firestore connection issues. Operating in offline mode.', JSON.stringify(errInfo));
+      lastQuotaErrorTime = now;
+    }
+    // Throw to let the UI catch it
+    throw new Error(JSON.stringify(errInfo));
+  } else {
+    console.error('Firestore Error: ', JSON.stringify(errInfo));
+    throw new Error(JSON.stringify(errInfo));
+  }
 }

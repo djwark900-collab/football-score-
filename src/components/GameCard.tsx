@@ -147,14 +147,25 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
           <div className="flex items-center gap-4">
             <motion.span 
               animate={pulse === 'home' ? { scale: [1, 1.5, 1], color: ['#fff', '#facc15', '#fff'] } : {}}
-              className={cn("text-3xl font-black tabular-nums", isLive ? "text-white" : "text-gray-900")}
+              className={cn(
+                "text-3xl font-black tabular-nums transition-all duration-500", 
+                isLive ? "text-white" : "text-gray-900"
+              )}
             >
               {game.homeScore}
             </motion.span>
-            <span className={cn("text-lg opacity-40 font-bold", isLive ? "text-white" : "text-gray-300")}>:</span>
+            <span className={cn(
+              "text-lg font-bold transition-all", 
+              isLive ? "text-white opacity-40" : "text-gray-300 opacity-40"
+            )}>
+              :
+            </span>
             <motion.span 
               animate={pulse === 'away' ? { scale: [1, 1.5, 1], color: ['#fff', '#facc15', '#fff'] } : {}}
-              className={cn("text-3xl font-black tabular-nums", isLive ? "text-white" : "text-gray-900")}
+              className={cn(
+                "text-3xl font-black tabular-nums transition-all duration-500", 
+                isLive ? "text-white" : "text-gray-900"
+              )}
             >
               {game.awayScore}
             </motion.span>

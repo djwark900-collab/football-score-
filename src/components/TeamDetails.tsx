@@ -10,7 +10,8 @@ import {
   Users as UsersIcon,
   Trophy as TrophyIcon,
   Heart as HeartIcon,
-  TrendingUp as TrendingUpIcon
+  TrendingUp as TrendingUpIcon,
+  Plus as PlusIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { GameCard } from './GameCard';
@@ -30,6 +31,8 @@ interface TeamDetailsProps {
   onToggleFavorite?: () => void;
   followedGames: string[];
   onToggleFollowMatch: (gameId: string) => void;
+  isAdmin?: boolean;
+  onAddPlayer?: (teamId: string) => void;
 }
 
 type Tab = 'fixtures' | 'squad' | 'standings' | 'details';
@@ -47,7 +50,9 @@ export function TeamDetails({
   isFavorite,
   onToggleFavorite,
   followedGames,
-  onToggleFollowMatch
+  onToggleFollowMatch,
+  isAdmin,
+  onAddPlayer
 }: TeamDetailsProps) {
   const [activeTab, setActiveTab] = useState<Tab>('fixtures');
 
@@ -168,6 +173,15 @@ export function TeamDetails({
           icon={<InfoIcon size={18} />} 
           label="Details" 
         />
+        {isAdmin && activeTab === 'squad' && (
+          <button 
+            onClick={() => onAddPlayer?.(team.id)}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-orange-600 text-white shadow-lg shadow-orange-100 hover:bg-orange-700 transition-all ml-4"
+          >
+            <PlusIcon size={18} />
+            <span>Add Player</span>
+          </button>
+        )}
       </div>
 
       <AnimatePresence mode="wait">

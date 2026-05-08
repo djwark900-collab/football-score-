@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Trophy as TrophyIcon, 
@@ -8,6 +8,9 @@ import {
   Plus as PlusIcon, 
   Trash2 as Trash2Icon, 
   Save as SaveIcon, 
+  Edit as EditIcon,
+  Upload as UploadIcon,
+  X as XIcon,
   ChevronRight as ChevronRightIcon,
   Globe as GlobeIcon,
   MapPin as MapPinIcon,
@@ -33,14 +36,36 @@ interface AdminPanelProps {
   user: any;
   onLogin: () => void;
   defaultLeagueId?: string;
+  defaultTeamId?: string;
+  defaultPlayerId?: string;
+  quotaExceeded?: boolean;
 }
 
 type Tab = 'leagues' | 'teams' | 'games' | 'venues' | 'players' | 'admins' | 'transfers';
 
-export function AdminPanel({ leagues, teams, games, players, venues, transfers, administrators, user, onLogin, defaultLeagueId }: AdminPanelProps) {
-  const [activeTab, setActiveTab] = useState<Tab>(defaultLeagueId ? 'games' : 'leagues');
+export function AdminPanel({ leagues, teams, games, players, venues, transfers, administrators, user, onLogin, defaultLeagueId, defaultTeamId, defaultPlayerId, quotaExceeded }: AdminPanelProps) {
+  const [activeTab, setActiveTab] = useState<Tab>(defaultPlayerId || defaultTeamId ? 'players' : (defaultLeagueId ? 'games' : 'leagues'));
   const [loading, setLoading] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(defaultPlayerId || null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (defaultPlayerId) {
+      const p = players.find(player => player.id === defaultPlayerId);
+      if (p) {
+        setPlayerForm({ 
+          name: p.name, 
+          teamId: p.teamId, 
+          position: p.position || '', 
+          number: p.number || 0,
+          imageUrl: p.imageUrl || '',
+          overview: p.overview || '',
+          career: p.career || '',
+          transferHistory: p.transferHistory || ''
+        });
+      }
+    }
+  }, [defaultPlayerId, players]);
 
   // Form States
   const [leagueForm, setLeagueForm] = useState<{
@@ -100,7 +125,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [playerForm, setPlayerForm] = useState({ 
     name: '', 
-    teamId: '', 
+    teamId: defaultTeamId || '', 
     position: '', 
     number: 0,
     imageUrl: '',
@@ -119,6 +144,11 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
     type: 'permanent' as 'permanent' | 'loan' | 'free'
   });
 
+  const showFeedback = (msg: string) => {
+    setSuccessMessage(msg);
+    setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
   const handleAddLeague = async () => {
     if (!leagueForm.name) return;
     setLoading(true);
@@ -126,8 +156,10 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
     try {
       if (editingId) {
         await updateDoc(doc(db, 'leagues', editingId), leagueForm);
+        showFeedback('League details & logo updated!');
       } else {
         await addDoc(collection(db, 'leagues'), leagueForm);
+        showFeedback('League added successfully!');
       }
       setLeagueForm({ name: '', country: '', logo: '', description: '', type: 'league', currentSeasonId: '', history: [] });
       setEditingId(null);
@@ -186,8 +218,10 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
     try {
       if (editingId) {
         await updateDoc(doc(db, 'teams', editingId), teamForm);
+        showFeedback('Team profile & logo updated!');
       } else {
         await addDoc(collection(db, 'teams'), teamForm);
+        showFeedback('Team registered successfully!');
       }
       setTeamForm({ name: '', leagueId: defaultLeagueId || '', logo: '' });
       setEditingId(null);
@@ -205,8 +239,10 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
     try {
       if (editingId) {
         await updateDoc(doc(db, 'games', editingId), gameForm);
+        showFeedback('Match details updated!');
       } else {
         await addDoc(collection(db, 'games'), gameForm);
+        showFeedback('Match scheduled successfully!');
       }
       setGameForm({ 
         leagueId: defaultLeagueId || '', 
@@ -320,12 +356,14 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
     try {
       if (editingId) {
         await updateDoc(doc(db, 'players', editingId), playerForm);
+        showFeedback('Player profile & photo updated!');
       } else {
         await addDoc(collection(db, 'players'), playerForm);
+        showFeedback('Player & photo saved successfully!');
       }
       setPlayerForm({ 
         name: '', 
-        teamId: '', 
+        teamId: defaultTeamId || '', 
         position: '', 
         number: 0,
         imageUrl: '',
@@ -363,8 +401,10 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
     try {
       if (editingId) {
         await updateDoc(doc(db, 'venues', editingId), venueForm);
+        showFeedback('Venue updated successfully!');
       } else {
         await addDoc(collection(db, 'venues'), venueForm);
+        showFeedback('Venue added successfully!');
       }
       setVenueForm({ name: '', city: '', capacity: 0 });
       setEditingId(null);
@@ -396,8 +436,10 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
     try {
       if (editingId) {
         await updateDoc(doc(db, 'transfers', editingId), transferForm);
+        showFeedback('Transfer record updated!');
       } else {
         await addDoc(collection(db, 'transfers'), transferForm);
+        showFeedback('Transfer recorded successfully!');
         // Bonus: Update player's team automatically? 
         // For a simple app, we can just leave it as historical record, 
         // but maybe the user expects the player to move.
@@ -533,6 +575,10 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, callback: (base64: string) => void) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 1024 * 1024) {
+        alert('File is too large. Maximum size is 1MB to ensure database stability.');
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         callback(reader.result as string);
@@ -569,7 +615,21 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
         </div>
       ) : (
         <>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          {quotaExceeded && (
+            <div className="mb-6 p-6 bg-orange-50 border border-orange-100 rounded-[32px] flex flex-col sm:flex-row items-center gap-6 animate-in slide-in-from-top-4 duration-500">
+              <div className="w-16 h-16 bg-white rounded-[24px] flex items-center justify-center text-3xl shadow-sm shrink-0">
+                ⚠️
+              </div>
+              <div className="text-center sm:text-left">
+                <p className="text-lg font-black text-orange-900 tracking-tight">Connectivity Notice</p>
+                <p className="text-sm text-orange-700 font-medium leading-relaxed">
+                  The database connection is limited (it may be at capacity or your connection is unstable). 
+                  Data shown may be stale, and new changes might not reflect immediately.
+                </p>
+              </div>
+            </div>
+          )}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h2 className="text-3xl font-black">Management</h2>
         <div className="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm overflow-x-auto scrollbar-none w-full sm:w-auto">
           <TabButton active={activeTab === 'leagues'} onClick={() => { setActiveTab('leagues'); cancelEdit(); }} icon={<GlobeIcon size={18} />} label="Leagues" />
@@ -633,6 +693,22 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
         </button>
       </div>
 
+      <AnimatePresence>
+        {successMessage && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed top-8 left-1/2 -translate-x-1/2 z-[100]"
+          >
+            <div className="bg-green-600 text-white px-8 py-4 rounded-[24px] shadow-2xl shadow-green-100 border border-green-500 flex items-center gap-3 font-black">
+              <ZapIcon size={20} className="animate-pulse" />
+              {successMessage}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence mode="wait">
           {activeTab === 'admins' && (
             <motion.div key="admins-tab" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
@@ -694,23 +770,12 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
                 <Input label="Position" value={playerForm.position} onChange={v => setPlayerForm({ ...playerForm, position: v })} placeholder="e.g. Forward" />
                 <Input type="number" label="Shirt Number" value={playerForm.number} onChange={v => setPlayerForm({ ...playerForm, number: parseInt(v) })} />
                 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Player Image (File or URL)</label>
-                  <div className="flex gap-2">
-                    <input 
-                      type="text"
-                      value={playerForm.imageUrl}
-                      onChange={e => setPlayerForm({ ...playerForm, imageUrl: e.target.value })}
-                      placeholder="Paste image URL..."
-                      className="flex-1 p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 transition-all font-medium"
-                    />
-                    <label className="p-4 bg-gray-100 rounded-2xl cursor-pointer hover:bg-gray-200 transition-colors flex items-center justify-center min-w-[54px]">
-                      <LucideImage size={20} className="text-gray-500" />
-                      <input type="file" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, (b) => setPlayerForm({ ...playerForm, imageUrl: b }))} />
-                    </label>
-                  </div>
-                  {playerForm.imageUrl && <img src={playerForm.imageUrl} alt="Preview" className="h-12 w-12 rounded-xl object-cover bg-gray-50 p-1 mt-2 border" />}
-                </div>
+                <ImageUpload 
+                  label="Player Image (File or URL)" 
+                  value={playerForm.imageUrl} 
+                  onChange={v => setPlayerForm({ ...playerForm, imageUrl: v })}
+                  onFileSelect={handleFileUpload}
+                />
 
                 <div className="sm:col-span-2 space-y-4">
                   <div className="space-y-2">
@@ -750,7 +815,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
                   )}
                   <button onClick={handleAddPlayer} disabled={loading} className="px-8 h-[54px] bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">
                     {editingId ? <SaveIcon size={20} /> : <PlusIcon size={20} />}
-                    {editingId ? "Save Changes" : "Add Player"}
+                    {editingId ? "Save Player" : "Add Player"}
                   </button>
                 </div>
               </div>
@@ -815,7 +880,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
                   )}
                   <button onClick={handleAddTransfer} disabled={loading} className="px-8 h-[54px] bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">
                     {editingId ? <SaveIcon size={20} /> : <PlusIcon size={20} />}
-                    {editingId ? "Save Changes" : "Record Transfer"}
+                    {editingId ? "Save Transfer" : "Record Transfer"}
                   </button>
                 </div>
               </div>
@@ -869,7 +934,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
                   )}
                   <button onClick={handleAddVenue} disabled={loading} className="px-8 h-[54px] bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">
                     {editingId ? <SaveIcon size={20} /> : <PlusIcon size={20} />}
-                    {editingId ? "Save Changes" : "Add Venue"}
+                    {editingId ? "Save Venue" : "Add Venue"}
                   </button>
                 </div>
               </div>
@@ -973,23 +1038,12 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">League Logo (File or URL)</label>
-                  <div className="flex gap-2">
-                    <input 
-                      type="text"
-                      value={leagueForm.logo}
-                      onChange={e => setLeagueForm({ ...leagueForm, logo: e.target.value })}
-                      placeholder="Paste image URL..."
-                      className="flex-1 p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 transition-all font-medium"
-                    />
-                    <label className="p-4 bg-gray-100 rounded-2xl cursor-pointer hover:bg-gray-200 transition-colors flex items-center justify-center min-w-[54px]">
-                      <LucideImage size={20} className="text-gray-500" />
-                      <input type="file" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, (b) => setLeagueForm({ ...leagueForm, logo: b }))} />
-                    </label>
-                  </div>
-                  {leagueForm.logo && <img src={leagueForm.logo} alt="Preview" className="h-12 w-12 rounded-xl object-contain bg-gray-50 p-1 mt-2 border" />}
-                </div>
+                <ImageUpload 
+                  label="League Logo (File or URL)" 
+                  value={leagueForm.logo} 
+                  onChange={v => setLeagueForm({ ...leagueForm, logo: v })}
+                  onFileSelect={handleFileUpload}
+                />
                 <div className="sm:pt-7 flex gap-2">
                   {editingId && (
                     <button onClick={cancelEdit} className="px-6 h-[54px] bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all">
@@ -998,7 +1052,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
                   )}
                   <button onClick={handleAddLeague} disabled={loading} className="flex-1 h-[54px] bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">
                     {editingId ? <SaveIcon size={20} /> : <PlusIcon size={20} />}
-                    {editingId ? "Save Changes" : "Add League"}
+                    {editingId ? "Save League" : "Add League"}
                   </button>
                 </div>
               </div>
@@ -1046,23 +1100,12 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="Team Name" value={teamForm.name} onChange={v => setTeamForm({ ...teamForm, name: v })} placeholder="e.g. Manchester United" />
                 <Select label="Assign to League" value={teamForm.leagueId} onChange={v => setTeamForm({ ...teamForm, leagueId: v })} options={leagues.map(l => ({ label: l.name, value: l.id }))} />
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Team Logo (File or URL)</label>
-                  <div className="flex gap-2">
-                    <input 
-                      type="text"
-                      value={teamForm.logo}
-                      onChange={e => setTeamForm({ ...teamForm, logo: e.target.value })}
-                      placeholder="Paste image URL..."
-                      className="flex-1 p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 transition-all font-medium"
-                    />
-                    <label className="p-4 bg-gray-100 rounded-2xl cursor-pointer hover:bg-gray-200 transition-colors flex items-center justify-center min-w-[54px]">
-                      <LucideImage size={20} className="text-gray-500" />
-                      <input type="file" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, (b) => setTeamForm({ ...teamForm, logo: b }))} />
-                    </label>
-                  </div>
-                  {teamForm.logo && <img src={teamForm.logo} alt="Preview" className="h-12 w-12 rounded-xl object-contain bg-gray-50 p-1 mt-2 border" />}
-                </div>
+                <ImageUpload 
+                  label="Team Logo (File or URL)" 
+                  value={teamForm.logo} 
+                  onChange={v => setTeamForm({ ...teamForm, logo: v })}
+                  onFileSelect={handleFileUpload}
+                />
                 <div className="sm:pt-7 flex gap-2">
                   {editingId && (
                     <button onClick={cancelEdit} className="px-6 h-[54px] bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all">
@@ -1071,7 +1114,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
                   )}
                   <button onClick={handleAddTeam} disabled={loading} className="flex-1 h-[54px] bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">
                     {editingId ? <SaveIcon size={20} /> : <PlusIcon size={20} />}
-                    {editingId ? "Save Changes" : "Add Team"}
+                    {editingId ? "Save Team" : "Add Team"}
                   </button>
                 </div>
               </div>
@@ -1113,6 +1156,11 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
 
         {activeTab === 'games' && (
           <motion.div key="games-tab" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+            {quotaExceeded && (
+              <div className="bg-orange-500 text-white px-4 py-2 text-center text-[10px] font-black uppercase tracking-widest animate-pulse rounded-2xl mb-4">
+                OFFLINE MODE • DATA IS STALE • CONNECTION LIMITED
+              </div>
+            )}
             <AdminCard title={editingId ? "Edit Game" : "Schedule New Game"} icon={<CalendarIcon className="text-blue-600" />}>
                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <Select 
@@ -1317,7 +1365,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
                     )}
                     <button onClick={handleAddGame} disabled={loading} className="flex-1 h-[54px] bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">
                       {editingId ? <SaveIcon size={20} /> : <PlusIcon size={20} />}
-                      {editingId ? "Save Changes" : "Schedule Game"}
+                      {editingId ? "Save Match" : "Schedule Game"}
                     </button>
                   </div>
                </div>
@@ -1439,6 +1487,106 @@ function Select({ label, value, onChange, options }: { label: string; value: str
           <option key={opt.value} value={opt.value}>{opt.label}</option>
         ))}
       </select>
+    </div>
+  );
+}
+
+function ImageUpload({ 
+  value, 
+  onChange, 
+  label = "Image", 
+  onFileSelect 
+}: { 
+  value: string; 
+  onChange: (v: string) => void; 
+  label?: string;
+  onFileSelect: (e: React.ChangeEvent<HTMLInputElement>, cb: (b: string) => void) => void;
+}) {
+  const [isDragging, setIsDragging] = useState(false);
+
+  return (
+     <div className="space-y-2">
+      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">{label}</label>
+      <div 
+        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragging(false);
+          const file = e.dataTransfer.files?.[0];
+          if (file) {
+            if (file.size > 1024 * 1024) {
+              alert('File is too large. Max 1MB.');
+              return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => onChange(reader.result as string);
+            reader.readAsDataURL(file);
+          }
+        }}
+        className={cn(
+          "relative group transition-all duration-300",
+          isDragging ? "ring-2 ring-blue-600 ring-offset-2 scale-[1.01]" : ""
+        )}
+      >
+        <div className="relative overflow-hidden rounded-[32px] bg-gray-50 border-2 border-dashed border-gray-200 group-hover:border-blue-200 transition-all min-h-[160px] flex flex-col items-center justify-center p-6 text-center">
+          {value ? (
+            <div className="relative w-full h-full flex flex-col items-center gap-4 animate-in zoom-in-95 duration-300">
+               <div className="relative">
+                 <img src={value} alt="Preview" className="h-24 w-24 rounded-[28px] object-cover shadow-2xl ring-4 ring-white" />
+                 <div className="absolute -bottom-2 -right-2 p-1.5 bg-green-500 text-white rounded-full shadow-lg">
+                   <SaveIcon size={12} />
+                 </div>
+                 <button 
+                  onClick={() => onChange('')}
+                  className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-all scale-0 group-hover:scale-100"
+                 >
+                  <XIcon size={12} />
+                 </button>
+               </div>
+               <div className="space-y-1">
+                 <p className="text-xs font-black text-gray-900">Image ready to save</p>
+                 <button className="text-[10px] font-bold text-blue-600 hover:underline">Change image</button>
+               </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="w-12 h-12 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
+                <UploadIcon size={20} className="text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs font-black text-gray-900">Drop image or click to upload</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">JPG, PNG, WebP (Max 1MB)</p>
+              </div>
+            </div>
+          )}
+          <input 
+            type="file" 
+            className="absolute inset-0 opacity-0 cursor-pointer" 
+            accept="image/*" 
+            onChange={(e) => onFileSelect(e, onChange)} 
+          />
+        </div>
+      </div>
+      
+      <div className="relative group">
+        <input 
+          type="text"
+          value={value.startsWith('data:') ? 'Local file uploaded' : value}
+          onChange={e => onChange(e.target.value)}
+          placeholder="Or paste image URL here..."
+          disabled={value.startsWith('data:')}
+          className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 transition-all font-medium text-xs text-gray-500 placeholder:text-gray-300"
+        />
+        {value.startsWith('data:') && (
+          <button 
+            onClick={() => onChange('')}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-red-500 uppercase tracking-widest hover:underline"
+          >
+            Clear
+          </button>
+        )}
+      </div>
     </div>
   );
 }
