@@ -81,8 +81,8 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
       className={cn(
         "p-6 cursor-pointer relative overflow-hidden transition-all flex flex-col justify-center",
         isLive 
-          ? "bg-blue-600 text-white rounded-[32px] shadow-2xl shadow-blue-200" 
-          : "bg-white border border-gray-100 rounded-3xl hover:shadow-lg hover:shadow-gray-100",
+          ? "bg-blue-600 text-white rounded-[32px] shadow-2xl shadow-blue-200 dark:shadow-blue-900/40" 
+          : "bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl hover:shadow-lg hover:shadow-gray-100 dark:hover:shadow-black/20",
         !isLive && game.status === 'scheduled' && "h-[180px]"
       )}
     >
@@ -117,7 +117,7 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
 
       <div className={cn(
         "absolute top-4 left-6 flex items-center gap-2 px-2 py-0.5 rounded-full",
-        isLive ? "bg-white/10 text-white" : "bg-gray-100 text-gray-400"
+        isLive ? "bg-white/10 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-400"
       )}>
         {league?.logo && <img src={league.logo} alt="" className="w-3 h-3 rounded-full object-cover" />}
         <span className="text-[8px] font-black uppercase tracking-widest">
@@ -138,7 +138,7 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
           <TeamLogo logo={homeTeam?.logo} name={homeTeam?.name} dark={isLive} />
           <span className={cn(
             "font-bold text-sm transition-colors", 
-            isLive ? "text-white group-hover/team:text-blue-200" : "text-gray-900 group-hover/team:text-blue-600"
+            isLive ? "text-white group-hover/team:text-blue-200" : "text-gray-900 dark:text-white group-hover/team:text-blue-600 dark:group-hover/team:text-blue-400"
           )}>
             {homeTeam?.name || 'Loading...'}
           </span>
@@ -150,7 +150,7 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
               animate={pulse === 'home' ? { scale: [1, 1.5, 1], color: ['#fff', '#facc15', '#fff'] } : {}}
               className={cn(
                 "text-3xl font-black tabular-nums transition-all duration-500", 
-                isLive ? "text-white" : "text-gray-900"
+                isLive ? "text-white" : "text-gray-900 dark:text-gray-100"
               )}
             >
               {game.homeScore}
@@ -165,7 +165,7 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
               animate={pulse === 'away' ? { scale: [1, 1.5, 1], color: ['#fff', '#facc15', '#fff'] } : {}}
               className={cn(
                 "text-3xl font-black tabular-nums transition-all duration-500", 
-                isLive ? "text-white" : "text-gray-900"
+                isLive ? "text-white" : "text-gray-900 dark:text-gray-100"
               )}
             >
               {game.awayScore}
@@ -176,7 +176,7 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
               "px-2 py-0.5 rounded-full font-black uppercase tracking-widest text-[9px] shadow-sm transition-all flex flex-col items-center",
               isLive 
                 ? "bg-white text-blue-600 animate-pulse" 
-                : "bg-gray-100 text-gray-900 border border-gray-200"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700"
             )}>
               {game.status === 'live' ? (
                 <span>{game.currentTime || 'Playing'}</span>
@@ -196,7 +196,7 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
             
             {!isLive && game.status === 'scheduled' && timeLeft && (
                <div className="mt-1 flex items-center">
-                 <span className="text-[8px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md border border-blue-100/50 uppercase tracking-tighter">
+                 <span className="text-[8px] font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded-md border border-blue-100/50 dark:border-blue-800/50 uppercase tracking-tighter">
                    {timeLeft}
                  </span>
                </div>
@@ -216,7 +216,7 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
           <TeamLogo logo={awayTeam?.logo} name={awayTeam?.name} dark={isLive} />
           <span className={cn(
             "font-bold text-sm transition-colors", 
-            isLive ? "text-white group-hover/team:text-blue-200" : "text-gray-900 group-hover/team:text-blue-600"
+            isLive ? "text-white group-hover/team:text-blue-200" : "text-gray-900 dark:text-white group-hover/team:text-blue-600 dark:group-hover/team:text-blue-400"
           )}>
             {awayTeam?.name || 'Loading...'}
           </span>
@@ -230,7 +230,7 @@ function TeamLogo({ logo, name, dark }: { logo?: string; name?: string; dark?: b
   return (
     <div className={cn(
       "w-16 h-16 rounded-2xl flex items-center justify-center overflow-hidden transition-all",
-      dark ? "bg-white/10" : "bg-gray-50 border border-gray-100"
+      dark ? "bg-white/10" : "bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700"
     )}>
       {logo ? (
         <img src={logo} alt={name} className="w-10 h-10 object-contain" />

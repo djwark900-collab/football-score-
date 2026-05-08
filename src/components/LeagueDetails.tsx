@@ -79,14 +79,14 @@ export function LeagueDetails({ league, teams, games, leagues, players, onBack, 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-[40px] p-6 border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center gap-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-12 opacity-[0.03] scale-[4] rotate-12 pointer-events-none">
+      <div className="bg-white dark:bg-gray-900 rounded-[40px] p-6 border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row items-center gap-6 relative overflow-hidden transition-all duration-300">
+        <div className="absolute top-0 right-0 p-12 opacity-[0.03] dark:opacity-[0.1] scale-[4] rotate-12 pointer-events-none text-gray-900 dark:text-white">
           <TrophyIcon size={120} />
         </div>
         
         <button 
           onClick={onBack}
-          className="p-3 bg-gray-50 rounded-2xl text-gray-400 hover:text-gray-900 transition-colors self-start sm:self-center relative z-10"
+          className="p-3 bg-gray-50 dark:bg-gray-800 rounded-2xl text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors self-start sm:self-center relative z-10"
         >
           <ChevronLeftIcon size={24} />
         </button>
@@ -94,19 +94,19 @@ export function LeagueDetails({ league, teams, games, leagues, players, onBack, 
         <div className="flex items-center gap-4 flex-1 relative z-10">
           <div className={cn(
             "w-16 h-16 rounded-2xl flex items-center justify-center p-3 shadow-inner",
-            league.type === 'cup' ? "bg-purple-50" : "bg-blue-50"
+            league.type === 'cup' ? "bg-purple-50 dark:bg-purple-900/20" : "bg-blue-50 dark:bg-blue-900/20"
           )}>
              {league.logo ? (
                <img src={league.logo} alt={league.name} className="w-full h-full object-contain" />
              ) : (
-               <TrophyIcon className={cn("w-8 h-8", league.type === 'cup' ? "text-purple-600" : "text-blue-600")} />
+               <TrophyIcon className={cn("w-8 h-8", league.type === 'cup' ? "text-purple-600 dark:text-purple-400" : "text-blue-600 dark:text-blue-400")} />
              )}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-black text-gray-900 leading-tight">{league.name}</h2>
+              <h2 className="text-2xl font-black text-gray-900 dark:text-white leading-tight">{league.name}</h2>
               {league.type === 'cup' && (
-                <span className="px-3 py-1 bg-purple-600 text-white text-[8px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-purple-200">Cup</span>
+                <span className="px-3 py-1 bg-purple-600 text-white text-[8px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-purple-200 dark:shadow-purple-900/40">Cup</span>
               )}
             </div>
             <div className="flex items-center gap-3 mt-1">
@@ -115,7 +115,7 @@ export function LeagueDetails({ league, teams, games, leagues, players, onBack, 
                 {league.country || 'International'}
               </p>
               {league.description && (
-                <p className="text-gray-300 font-medium text-[10px] truncate max-w-[200px] border-l border-gray-100 pl-3">{league.description}</p>
+                <p className="text-gray-300 font-medium text-[10px] truncate max-w-[200px] border-l border-gray-100 dark:border-gray-800 pl-3">{league.description}</p>
               )}
             </div>
           </div>
@@ -133,12 +133,12 @@ export function LeagueDetails({ league, teams, games, leagues, players, onBack, 
       </div>
 
       {/* Tabs */}
-      <div className="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm w-full sm:w-fit overflow-x-auto scrollbar-none">
+      <div className="flex bg-white dark:bg-gray-900 p-1 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm w-full sm:w-fit overflow-x-auto scrollbar-none transition-all">
         <button 
           onClick={() => setActiveTab('matches')}
           className={cn(
             "flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap",
-            activeTab === 'matches' ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "text-gray-400 hover:text-gray-600"
+            activeTab === 'matches' ? "bg-blue-600 text-white shadow-lg shadow-blue-100 dark:shadow-blue-900/40" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           )}
         >
           <CalendarIcon size={18} />
@@ -148,7 +148,7 @@ export function LeagueDetails({ league, teams, games, leagues, players, onBack, 
           onClick={() => setActiveTab('table')}
           className={cn(
             "flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap",
-            activeTab === 'table' ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "text-gray-400 hover:text-gray-600"
+            activeTab === 'table' ? "bg-blue-600 text-white shadow-lg shadow-blue-100 dark:shadow-blue-900/40" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           )}
         >
           <TrendingUpIcon size={18} />
@@ -158,7 +158,7 @@ export function LeagueDetails({ league, teams, games, leagues, players, onBack, 
           onClick={() => setActiveTab('stats')}
           className={cn(
             "flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap",
-            activeTab === 'stats' ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "text-gray-400 hover:text-gray-600"
+            activeTab === 'stats' ? "bg-blue-600 text-white shadow-lg shadow-blue-100 dark:shadow-blue-900/40" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           )}
         >
           <TargetIcon size={18} />
@@ -168,7 +168,7 @@ export function LeagueDetails({ league, teams, games, leagues, players, onBack, 
           onClick={() => setActiveTab('history')}
           className={cn(
             "flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap",
-            activeTab === 'history' ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "text-gray-400 hover:text-gray-600"
+            activeTab === 'history' ? "bg-blue-600 text-white shadow-lg shadow-blue-100 dark:shadow-blue-900/40" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           )}
         >
           <BookOpenIcon size={18} />
@@ -189,9 +189,9 @@ export function LeagueDetails({ league, teams, games, leagues, players, onBack, 
               (Object.entries(gamesByRound) as [string, Game[]][]).map(([round, roundGames]) => (
                 <div key={round} className="space-y-4">
                   <div className="flex items-center gap-3 px-2">
-                    <div className="h-px bg-gray-100 flex-1" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-300">{round}</span>
-                    <div className="h-px bg-gray-100 flex-1" />
+                    <div className="h-px bg-gray-100 dark:bg-gray-800 flex-1" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-300 dark:text-gray-600">{round}</span>
+                    <div className="h-px bg-gray-100 dark:bg-gray-800 flex-1" />
                   </div>
                   <div className="grid gap-4">
                     {roundGames.map(game => (
@@ -211,7 +211,7 @@ export function LeagueDetails({ league, teams, games, leagues, players, onBack, 
                 </div>
               ))
             ) : (
-              <div className="p-12 text-center bg-white rounded-[40px] border border-gray-100 text-gray-400">
+              <div className="p-12 text-center bg-white dark:bg-gray-900 rounded-[40px] border border-gray-100 dark:border-gray-800 text-gray-400 transition-all">
                 <CalendarIcon className="w-12 h-12 mx-auto mb-4 opacity-20" />
                 <p className="font-bold">No matches scheduled yet for this league.</p>
               </div>
@@ -243,20 +243,20 @@ export function LeagueDetails({ league, teams, games, leagues, players, onBack, 
             exit={{ opacity: 0, y: -10 }}
             className="space-y-6"
           >
-            <div className="bg-white rounded-[40px] border border-gray-100 shadow-xl overflow-hidden">
-               <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-white to-gray-50">
+            <div className="bg-white dark:bg-gray-900 rounded-[40px] border border-gray-100 dark:border-gray-800 shadow-xl dark:shadow-black/20 overflow-hidden transition-all duration-300">
+               <div className="p-8 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gradient-to-r from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
                   <div className="flex items-center gap-3">
-                      <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-100">
+                      <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-100 dark:shadow-blue-900/40">
                           <TargetIcon className="text-white" size={24} />
                       </div>
                       <div>
-                        <h2 className="text-2xl font-black">Top Scorers</h2>
+                        <h2 className="text-2xl font-black dark:text-white">Top Scorers</h2>
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Goal Rankings</p>
                       </div>
                   </div>
                </div>
                
-               <div className="divide-y divide-gray-50">
+               <div className="divide-y divide-gray-50 dark:divide-gray-800">
                   {(() => {
                     const goalMap: Record<string, number> = {};
                     leagueGames.forEach(game => {
@@ -286,24 +286,24 @@ export function LeagueDetails({ league, teams, games, leagues, players, onBack, 
                       return (
                         <div 
                           key={s.playerId} 
-                          className="flex items-center justify-between p-6 hover:bg-gray-50 transition-colors cursor-pointer group"
+                          className="flex items-center justify-between p-6 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer group"
                           onClick={() => onPlayerClick?.(s.playerId)}
                         >
                           <div className="flex items-center gap-4">
                             <span className={cn(
                               "w-8 h-8 flex items-center justify-center rounded-xl font-black text-sm transition-all",
-                              i === 0 ? "bg-yellow-400 text-yellow-950 scale-110 shadow-lg shadow-yellow-100" :
-                              i === 1 ? "bg-gray-300 text-gray-700" :
-                              i === 2 ? "bg-orange-300 text-orange-900" :
-                              "text-gray-300 group-hover:text-gray-900"
+                              i === 0 ? "bg-yellow-400 text-yellow-950 scale-110 shadow-lg shadow-yellow-100 dark:shadow-yellow-900/20" :
+                              i === 1 ? "bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300" :
+                              i === 2 ? "bg-orange-300 dark:bg-orange-900 text-orange-900 dark:text-orange-200" :
+                              "text-gray-300 dark:text-gray-600 group-hover:text-gray-900 dark:group-hover:text-gray-200"
                             )}>
                               {i + 1}
                             </span>
-                            <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 overflow-hidden">
-                              {player?.imageUrl ? <img src={player.imageUrl} className="w-full h-full object-cover" /> : <ShieldIcon className="p-2 text-gray-200" />}
+                            <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 overflow-hidden">
+                              {player?.imageUrl ? <img src={player.imageUrl} className="w-full h-full object-cover" /> : <ShieldIcon className="p-2 text-gray-200 dark:text-gray-700" />}
                             </div>
                             <div>
-                               <p className="font-black text-gray-900">{player?.name || 'Unknown'}</p>
+                               <p className="font-black text-gray-900 dark:text-white transition-colors">{player?.name || 'Unknown'}</p>
                                <div className="flex items-center gap-2 mt-0.5">
                                  <div className="w-3 h-3">
                                    {team?.logo && <img src={team.logo} className="w-full h-full object-contain" />}
@@ -313,8 +313,8 @@ export function LeagueDetails({ league, teams, games, leagues, players, onBack, 
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                             <span className="text-xl font-black text-blue-600">{s.goals}</span>
-                             <span className="text-[10px] font-black uppercase text-gray-300">Goals</span>
+                             <span className="text-xl font-black text-blue-600 dark:text-blue-400">{s.goals}</span>
+                             <span className="text-[10px] font-black uppercase text-gray-300 dark:text-gray-600">Goals</span>
                           </div>
                         </div>
                       );
@@ -331,13 +331,13 @@ export function LeagueDetails({ league, teams, games, leagues, players, onBack, 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="bg-white rounded-[40px] p-8 border border-gray-100 shadow-sm"
+            className="bg-white dark:bg-gray-900 rounded-[40px] p-8 border border-gray-100 dark:border-gray-800 shadow-sm transition-all"
           >
             <div className="flex items-center gap-4 mb-8">
-               <div className="p-3 bg-yellow-50 rounded-2xl">
-                 <HistoryIcon size={24} className="text-yellow-600" />
+               <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl">
+                 <HistoryIcon size={24} className="text-yellow-600 dark:text-yellow-400" />
                </div>
-               <h3 className="text-xl font-black">League History</h3>
+               <h3 className="text-xl font-black dark:text-white">League History</h3>
             </div>
             
             {league.history && league.history.length > 0 ? (
@@ -345,12 +345,12 @@ export function LeagueDetails({ league, teams, games, leagues, players, onBack, 
                 {league.history.map((h, i) => {
                   const winner = teams.find(t => t.id === h.winnerId);
                   return (
-                    <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-3xl group hover:bg-gray-100 transition-colors">
-                      <span className="font-black text-gray-300">{h.season}</span>
+                    <div key={i} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-3xl group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                      <span className="font-black text-gray-300 dark:text-gray-600">{h.season}</span>
                       <div className="flex items-center gap-3">
-                         <span className="font-bold text-sm">{winner?.name}</span>
-                         <div className="w-8 h-8 rounded-lg bg-white p-1 shadow-sm">
-                            {winner?.logo ? <img src={winner.logo} className="w-full h-full object-contain" /> : <ShieldIcon size={16} className="text-gray-200" />}
+                         <span className="font-bold text-sm dark:text-white">{winner?.name}</span>
+                         <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-900 p-1 shadow-sm">
+                            {winner?.logo ? <img src={winner.logo} className="w-full h-full object-contain" /> : <ShieldIcon size={16} className="text-gray-200 dark:text-gray-700" />}
                          </div>
                       </div>
                     </div>
@@ -359,18 +359,18 @@ export function LeagueDetails({ league, teams, games, leagues, players, onBack, 
               </div>
             ) : (
               <div className="text-center py-12 px-6">
-                 <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                   <TrophyIcon size={24} className="text-gray-200" />
+                 <div className="w-16 h-16 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                   <TrophyIcon size={24} className="text-gray-200 dark:text-gray-700" />
                  </div>
                  <p className="text-gray-400 font-bold mb-2">No history records available.</p>
-                 <p className="text-gray-300 text-xs">Historical data will appear here once seasons conclude.</p>
+                 <p className="text-gray-300 dark:text-gray-600 text-xs">Historical data will appear here once seasons conclude.</p>
               </div>
             )}
             
             {league.description && (
-              <div className="mt-8 pt-8 border-t border-gray-100">
+              <div className="mt-8 pt-8 border-t border-gray-100 dark:border-gray-800">
                 <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-4">About the Competition</h4>
-                <p className="text-gray-600 text-sm leading-relaxed">{league.description}</p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">{league.description}</p>
               </div>
             )}
           </motion.div>

@@ -159,8 +159,8 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
       className="space-y-6 pb-20"
     >
       {/* Detail Header */}
-      <div className="flex justify-between items-center bg-white p-4 rounded-[32px] border border-gray-100 shadow-sm sticky top-0 z-30">
-        <button onClick={onBack} className="p-3 bg-gray-50 rounded-full text-gray-900 hover:bg-gray-100 transition-colors">
+      <div className="flex justify-between items-center bg-white dark:bg-gray-900 p-4 rounded-[32px] border border-gray-100 dark:border-gray-800 shadow-sm sticky top-0 z-30 transition-all duration-300">
+        <button onClick={onBack} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
           <ChevronLeftIcon size={24} />
         </button>
         <div className="flex flex-col items-center">
@@ -169,7 +169,7 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
             onClick={() => league && onLeagueClick(league.id)}
           >
             {league?.logo && <img src={league.logo} alt="" className="w-4 h-4 rounded-full object-contain" />}
-            <span className="font-bold text-gray-900 text-sm sm:text-base truncate max-w-[150px] sm:max-w-none">{league?.name || 'Game Center'}</span>
+            <span className="font-bold text-gray-900 dark:text-white text-sm sm:text-base truncate max-w-[150px] sm:max-w-none transition-colors">{league?.name || 'Game Center'}</span>
           </div>
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{game.round ? `${game.round} • ` : ''}Match Information</span>
         </div>
@@ -178,17 +178,17 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
               onClick={onToggleFollow}
               className={cn(
                 "p-3 rounded-full transition-all",
-                isFollowing ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "bg-gray-50 text-gray-900 hover:bg-gray-100"
+                isFollowing ? "bg-blue-600 text-white shadow-lg shadow-blue-200 dark:shadow-blue-900/40" : "bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
               )}
             >
               <BellIcon size={20} className={isFollowing ? "fill-white" : ""} />
             </button>
-            <button className="p-3 bg-gray-50 rounded-full text-gray-900"><Share2Icon size={20} /></button>
+            <button className="p-3 bg-gray-50 dark:bg-gray-800 rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"><Share2Icon size={20} /></button>
         </div>
       </div>
 
       {/* Main Scoreboard */}
-      <div className="bg-white rounded-[40px] p-6 sm:p-8 border border-gray-100 shadow-xl overflow-hidden relative">
+      <div className="bg-white dark:bg-gray-900 rounded-[40px] p-6 sm:p-8 border border-gray-100 dark:border-gray-800 shadow-xl dark:shadow-black/20 overflow-hidden relative transition-all duration-300">
         <AnimatePresence>
           {pulse && (
             <motion.div 
@@ -209,10 +209,10 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
             className="flex flex-col items-center gap-2 sm:gap-4 flex-1 cursor-pointer group"
             onClick={() => homeTeam && onTeamClick(homeTeam.id)}
            >
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-50 rounded-2xl sm:rounded-3xl flex items-center justify-center p-3 sm:p-4 border border-gray-100 group-hover:border-blue-200 transition-colors">
-                {homeTeam?.logo ? <img src={homeTeam.logo} className="w-full h-full object-contain" /> : <ShieldIcon size={40} className="text-gray-200" />}
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-50 dark:bg-gray-800 rounded-2xl sm:rounded-3xl flex items-center justify-center p-3 sm:p-4 border border-gray-100 dark:border-gray-800 group-hover:border-blue-200 dark:group-hover:border-blue-800 transition-colors">
+                {homeTeam?.logo ? <img src={homeTeam.logo} className="w-full h-full object-contain" /> : <ShieldIcon size={40} className="text-gray-200 dark:text-gray-700 transition-colors" />}
               </div>
-              <h3 className="font-black text-center text-sm sm:text-lg leading-tight h-10 sm:h-auto flex items-center justify-center group-hover:text-blue-600 transition-colors">{homeTeam?.name}</h3>
+              <h3 className="font-black text-center text-sm sm:text-lg leading-tight h-10 sm:h-auto flex items-center justify-center dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{homeTeam?.name}</h3>
               <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Home</span>
            </div>
 
@@ -224,19 +224,18 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
                 )}>
                   {game.status === 'live' ? (game.currentTime || '90:00 LIVE') : game.status === 'finished' ? 'FINISHED' : new Date(game.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: localStorage.getItem('pref_time_format') === '12h' })}
                 </div>
-                
-                {game.status === 'scheduled' && (
+                                {game.status === 'scheduled' && (
                    <div className="flex flex-col items-center mt-1">
                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
                        {new Date(game.date).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
                      </p>
                      {timeLeft && (
-                       <div className="mt-4 flex flex-col items-center gap-1.5 pt-4 border-t border-gray-50 w-full">
+                       <div className="mt-4 flex flex-col items-center gap-1.5 pt-4 border-t border-gray-50 dark:border-gray-800 w-full">
                          <span className="text-[8px] font-black text-gray-300 uppercase tracking-[0.3em]">
                            {timeLeft === 'LIVE NOW' ? 'Match Started' : 'Live Countdown'}
                          </span>
                          <div className={cn(
-                           "flex items-center gap-3 bg-gray-900 px-8 py-3 rounded-[24px] shadow-2xl shadow-blue-100 border border-gray-800 ring-4 ring-white transition-all",
+                           "flex items-center gap-3 bg-gray-900 dark:bg-black px-8 py-3 rounded-[24px] shadow-2xl shadow-blue-100 dark:shadow-blue-900/40 border border-gray-800 dark:border-gray-900 ring-4 ring-white dark:ring-gray-800 transition-all",
                            timeLeft === 'LIVE NOW' && "px-4 py-1.5 ring-2"
                          )}>
                            <ClockIcon size={timeLeft === 'LIVE NOW' ? 10 : 14} className="text-blue-400 animate-pulse" />
@@ -254,19 +253,19 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
               <div className="flex items-center gap-4 sm:gap-8 mt-2">
                 <motion.span 
                   animate={pulse === 'home' ? { scale: [1, 1.3, 1], y: [0, -20, 0] } : {}}
-                  className="text-5xl sm:text-7xl font-black tabular-nums drop-shadow-sm transition-all duration-500"
+                  className="text-5xl sm:text-7xl font-black tabular-nums drop-shadow-sm transition-all duration-500 dark:text-white"
                 >
                   {game.homeScore}
                 </motion.span>
                 <span className={cn(
                   "text-2xl sm:text-3xl font-black transition-all opacity-30",
-                  game.status === 'live' ? "text-white" : "text-gray-200"
+                  game.status === 'live' || localStorage.getItem('pref_theme') === 'dark' ? "text-white" : "text-gray-200"
                 )}>
                   :
                 </span>
                 <motion.span 
                   animate={pulse === 'away' ? { scale: [1, 1.3, 1], y: [0, -20, 0] } : {}}
-                  className="text-5xl sm:text-7xl font-black tabular-nums drop-shadow-sm transition-all duration-500"
+                  className="text-5xl sm:text-7xl font-black tabular-nums drop-shadow-sm transition-all duration-500 dark:text-white"
                 >
                   {game.awayScore}
                 </motion.span>
@@ -284,10 +283,10 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
             className="flex flex-col items-center gap-2 sm:gap-4 flex-1 cursor-pointer group"
             onClick={() => awayTeam && onTeamClick(awayTeam.id)}
            >
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-50 rounded-2xl sm:rounded-3xl flex items-center justify-center p-3 sm:p-4 border border-gray-100 group-hover:border-blue-200 transition-colors">
-                {awayTeam?.logo ? <img src={awayTeam.logo} className="w-full h-full object-contain" /> : <ShieldIcon size={40} className="text-gray-200" />}
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-50 dark:bg-gray-800 rounded-2xl sm:rounded-3xl flex items-center justify-center p-3 sm:p-4 border border-gray-100 dark:border-gray-800 group-hover:border-blue-200 dark:group-hover:border-blue-800 transition-colors">
+                {awayTeam?.logo ? <img src={awayTeam.logo} className="w-full h-full object-contain" /> : <ShieldIcon size={40} className="text-gray-200 dark:text-gray-700 transition-colors" />}
               </div>
-              <h3 className="font-black text-center text-sm sm:text-lg leading-tight h-10 sm:h-auto flex items-center justify-center group-hover:text-blue-600 transition-colors">{awayTeam?.name}</h3>
+              <h3 className="font-black text-center text-sm sm:text-lg leading-tight h-10 sm:h-auto flex items-center justify-center dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{awayTeam?.name}</h3>
               <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Away</span>
            </div>
         </div>
@@ -300,54 +299,54 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
               {loading && <span className="text-blue-500 animate-pulse text-[8px]">Updating Database...</span>}
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-gray-50 p-4 rounded-3xl flex items-center justify-between gap-4">
-                <span className="text-xs font-black uppercase tracking-tighter">Score Control</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 transition-all duration-300">
+              <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-3xl flex items-center justify-between gap-4 transition-colors">
+                <span className="text-xs font-black uppercase tracking-tighter dark:text-gray-300">Score Control</span>
                 <div className="flex items-center gap-4">
                    <div className="flex items-center gap-2">
                     <button 
                       onClick={() => updateGame({ homeScore: Math.max(0, game.homeScore - 1) })}
-                      className="p-2 bg-white rounded-xl shadow-sm hover:bg-gray-100 transition-colors"
+                      className="p-2 bg-white dark:bg-gray-700 rounded-xl shadow-sm hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                     >
-                      <MinusIcon size={14} />
+                      <MinusIcon size={14} className="dark:text-white" />
                     </button>
-                    <span className="w-4 text-center font-black">{game.homeScore}</span>
+                    <span className="w-4 text-center font-black dark:text-white">{game.homeScore}</span>
                     <button 
                       onClick={() => updateGame({ homeScore: game.homeScore + 1 })}
-                      className="p-2 bg-white rounded-xl shadow-sm hover:bg-gray-100 transition-colors"
+                      className="p-2 bg-white dark:bg-gray-700 rounded-xl shadow-sm hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                     >
-                      <PlusIcon size={14} />
+                      <PlusIcon size={14} className="dark:text-white" />
                     </button>
                    </div>
-                   <div className="w-px h-6 bg-gray-200" />
+                   <div className="w-px h-6 bg-gray-200 dark:bg-gray-700" />
                    <div className="flex items-center gap-2">
                     <button 
                       onClick={() => updateGame({ awayScore: Math.max(0, game.awayScore - 1) })}
-                      className="p-2 bg-white rounded-xl shadow-sm hover:bg-gray-100 transition-colors"
+                      className="p-2 bg-white dark:bg-gray-700 rounded-xl shadow-sm hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                     >
-                      <MinusIcon size={14} />
+                      <MinusIcon size={14} className="dark:text-white" />
                     </button>
-                    <span className="w-4 text-center font-black">{game.awayScore}</span>
+                    <span className="w-4 text-center font-black dark:text-white">{game.awayScore}</span>
                     <button 
                       onClick={() => updateGame({ awayScore: game.awayScore + 1 })}
-                      className="p-2 bg-white rounded-xl shadow-sm hover:bg-gray-100 transition-colors"
+                      className="p-2 bg-white dark:bg-gray-700 rounded-xl shadow-sm hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                     >
-                      <PlusIcon size={14} />
+                      <PlusIcon size={14} className="dark:text-white" />
                     </button>
                    </div>
                 </div>
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-3xl flex items-center justify-between gap-4">
-                <span className="text-xs font-black uppercase tracking-tighter">Status</span>
-                <div className="flex gap-1 bg-white p-1 rounded-2xl shadow-sm">
+              <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-3xl flex items-center justify-between gap-4 transition-colors">
+                <span className="text-xs font-black uppercase tracking-tighter dark:text-gray-300">Status</span>
+                <div className="flex gap-1 bg-white dark:bg-gray-900 p-1 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
                   {(['scheduled', 'live', 'finished'] as const).map(s => (
                     <button 
                       key={s}
                       onClick={() => updateGame({ status: s })}
                       className={cn(
                         "px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all",
-                        game.status === s ? "bg-blue-600 text-white shadow-md shadow-blue-100" : "text-gray-400 hover:text-gray-600"
+                        game.status === s ? "bg-blue-600 text-white shadow-md shadow-blue-100 dark:shadow-blue-900/40" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                       )}
                     >
                       {s}
@@ -357,15 +356,15 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
               </div>
 
               {game.status === 'live' && (
-                <div className="bg-gray-50 p-4 rounded-3xl flex items-center justify-between gap-4">
-                  <span className="text-xs font-black uppercase tracking-tighter">Match Time</span>
+                <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-3xl flex items-center justify-between gap-4 transition-colors">
+                  <span className="text-xs font-black uppercase tracking-tighter dark:text-gray-300">Match Time</span>
                   <div className="flex items-center gap-2">
                     <input 
                       type="text" 
                       value={game.currentTime || ''} 
                       onChange={(e) => updateGame({ currentTime: e.target.value })}
                       placeholder="e.g. 45', HT"
-                      className="w-24 h-10 bg-white rounded-xl text-center font-bold text-xs border-none shadow-sm"
+                      className="w-24 h-10 bg-white dark:bg-gray-800 rounded-xl text-center font-bold text-xs border-none shadow-sm dark:text-white transition-all outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </div>
@@ -376,13 +375,13 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
       </div>
 
       {/* Tabs Section */}
-      <div className="bg-white rounded-[40px] p-6 sm:p-8 border border-gray-100 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 rounded-[40px] p-6 sm:p-8 border border-gray-100 dark:border-gray-800 shadow-sm transition-all duration-300">
         <div className="flex gap-2 sm:gap-4 mb-8 overflow-x-auto scrollbar-none pb-2">
           <button 
             onClick={() => setActiveTab('stats')}
             className={cn(
               "flex-1 min-w-[100px] py-3 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all",
-              activeTab === 'stats' ? "bg-gray-900 text-white" : "text-gray-400 hover:bg-gray-50"
+              activeTab === 'stats' ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-lg dark:shadow-white/10" : "text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"
             )}
           >
             <ActivityIcon size={16} />
@@ -392,7 +391,7 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
             onClick={() => setActiveTab('events')}
             className={cn(
               "flex-1 min-w-[100px] py-3 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all",
-              activeTab === 'events' ? "bg-gray-900 text-white" : "text-gray-400 hover:bg-gray-50"
+              activeTab === 'events' ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-lg dark:shadow-white/10" : "text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"
             )}
           >
             <ZapIcon size={16} />
@@ -402,7 +401,7 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
             onClick={() => setActiveTab('lineups')}
             className={cn(
               "flex-1 min-w-[100px] py-3 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all",
-              activeTab === 'lineups' ? "bg-gray-900 text-white" : "text-gray-400 hover:bg-gray-50"
+              activeTab === 'lineups' ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-lg dark:shadow-white/10" : "text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"
             )}
           >
             <UsersIcon size={16} />
@@ -412,7 +411,7 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
             onClick={() => setActiveTab('standings')}
             className={cn(
               "flex-1 min-w-[100px] py-3 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all",
-              activeTab === 'standings' ? "bg-gray-900 text-white" : "text-gray-400 hover:bg-gray-50"
+              activeTab === 'standings' ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-lg dark:shadow-white/10" : "text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"
             )}
           >
             <TrendingUpIcon size={16} />
@@ -422,7 +421,7 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
             onClick={() => setActiveTab('h2h')}
             className={cn(
               "flex-1 min-w-[100px] py-3 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all",
-              activeTab === 'h2h' ? "bg-gray-900 text-white" : "text-gray-400 hover:bg-gray-50"
+              activeTab === 'h2h' ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-lg dark:shadow-white/10" : "text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"
             )}
           >
             <HistoryIcon size={16} />
@@ -432,12 +431,12 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
 
         {activeTab === 'lineups' && (
           <div className="flex justify-center mb-6">
-            <div className="bg-gray-50 p-1 rounded-2xl flex gap-1 border border-gray-100">
+            <div className="bg-gray-50 dark:bg-gray-800 p-1 rounded-2xl flex gap-1 border border-gray-100 dark:border-gray-700 transition-all">
               <button 
                 onClick={() => setLineupView('field')}
                 className={cn(
                   "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                  lineupView === 'field' ? "bg-white text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                  lineupView === 'field' ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                 )}
               >
                 Field
@@ -446,7 +445,7 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
                 onClick={() => setLineupView('list')}
                 className={cn(
                   "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                  lineupView === 'list' ? "bg-white text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                  lineupView === 'list' ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                 )}
               >
                 List
@@ -467,7 +466,7 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
               {isAdmin && (
                 <div className="space-y-4">
                   {/* Status Control */}
-                  <div className="p-6 bg-gray-900 rounded-[32px] border border-gray-800 shadow-2xl flex items-center justify-between gap-4">
+                  <div className="p-6 bg-gray-900 dark:bg-black rounded-[32px] border border-gray-800 dark:border-gray-900 shadow-2xl flex items-center justify-between gap-4 transition-all duration-300">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-blue-600 rounded-xl">
                         <ZapIcon size={16} className="text-white" />
@@ -477,7 +476,7 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
                         <p className="text-xs font-bold text-white capitalize">{game.status}</p>
                       </div>
                     </div>
-                    <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
+                    <div className="flex bg-white/5 dark:bg-white/10 p-1 rounded-2xl border border-white/10 dark:border-white/20">
                       {(['scheduled', 'live', 'finished'] as const).map(s => (
                         <button
                           key={s}
@@ -493,39 +492,39 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
                     </div>
                   </div>
 
-                  <div className="p-6 bg-blue-50 rounded-[32px] border border-blue-100 space-y-4">
+                  <div className="p-6 bg-blue-50 dark:bg-blue-900/20 rounded-[32px] border border-blue-100 dark:border-blue-800 space-y-4 transition-all duration-300">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-900">Live Events Control</h4>
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-900 dark:text-blue-200 transition-colors">Live Events Control</h4>
                       <div className="flex gap-2">
                         <select 
-                          className="bg-white border border-blue-100 rounded-lg text-[9px] font-bold px-2 py-1 outline-none max-w-[100px]"
+                          className="bg-white dark:bg-gray-800 dark:text-white border border-blue-100 dark:border-blue-800 rounded-lg text-[9px] font-bold px-2 py-1 outline-none max-w-[100px] transition-colors"
                           value={selectedEventPlayer || ''}
                           onChange={(e) => setSelectedEventPlayer(e.target.value)}
                         >
                           <option value="">Main Player</option>
-                          <optgroup label={homeTeam?.name || 'Home'}>
+                          <optgroup className="dark:bg-gray-900" label={homeTeam?.name || 'Home'}>
                             {players.filter(p => p.teamId === game.homeTeamId).map(p => (
                               <option key={p.id} value={p.id}>{p.name}</option>
                             ))}
                           </optgroup>
-                          <optgroup label={awayTeam?.name || 'Away'}>
+                          <optgroup className="dark:bg-gray-900" label={awayTeam?.name || 'Away'}>
                             {players.filter(p => p.teamId === game.awayTeamId).map(p => (
                               <option key={p.id} value={p.id}>{p.name}</option>
                             ))}
                           </optgroup>
                         </select>
                         <select 
-                          className="bg-white border border-blue-100 rounded-lg text-[9px] font-bold px-2 py-1 outline-none max-w-[100px]"
+                          className="bg-white dark:bg-gray-800 dark:text-white border border-blue-100 dark:border-blue-800 rounded-lg text-[9px] font-bold px-2 py-1 outline-none max-w-[100px] transition-colors"
                           value={selectedPlayerOut || ''}
                           onChange={(e) => setSelectedPlayerOut(e.target.value)}
                         >
                           <option value="">Sub Out (Optional)</option>
-                          <optgroup label={homeTeam?.name || 'Home'}>
+                          <optgroup className="dark:bg-gray-900" label={homeTeam?.name || 'Home'}>
                             {players.filter(p => p.teamId === game.homeTeamId).map(p => (
                               <option key={p.id} value={p.id}>{p.name}</option>
                             ))}
                           </optgroup>
-                          <optgroup label={awayTeam?.name || 'Away'}>
+                          <optgroup className="dark:bg-gray-900" label={awayTeam?.name || 'Away'}>
                             {players.filter(p => p.teamId === game.awayTeamId).map(p => (
                               <option key={p.id} value={p.id}>{p.name}</option>
                             ))}
@@ -545,10 +544,10 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
                             events: [...(game.events || []), newEvent]
                           });
                         }}
-                        className="bg-white p-3 rounded-2xl border border-blue-100 flex flex-col items-center justify-center gap-2 hover:shadow-md transition-all group"
+                        className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-blue-100 dark:border-blue-800 flex flex-col items-center justify-center gap-2 hover:shadow-md transition-all group"
                       >
-                        <ActivityIcon size={16} className="text-blue-600" />
-                        <span className="text-[10px] font-black uppercase text-blue-900">Goal</span>
+                        <ActivityIcon size={16} className="text-blue-600 dark:text-blue-400" />
+                        <span className="text-[10px] font-black uppercase text-blue-900 dark:text-blue-200">Goal</span>
                       </button>
                       <button 
                         onClick={() => {
@@ -560,10 +559,10 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
                             events: [...(game.events || []), newEvent]
                           });
                         }}
-                        className="bg-white p-3 rounded-2xl border border-blue-100 flex flex-col items-center justify-center gap-2 hover:shadow-md transition-all"
+                        className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-blue-100 dark:border-blue-800 flex flex-col items-center justify-center gap-2 hover:shadow-md transition-all"
                       >
                         <div className="w-3 h-4 bg-yellow-400 rounded-sm" />
-                        <span className="text-[10px] font-black uppercase text-blue-900">Yellow</span>
+                        <span className="text-[10px] font-black uppercase text-blue-900 dark:text-blue-200">Yellow</span>
                       </button>
                       <button 
                         onClick={() => {
@@ -575,10 +574,10 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
                             events: [...(game.events || []), newEvent]
                           });
                         }}
-                        className="bg-white p-3 rounded-2xl border border-blue-100 flex flex-col items-center justify-center gap-2 hover:shadow-md transition-all"
+                        className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-blue-100 dark:border-blue-800 flex flex-col items-center justify-center gap-2 hover:shadow-md transition-all"
                       >
                         <div className="w-3 h-4 bg-red-600 rounded-sm" />
-                        <span className="text-[10px] font-black uppercase text-blue-900">Red Card</span>
+                        <span className="text-[10px] font-black uppercase text-blue-900 dark:text-blue-200">Red Card</span>
                       </button>
                       <button 
                         onClick={() => {
@@ -599,10 +598,10 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
                             events: [...(game.events || []), newEvent]
                           });
                         }}
-                        className="bg-white p-3 rounded-2xl border border-blue-100 flex flex-col items-center justify-center gap-2 hover:shadow-md transition-all"
+                        className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-blue-100 dark:border-blue-800 flex flex-col items-center justify-center gap-2 hover:shadow-md transition-all"
                       >
-                        <RefreshCwIcon size={16} className="text-blue-600" />
-                        <span className="text-[10px] font-black uppercase text-blue-900">Sub</span>
+                        <RefreshCwIcon size={16} className="text-blue-600 dark:text-blue-400" />
+                        <span className="text-[10px] font-black uppercase text-blue-900 dark:text-blue-200">Sub</span>
                       </button>
                     </div>
                   </div>
@@ -614,7 +613,7 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
                 <ClockIcon size={14} className="text-gray-300" />
               </div>
               
-              <div className="relative space-y-4 before:absolute before:left-1/2 before:top-0 before:bottom-0 before:w-px before:bg-gray-100 before:-translate-x-1/2">
+              <div className="relative space-y-4 before:absolute before:left-1/2 before:top-0 before:bottom-0 before:w-px before:bg-gray-100 dark:before:bg-gray-800 before:-translate-x-1/2 transition-colors">
                 {sortedEvents.length > 0 ? (
                   sortedEvents.map((event, idx) => {
                     const isHome = event.teamId === game.homeTeamId;
@@ -629,28 +628,28 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
                         isHome ? "flex-row" : "flex-row-reverse"
                       )} onClick={() => eventPlayer && onPlayerClick?.(eventPlayer.id)}>
                         <div className={cn("flex-1", isHome ? "text-right" : "text-left")}>
-                          <p className="font-bold text-sm text-gray-900 group-hover/event:text-blue-600 transition-colors uppercase tracking-tight">{eventPlayer?.name || pIn?.name || 'Unknown'}</p>
+                          <p className="font-bold text-sm text-gray-900 dark:text-white group-hover/event:text-blue-600 dark:group-hover/event:text-blue-400 transition-colors uppercase tracking-tight">{eventPlayer?.name || pIn?.name || 'Unknown'}</p>
                           {event.type === 'goal' && assistant && (
-                            <p className="text-[10px] text-gray-400 font-medium">assist by {assistant.name}</p>
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium transition-colors">assist by {assistant.name}</p>
                           )}
                           {event.type === 'sub' && pOut && (
-                            <p className="text-[10px] text-red-400 font-medium tracking-tight">out: {pOut.name}</p>
+                            <p className="text-[10px] text-red-400 dark:text-red-500 font-medium tracking-tight transition-colors">out: {pOut.name}</p>
                           )}
                         </div>
                         
-                        <div className="w-10 h-10 rounded-full bg-white border-2 border-gray-50 flex items-center justify-center shadow-lg">
+                        <div className="w-10 h-10 rounded-full bg-white dark:bg-gray-900 border-2 border-gray-50 dark:border-gray-800 flex items-center justify-center shadow-lg transition-colors">
                           <EventIcon type={event.type} />
                         </div>
 
                         <div className={cn("flex-1 flex items-center gap-2", isHome ? "flex-row" : "flex-row-reverse")}>
-                           <span className="font-black tabular-nums text-blue-600 text-sm">{event.minute}'</span>
+                           <span className="font-black tabular-nums text-blue-600 dark:text-blue-400 text-sm transition-colors">{event.minute}'</span>
                            <div className="flex-1" />
                         </div>
                       </div>
                     );
                   })
                 ) : (
-                  <div className="py-20 text-center text-gray-400 relative z-10 bg-white">
+                  <div className="py-20 text-center text-gray-400 dark:text-gray-600 relative z-10 bg-white dark:bg-gray-900 transition-colors">
                     <ZapIcon className="w-12 h-12 mx-auto mb-4 opacity-10" />
                     <p className="font-bold">No major events recorded yet.</p>
                   </div>
@@ -808,7 +807,7 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
             >
               <div className="flex items-center justify-between px-2 mb-2">
                 <h4 className="text-sm font-black uppercase tracking-widest text-gray-400">Head to Head History</h4>
-                <HistoryIcon size={14} className="text-gray-300" />
+                <HistoryIcon size={14} className="text-gray-300 dark:text-gray-600" />
               </div>
               {h2hGames.length > 0 ? (
                 <div className="grid gap-3">
@@ -818,21 +817,21 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
                       <div 
                         key={g.id} 
                         onClick={() => onGameClick(g.id)}
-                        className="bg-white p-4 rounded-[28px] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between group"
+                        className="bg-white dark:bg-gray-900 p-4 rounded-[28px] border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md dark:hover:shadow-black/20 transition-all cursor-pointer flex items-center justify-between group"
                       >
                          <div className="flex items-center gap-4">
                             <span className="text-[10px] font-black text-gray-400 w-12">{new Date(g.date).getFullYear()}</span>
                             <div className="flex items-center gap-3">
                                <div className="flex flex-col items-end">
-                                 <span className={cn("text-[11px] font-bold", isHomeOutcome ? "text-gray-900" : "text-gray-500")}>
+                                 <span className={cn("text-[11px] font-bold", isHomeOutcome ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400")}>
                                    {teams.find(t => t.id === g.homeTeamId)?.name}
                                  </span>
                                </div>
-                               <div className="bg-gray-50 px-3 py-1 rounded-xl border border-gray-100 font-black text-xs tabular-nums">
+                               <div className="bg-gray-50 dark:bg-gray-800 px-3 py-1 rounded-xl border border-gray-100 dark:border-gray-700 font-black text-xs tabular-nums dark:text-white">
                                  {g.homeScore} - {g.awayScore}
                                </div>
                                <div className="flex flex-col items-start">
-                                 <span className={cn("text-[11px] font-bold", !isHomeOutcome ? "text-gray-900" : "text-gray-500")}>
+                                 <span className={cn("text-[11px] font-bold", !isHomeOutcome ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400")}>
                                    {teams.find(t => t.id === g.awayTeamId)?.name}
                                  </span>
                                </div>
@@ -844,7 +843,7 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
                   })}
                 </div>
               ) : (
-                <div className="p-12 text-center text-gray-400">
+                <div className="p-12 text-center text-gray-400 dark:text-gray-600">
                   <HistoryIcon className="w-12 h-12 mx-auto mb-4 opacity-10" />
                   <p className="font-bold">No previous encounters found.</p>
                 </div>
@@ -890,15 +889,15 @@ function LineupItem({ player, isRight, ...props }: LineupItemProps & { key?: any
     <div 
       {...props}
       className={cn(
-      "flex items-center gap-3 p-2 bg-gray-50/50 rounded-2xl border border-gray-100/50 cursor-pointer hover:bg-white hover:shadow-md transition-all group",
+      "flex items-center gap-3 p-2 bg-gray-50/50 dark:bg-gray-800/50 rounded-2xl border border-gray-100/50 dark:border-gray-700/50 cursor-pointer hover:bg-white dark:hover:bg-gray-800 hover:shadow-md transition-all group",
       isRight ? "flex-row-reverse" : "flex-row"
     )}>
-      <div className="w-8 h-8 rounded-full bg-white group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center font-black text-gray-400 text-[10px] shadow-sm transition-colors">
+      <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-700 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center font-black text-gray-400 text-[10px] shadow-sm transition-colors">
         {player.number}
       </div>
       <div className={cn("flex-1 overflow-hidden", isRight ? "text-right" : "text-left")}>
-        <p className="text-xs font-bold text-gray-900 group-hover:text-blue-600 transition-colors truncate">{player.name}</p>
-        <p className="text-[8px] font-black uppercase text-gray-400 tracking-tighter">{player.position}</p>
+        <p className="text-xs font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">{player.name}</p>
+        <p className="text-[8px] font-black uppercase text-gray-400 dark:text-gray-500 tracking-tighter">{player.position}</p>
       </div>
     </div>
   );
@@ -1009,13 +1008,13 @@ function StatProgress({ label, homeValue, awayValue, isPercent }: { label: strin
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-center px-1">
-        <span className="font-black text-base sm:text-lg">{homeValue}{isPercent && '%'}</span>
+        <span className="font-black text-base sm:text-lg dark:text-white">{homeValue}{isPercent && '%'}</span>
         <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-widest">{label}</span>
-        <span className="font-black text-base sm:text-lg text-right">{awayValue}{isPercent && '%'}</span>
+        <span className="font-black text-base sm:text-lg text-right dark:text-white">{awayValue}{isPercent && '%'}</span>
       </div>
-      <div className="h-1.5 w-full bg-gray-100 rounded-full flex gap-1 overflow-hidden">
-        <div className="h-full bg-blue-900 transition-all duration-1000" style={{ width: `${homePercent}%` }} />
-        <div className="h-full bg-gray-900 transition-all duration-1000 flex-1" />
+      <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-800 rounded-full flex gap-1 overflow-hidden">
+        <div className="h-full bg-blue-900 dark:bg-blue-700 transition-all duration-1000" style={{ width: `${homePercent}%` }} />
+        <div className="h-full bg-gray-900 dark:bg-blue-400 transition-all duration-1000 flex-1" />
       </div>
     </div>
   );

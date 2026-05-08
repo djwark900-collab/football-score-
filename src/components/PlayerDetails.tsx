@@ -30,12 +30,12 @@ export function PlayerDetails({ player, team, onBack, isAdmin, onEdit }: PlayerD
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="relative overflow-hidden bg-white rounded-[40px] border border-gray-100 shadow-sm">
-        <div className="absolute top-0 right-0 p-12 opacity-[0.03] scale-[4] rotate-12 pointer-events-none">
+      <div className="relative overflow-hidden bg-white dark:bg-gray-900 rounded-[40px] border border-gray-100 dark:border-gray-800 shadow-sm transition-all duration-300">
+        <div className="absolute top-0 right-0 p-12 opacity-[0.03] dark:opacity-[0.1] scale-[4] rotate-12 pointer-events-none text-gray-900 dark:text-white">
           <UserIcon size={120} />
         </div>
 
-        <div className="p-8 pb-32 bg-gradient-to-br from-blue-600 to-blue-800 relative">
+        <div className="p-8 pb-32 bg-gradient-to-br from-blue-600 to-blue-800 dark:from-blue-700 dark:to-blue-900 relative">
           <button 
             onClick={onBack}
             className="p-3 bg-white/10 backdrop-blur-md rounded-2xl text-white hover:bg-white/20 transition-all mb-8"
@@ -44,11 +44,11 @@ export function PlayerDetails({ player, team, onBack, isAdmin, onEdit }: PlayerD
           </button>
           
           <div className="flex flex-col sm:flex-row items-center gap-8">
-            <div className="w-32 h-32 bg-white rounded-[40px] shadow-2xl flex items-center justify-center overflow-hidden border-4 border-white shrink-0">
+            <div className="w-32 h-32 bg-white dark:bg-gray-800 rounded-[40px] shadow-2xl flex items-center justify-center overflow-hidden border-4 border-white dark:border-gray-700 shrink-0 transition-all">
                {player.imageUrl ? (
                  <img src={player.imageUrl} alt={player.name} className="w-full h-full object-cover" />
                ) : (
-                 <UserIcon className="text-gray-200 w-16 h-16" />
+                 <UserIcon className="text-gray-200 dark:text-gray-700 w-16 h-16" />
                )}
             </div>
             
@@ -71,7 +71,7 @@ export function PlayerDetails({ player, team, onBack, isAdmin, onEdit }: PlayerD
               </div>
               {team && (
                 <div className="flex items-center justify-center sm:justify-start gap-3">
-                   <div className="w-6 h-6 bg-white/90 rounded-lg flex items-center justify-center p-1">
+                   <div className="w-6 h-6 bg-white/90 dark:bg-white/80 rounded-lg flex items-center justify-center p-1">
                       {team.logo ? <img src={team.logo} alt="" className="w-full h-full object-contain" /> : <ShieldIcon className="text-blue-600" size={12} />}
                    </div>
                    <span className="font-bold text-white/90">{team.name}</span>
@@ -83,7 +83,7 @@ export function PlayerDetails({ player, team, onBack, isAdmin, onEdit }: PlayerD
 
         {/* Overlapping Content */}
         <div className="px-6 -mt-24 relative z-10 pb-6">
-          <div className="bg-white rounded-[32px] p-2 flex border border-gray-100 shadow-xl w-full sm:w-fit mx-auto sm:mx-0 overflow-x-auto scrollbar-none">
+          <div className="bg-white dark:bg-gray-800 rounded-[32px] p-2 flex border border-gray-100 dark:border-gray-700 shadow-xl dark:shadow-black/40 w-full sm:w-fit mx-auto sm:mx-0 overflow-x-auto scrollbar-none transition-all duration-300">
             <TabButton 
               active={activeTab === 'overview'} 
               onClick={() => setActiveTab('overview')} 
@@ -110,24 +110,24 @@ export function PlayerDetails({ player, team, onBack, isAdmin, onEdit }: PlayerD
             className="space-y-6"
           >
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-2 bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
+              <div className="md:col-span-2 bg-white dark:bg-gray-900 p-8 rounded-[40px] border border-gray-100 dark:border-gray-800 shadow-sm space-y-6 transition-all duration-300">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-blue-50 rounded-2xl">
-                    <InfoIcon className="text-blue-600" size={24} />
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl">
+                    <InfoIcon className="text-blue-600 dark:text-blue-400" size={24} />
                   </div>
-                  <h3 className="text-xl font-black">Player Summary</h3>
+                  <h3 className="text-xl font-black dark:text-white">Player Summary</h3>
                 </div>
-                <div className="text-gray-600 leading-relaxed font-medium">
+                <div className="text-gray-600 dark:text-gray-400 leading-relaxed font-medium">
                   {player.overview || `Description for ${player.name} is currently being prepared. Check back soon for detailed analysis and performance traits.`}
                 </div>
               </div>
 
-              <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
+              <div className="bg-white dark:bg-gray-900 p-8 rounded-[40px] border border-gray-100 dark:border-gray-800 shadow-sm space-y-6 transition-all duration-300">
                  <div className="flex items-center gap-3">
-                  <div className="p-3 bg-blue-50 rounded-2xl">
-                    <TargetIcon className="text-blue-600" size={24} />
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl">
+                    <TargetIcon className="text-blue-600 dark:text-blue-400" size={24} />
                   </div>
-                  <h3 className="text-xl font-black">Details</h3>
+                  <h3 className="text-xl font-black dark:text-white">Details</h3>
                 </div>
                 <div className="space-y-4">
                   <DetailRow label="Position" value={player.position} />
@@ -146,28 +146,28 @@ export function PlayerDetails({ player, team, onBack, isAdmin, onEdit }: PlayerD
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-8"
+            className="bg-white dark:bg-gray-900 p-8 rounded-[40px] border border-gray-100 dark:border-gray-800 shadow-sm space-y-8 transition-all duration-300"
           >
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-blue-50 rounded-2xl">
-                <TrendingUpIcon className="text-blue-600" size={24} />
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl">
+                <TrendingUpIcon className="text-blue-600 dark:text-blue-400" size={24} />
               </div>
-              <h3 className="text-xl font-black">Career Path & Achievements</h3>
+              <h3 className="text-xl font-black dark:text-white">Career Path & Achievements</h3>
             </div>
             
-            <div className="text-gray-600 leading-relaxed font-medium whitespace-pre-line">
+            <div className="text-gray-600 dark:text-gray-400 leading-relaxed font-medium whitespace-pre-line">
               {player.career || `${player.name}'s career path at professional level is being updated by the scouting team.`}
             </div>
 
             {player.transferHistory && (
-              <div className="mt-12 pt-12 border-t border-gray-100 space-y-6">
+              <div className="mt-12 pt-12 border-t border-gray-100 dark:border-gray-800 space-y-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-green-50 rounded-2xl">
-                    <TrendingUpIcon className="text-green-600" size={24} />
+                  <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-2xl">
+                    <TrendingUpIcon className="text-green-600 dark:text-green-400" size={24} />
                   </div>
-                  <h3 className="text-xl font-black">Transfer History</h3>
+                  <h3 className="text-xl font-black dark:text-white">Transfer History</h3>
                 </div>
-                <div className="text-gray-600 leading-relaxed font-medium whitespace-pre-line bg-gray-50/50 p-6 rounded-3xl border border-gray-100">
+                <div className="text-gray-600 dark:text-gray-400 leading-relaxed font-medium whitespace-pre-line bg-gray-50/50 dark:bg-gray-800/50 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 transition-colors">
                   {player.transferHistory}
                 </div>
               </div>
@@ -185,7 +185,7 @@ function TabButton({ active, onClick, icon, label }: { active: boolean; onClick:
       onClick={onClick}
       className={cn(
         "flex items-center gap-2 px-8 py-3 rounded-2xl font-bold text-sm transition-all whitespace-nowrap",
-        active ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "text-gray-400 hover:text-gray-600"
+        active ? "bg-blue-600 text-white shadow-lg shadow-blue-100 dark:shadow-blue-900/40" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
       )}
     >
       {icon}
@@ -196,9 +196,9 @@ function TabButton({ active, onClick, icon, label }: { active: boolean; onClick:
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between items-center py-3 border-b border-gray-50 last:border-0">
+    <div className="flex justify-between items-center py-3 border-b border-gray-50 dark:border-gray-800 last:border-0 transition-colors">
       <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{label}</span>
-      <span className="font-bold text-sm text-gray-900">{value}</span>
+      <span className="font-bold text-sm text-gray-900 dark:text-white transition-colors">{value}</span>
     </div>
   );
 }

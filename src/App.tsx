@@ -176,9 +176,9 @@ export default function App() {
         pref_time_desc: 'Choose how match times are displayed',
         pref_appearance: 'Appearance',
         pref_language: 'Language',
-        pref_system: 'SYSTEM all screen',
-        pref_light: 'LIGHT all screen',
-        pref_dark: 'dark all screen',
+        pref_system: 'System Default',
+        pref_light: 'Light Mode',
+        pref_dark: 'Dark Mode',
         tap_lang: 'tap English Language',
         tap_lang_ku: 'tap Kurdish Language',
         live_match: 'Live Match',
@@ -215,9 +215,9 @@ export default function App() {
         pref_time_desc: 'شێوازی پیشاندانی کاتی یارییەکان هەڵبژێرە',
         pref_appearance: 'شێوە',
         pref_language: 'زمان',
-        pref_system: 'سیستەم لێرە',
-        pref_light: 'ڕووناک لێرە',
-        pref_dark: 'تاریک لێرە',
+        pref_system: 'سیستەمی بنەڕەتی',
+        pref_light: 'دۆخی ڕووناک',
+        pref_dark: 'دۆخی تاریک',
         tap_lang: 'tap English Language',
         tap_lang_ku: 'tap Kurdish Language',
         live_match: 'یاری ڕاستەوخۆ',
@@ -256,16 +256,26 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('pref_theme', prefTheme);
     
-    // Apply theme
     const root = window.document.documentElement;
-    if (prefTheme === 'dark') {
-      root.classList.add('dark');
-    } else if (prefTheme === 'light') {
-      root.classList.remove('dark');
-    } else {
-      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (systemDark) root.classList.add('dark');
-      else root.classList.remove('dark');
+    const applyTheme = () => {
+      if (prefTheme === 'dark') {
+        root.classList.add('dark');
+      } else if (prefTheme === 'light') {
+        root.classList.remove('dark');
+      } else {
+        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (systemDark) root.classList.add('dark');
+        else root.classList.remove('dark');
+      }
+    };
+
+    applyTheme();
+
+    if (prefTheme === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = () => applyTheme();
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
     }
   }, [prefTheme]);
 
@@ -626,13 +636,13 @@ export default function App() {
   const liveGames = useMemo(() => games.filter(g => g.status === 'live'), [games]);
 
   return (
-    <div className="min-h-screen bg-[#F8F9FE] text-[#1A1A1A] font-sans selection:bg-blue-100 pb-24">
+    <div className="min-h-screen bg-[#F8F9FE] dark:bg-gray-950 text-[#1A1A1A] dark:text-white font-sans selection:bg-blue-100 pb-24">
       <AnimatePresence>
         {isLoading && (
           <motion.div 
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[1000] bg-white flex flex-col items-center justify-center gap-8"
+            className="fixed inset-0 z-[1000] bg-white dark:bg-gray-950 flex flex-col items-center justify-center gap-8"
           >
             <motion.div 
               animate={{ 
@@ -649,7 +659,7 @@ export default function App() {
               <TrophyIcon className="text-white w-12 h-12" />
             </motion.div>
             <div className="space-y-2 text-center">
-              <h2 className="text-2xl font-black text-blue-900 tracking-tight">LiveScore<span className="text-blue-500">Pro</span></h2>
+              <h2 className="text-2xl font-black text-blue-900 dark:text-white tracking-tight">LiveScore<span className="text-blue-500">Pro</span></h2>
               <div className="flex gap-1 justify-center">
                 <motion.div 
                   animate={{ opacity: [0.3, 1, 0.3] }}
@@ -704,18 +714,18 @@ export default function App() {
       )}
 
       {quotaExceeded && (
-        <div className="fixed inset-0 z-[200] bg-white/80 backdrop-blur-md flex items-center justify-center p-6 text-center">
-          <div className="max-w-md w-full bg-white rounded-[40px] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] p-10 border border-gray-100 flex flex-col items-center gap-6">
-            <div className="w-20 h-20 bg-orange-50 rounded-[32px] flex items-center justify-center text-4xl shadow-inner">
+        <div className="fixed inset-0 z-[200] bg-white/80 dark:bg-gray-950/80 backdrop-blur-md flex items-center justify-center p-6 text-center">
+          <div className="max-w-md w-full bg-white dark:bg-gray-900 rounded-[40px] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] p-10 border border-gray-100 dark:border-gray-800 flex flex-col items-center gap-6">
+            <div className="w-20 h-20 bg-orange-50 dark:bg-orange-500/10 rounded-[32px] flex items-center justify-center text-4xl shadow-inner">
               ⏳
             </div>
             <div className="space-y-2">
-              <h2 className="text-2xl font-black text-gray-900 tracking-tight">Connectivity Notice</h2>
-              <p className="text-gray-500 font-medium leading-relaxed">
+              <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Connectivity Notice</h2>
+              <p className="text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
                 We're having trouble connecting to the live database (it may be at capacity or your connection is unstable). You can continue using the app with cached data for now.
               </p>
             </div>
-            <div className="w-full h-px bg-gray-50" />
+            <div className="w-full h-px bg-gray-50 dark:bg-gray-800" />
             <div className="space-y-4 w-full">
               <div className="flex flex-col gap-3">
                 <button 
@@ -729,7 +739,7 @@ export default function App() {
                     setQuotaExceeded(false);
                     setHasDismissedQuota(true);
                   }}
-                  className="w-full py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all"
+                  className="w-full py-4 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-2xl font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
                 >
                   Continue with cached data
                 </button>
@@ -925,7 +935,7 @@ export default function App() {
                       />
                     ))
                   ) : (
-                    <div className="p-12 text-center bg-white rounded-3xl border border-gray-100 text-gray-400">
+                    <div className="p-12 text-center bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 text-gray-400">
                       <CalendarIcon className="w-12 h-12 mx-auto mb-4 opacity-20" />
                       <p>{t('no_matches')}</p>
                     </div>
@@ -980,19 +990,19 @@ export default function App() {
                        navigateTo('league-details');
                      }}
                       className={cn(
-                        "p-4 rounded-3xl border transition-all cursor-pointer flex items-center gap-4 hover:shadow-md bg-white border-gray-100"
+                        "p-4 rounded-3xl border transition-all cursor-pointer flex items-center gap-4 hover:shadow-md bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800"
                       )}
                    >
-                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden bg-blue-50">
+                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden bg-blue-50 dark:bg-blue-500/10">
                         {league.logo ? <img src={league.logo} alt="" className="w-full h-full object-cover" /> : <TrophyIcon className="text-blue-600" />}
                       </div>
                       <div>
-                        <h3 className="font-bold text-gray-900">{league.name}</h3>
+                        <h3 className="font-bold text-gray-900 dark:text-white">{league.name}</h3>
                         <div className="flex items-center gap-2">
-                           <p className="text-xs text-gray-500">{league.country || 'International'}</p>
+                           <p className="text-xs text-gray-500 dark:text-gray-400">{league.country || 'International'}</p>
                            {league.competitionId && (
                              <>
-                                <span className="w-1 h-1 bg-gray-200 rounded-full" />
+                                <span className="w-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-full" />
                                 <span className="text-[9px] font-black uppercase text-blue-500 tracking-wider">
                                   {competitions.find(c => c.id === league.competitionId)?.name}
                                 </span>
@@ -1000,7 +1010,7 @@ export default function App() {
                            )}
                         </div>
                       </div>
-                      <ChevronRightIcon className="ml-auto text-gray-300" />
+                      <ChevronRightIcon className="ml-auto text-gray-300 dark:text-gray-600" />
                    </div>
                  ))}
                </div>
@@ -1196,7 +1206,7 @@ export default function App() {
 
                   if (filtered.length === 0) {
                     return (
-                      <div className="p-12 text-center bg-white rounded-[40px] border border-gray-100 text-gray-400">
+                      <div className="p-12 text-center bg-white dark:bg-gray-900 rounded-[40px] border border-gray-100 dark:border-gray-800 text-gray-400">
                         <TransferIcon className="w-12 h-12 mx-auto mb-4 opacity-20" />
                         <p className="font-bold">{t('no_transfers')}</p>
                       </div>
@@ -1214,17 +1224,17 @@ export default function App() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.05 }}
                         key={transfer.id} 
-                        className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
+                        className="bg-white dark:bg-gray-900 rounded-3xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow"
                       >
                         <div className="flex flex-col sm:flex-row items-center gap-6">
                            {/* Player info */}
                           <div className="flex items-center gap-4 w-full sm:w-1/3">
-                            <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center overflow-hidden border border-gray-100">
+                            <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden border border-gray-100 dark:border-gray-700">
                               {player?.imageUrl ? <img src={player.imageUrl} alt="" className="w-full h-full object-cover" /> : <UsersIcon className="text-gray-300" />}
                             </div>
                             <div>
-                               <p className="font-black text-gray-900">{player?.name || t('unknown_player')}</p>
-                               <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">
+                               <p className="font-black text-gray-900 dark:text-white">{player?.name || t('unknown_player')}</p>
+                               <span className="text-[10px] font-black uppercase text-gray-400 dark:text-gray-500 tracking-wider">
                                  {player?.position || 'N/A'} • {new Date(transfer.date).toLocaleDateString()}
                                </span>
                             </div>
@@ -1233,31 +1243,31 @@ export default function App() {
                           {/* Transfer path */}
                           <div className="flex items-center justify-center gap-4 flex-1">
                             <div className="flex flex-col items-center gap-1 group cursor-pointer" onClick={() => fromTeam && setSelectedTeamId(fromTeam.id) && navigateTo('team-details')}>
-                              <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center border border-gray-100">
-                                {fromTeam?.logo ? <img src={fromTeam.logo} alt="" className="w-6 h-6 object-contain" /> : <ShieldIcon className="text-gray-300" />}
+                              <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center border border-gray-100 dark:border-gray-700 transition-colors">
+                                {fromTeam?.logo ? <img src={fromTeam.logo} alt="" className="w-6 h-6 object-contain" /> : <ShieldIcon className="text-gray-300 dark:text-gray-600" />}
                               </div>
-                              <span className="text-[10px] font-bold text-gray-400 truncate max-w-[60px]">{fromTeam?.name}</span>
+                              <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 truncate max-w-[60px] transition-colors">{fromTeam?.name}</span>
                             </div>
 
                             <div className="flex flex-col items-center gap-1">
                                <div className="flex items-center gap-1">
-                                  <div className="w-2 h-0.5 bg-gray-200 rounded-full" />
-                                  <TransferIcon size={16} className="text-blue-600" />
-                                  <div className="w-2 h-0.5 bg-gray-200 rounded-full" />
+                                  <div className="w-2 h-0.5 bg-gray-200 dark:bg-gray-700 rounded-full transition-colors" />
+                                  <TransferIcon size={16} className="text-blue-600 dark:text-blue-400" />
+                                  <div className="w-2 h-0.5 bg-gray-200 dark:bg-gray-700 rounded-full transition-colors" />
                                </div>
                                <span className={cn(
-                                 "text-[10px] font-black uppercase px-2 py-0.5 rounded-full",
-                                 transfer.type === 'loan' ? "bg-orange-50 text-orange-600" : "bg-green-50 text-green-600"
+                                 "text-[10px] font-black uppercase px-2 py-0.5 rounded-full transition-all",
+                                 transfer.type === 'loan' ? "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400" : "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400"
                                )}>
                                  {transfer.type}
                                </span>
                             </div>
 
                             <div className="flex flex-col items-center gap-1 group cursor-pointer" onClick={() => toTeam && setSelectedTeamId(toTeam.id) && navigateTo('team-details')}>
-                              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100">
+                              <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center border border-blue-100 dark:border-blue-900/50">
                                 {toTeam?.logo ? <img src={toTeam.logo} alt="" className="w-6 h-6 object-contain" /> : <ShieldIcon className="text-blue-600" />}
                               </div>
-                              <span className="text-[10px] font-bold text-gray-900 truncate max-w-[60px]">{toTeam?.name}</span>
+                              <span className="text-[10px] font-bold text-gray-900 dark:text-white truncate max-w-[60px]">{toTeam?.name}</span>
                             </div>
                           </div>
 
@@ -1312,20 +1322,20 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-[40px] p-8 border border-gray-100 shadow-sm space-y-6">
+              <div className="bg-white dark:bg-gray-900 rounded-[40px] p-8 border border-gray-100 dark:border-gray-800 shadow-sm space-y-6">
                 <div className="space-y-4">
                   <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">{t('pref_notifications')}</h3>
                   
                   <div className="flex justify-between items-center group">
                     <div>
-                      <p className="font-black text-gray-900">{t('pref_notifications')}</p>
+                      <p className="font-black text-gray-900 dark:text-white">{t('pref_notifications')}</p>
                       <p className="text-xs text-gray-500 font-medium">{t('pref_notifications_desc')}</p>
                     </div>
                     <button 
                       onClick={() => setPrefNotifications(!prefNotifications)}
                       className={cn(
                         "w-14 h-8 rounded-full transition-all relative",
-                        prefNotifications ? "bg-blue-600 shadow-lg shadow-blue-100" : "bg-gray-100"
+                        prefNotifications ? "bg-blue-600 shadow-lg shadow-blue-100" : "bg-gray-100 dark:bg-gray-800"
                       )}
                     >
                       <div className={cn(
@@ -1335,16 +1345,16 @@ export default function App() {
                     </button>
                   </div>
 
-                  <div className="flex justify-between items-center group pt-4 border-t border-gray-50">
+                  <div className="flex justify-between items-center group pt-4 border-t border-gray-50 dark:border-gray-800">
                     <div>
-                      <p className="font-black text-gray-900">{t('pref_banners')}</p>
+                      <p className="font-black text-gray-900 dark:text-white">{t('pref_banners')}</p>
                       <p className="text-xs text-gray-500 font-medium">{t('pref_banners_desc')}</p>
                     </div>
                     <button 
                       onClick={() => setPrefMobileBanners(!prefMobileBanners)}
                       className={cn(
                         "w-14 h-8 rounded-full transition-all relative",
-                        prefMobileBanners ? "bg-blue-600 shadow-lg shadow-blue-100" : "bg-gray-100"
+                        prefMobileBanners ? "bg-blue-600 shadow-lg shadow-blue-100" : "bg-gray-100 dark:bg-gray-800"
                       )}
                     >
                       <div className={cn(
@@ -1355,21 +1365,21 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="pt-6 border-t border-gray-100">
+                <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
                   <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">{t('settings')}</h3>
                   
                   <div className="space-y-6">
                     <div className="flex justify-between items-center group">
                       <div>
-                        <p className="font-black text-gray-900">{t('pref_time')}</p>
+                        <p className="font-black text-gray-900 dark:text-white">{t('pref_time')}</p>
                         <p className="text-xs text-gray-500 font-medium">{t('pref_time_desc')}</p>
                       </div>
-                      <div className="flex bg-gray-50 p-1 rounded-2xl border border-gray-100">
+                      <div className="flex bg-gray-50 dark:bg-gray-800 p-1 rounded-2xl border border-gray-100 dark:border-gray-700">
                         <button 
                           onClick={() => setPrefTimeFormat('12h')}
                           className={cn(
                             "px-4 py-2 rounded-xl text-[10px] font-black transition-all",
-                            prefTimeFormat === '12h' ? "bg-white text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                            prefTimeFormat === '12h' ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-400 hover:text-gray-600"
                           )}
                         >
                           AM/PM
@@ -1378,7 +1388,7 @@ export default function App() {
                           onClick={() => setPrefTimeFormat('24h')}
                           className={cn(
                             "px-4 py-2 rounded-xl text-[10px] font-black transition-all",
-                            prefTimeFormat === '24h' ? "bg-white text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                            prefTimeFormat === '24h' ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-400 hover:text-gray-600"
                           )}
                         >
                           24H
@@ -1386,7 +1396,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="space-y-4 pt-4 border-t border-gray-50 mt-4">
+                    <div className="space-y-4 pt-4 border-t border-gray-50 dark:border-gray-800 mt-4">
                       <p className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em]">{t('pref_appearance')}</p>
                       <div className="grid gap-3">
                         {(['system', 'light', 'dark'] as const).map(t_key => (
@@ -1397,7 +1407,7 @@ export default function App() {
                               "w-full p-4 rounded-2xl flex items-center justify-between transition-all border",
                               prefTheme === t_key 
                                 ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100" 
-                                : "bg-white border-gray-100 text-gray-900 hover:border-gray-200"
+                                : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-900 dark:text-white hover:border-gray-200 dark:hover:border-gray-600"
                             )}
                           >
                             <span className="font-black tracking-widest text-xs">
@@ -1405,7 +1415,7 @@ export default function App() {
                             </span>
                             <div className={cn(
                               "w-4 h-4 rounded-full border-2 flex items-center justify-center",
-                              prefTheme === t_key ? "border-white" : "border-gray-200"
+                              prefTheme === t_key ? "border-white" : "border-gray-200 dark:border-gray-600"
                             )}>
                               {prefTheme === t_key && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                             </div>
@@ -1414,7 +1424,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="space-y-4 pt-4 border-t border-gray-50 mt-4">
+                    <div className="space-y-4 pt-4 border-t border-gray-50 dark:border-gray-800 mt-4">
                       <p className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em]">{t('pref_language')}</p>
                       <div className="grid gap-3">
                         {(['English', 'Kurdish'] as const).map(lang => (
@@ -1425,13 +1435,13 @@ export default function App() {
                               "w-full p-4 rounded-2xl flex items-center justify-between transition-all border",
                               prefLanguage === lang 
                                 ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100" 
-                                : "bg-white border-gray-100 text-gray-900 hover:border-gray-200"
+                                : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-900 dark:text-white hover:border-gray-200 dark:hover:border-gray-600"
                             )}
                           >
                             <span className="font-black tracking-widest text-xs">{t(lang === 'English' ? 'tap_lang' : 'tap_lang_ku')}</span>
                             <div className={cn(
                               "w-4 h-4 rounded-full border-2 flex items-center justify-center",
-                              prefLanguage === lang ? "border-white" : "border-gray-200"
+                              prefLanguage === lang ? "border-white" : "border-gray-200 dark:border-gray-600"
                             )}>
                               {prefLanguage === lang && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                             </div>
@@ -1470,25 +1480,25 @@ export default function App() {
       {/* Admin Login Modal */}
       <AnimatePresence>
         {showAdminLogin && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 dark:bg-black/80 backdrop-blur-sm">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl"
+              className="bg-white dark:bg-gray-900 rounded-[40px] p-8 w-full max-w-sm shadow-2xl border border-white/10"
             >
-              <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <div className="w-16 h-16 bg-blue-50 dark:bg-blue-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <LockIcon className="text-blue-600 w-8 h-8" />
               </div>
-              <h3 className="text-2xl font-bold text-center mb-2">Admin Panel</h3>
-              <p className="text-gray-500 text-center mb-8">Enter the master password to unlock administrative features.</p>
+              <h3 className="text-2xl font-bold text-center mb-2 dark:text-white">Admin Panel</h3>
+              <p className="text-gray-500 dark:text-gray-400 text-center mb-8">Enter the master password to unlock administrative features.</p>
               
               <input 
                 type="password" 
                 placeholder="Enter Password"
                 value={adminPassword}
                 onChange={(e) => setAdminPassword(e.target.value)}
-                className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 mb-4 transition-all"
+                className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 mb-4 transition-all dark:text-white"
                 onKeyDown={(e) => e.key === 'Enter' && handleAdminAuth()}
               />
               
@@ -1512,7 +1522,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-100 px-6 py-4 z-40">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 px-6 py-4 z-40">
         <div className="max-w-md mx-auto flex justify-between items-center">
           <NavButton active={view === 'matches'} onClick={() => { navigateTo('matches'); setSelectedLeagueId(null); setSelectedPlayerId(null); setSelectedTeamId(null); }} icon={<ClockIcon />} label={prefLanguage === 'English' ? 'Home' : 'سەرەکی'} />
           <NavButton active={view === 'leagues'} onClick={() => navigateTo('leagues')} icon={<ShieldIcon />} label={t('leagues')} />
