@@ -58,8 +58,9 @@ import { TeamDetails } from './components/TeamDetails';
 type View = 'matches' | 'leagues' | 'standings' | 'admin' | 'settings' | 'game-details' | 'league-details' | 'team-details' | 'player-details' | 'transfers';
 
 export default function App() {
-  const [view, setView] = useState<View>('transfers');
+  const [view, setView] = useState<View>('matches');
   const [previousView, setPreviousView] = useState<View>('matches');
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
@@ -93,12 +94,43 @@ export default function App() {
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
   const [showOnlyLive, setShowOnlyLive] = useState(false);
   const [quotaExceeded, setQuotaExceeded] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [hasDismissedQuota, setHasDismissedQuota] = useState(false);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   const [activeBanner, setActiveBanner] = useState<AppNotification | null>(null);
   const [transferFilter, setTransferFilter] = useState<'worldwide' | 'domestic' | 'top'>('worldwide');
   const [adminDefaultTeamId, setAdminDefaultTeamId] = useState<string | null>(null);
   const [adminDefaultPlayerId, setAdminDefaultPlayerId] = useState<string | null>(null);
   const [adminDefaultLeagueId, setAdminDefaultLeagueId] = useState<string | null>(null);
+
+  // Data Sync Status Tracking
+  const [syncStatus, setSyncStatus] = useState<Record<string, boolean>>({
+    leagues: false,
+    games: false,
+    teams: false,
+    players: false
+  });
+
+  useEffect(() => {
+    // Hide loading once essential data is fetched or after a timeout
+    const essentialDataLoaded = syncStatus.leagues && syncStatus.games && syncStatus.teams;
+    if (essentialDataLoaded) {
+      setIsLoading(false);
+    }
+
+    const timeout = setTimeout(() => setIsLoading(false), 3000); // Max 3s loading
+    return () => clearTimeout(timeout);
+  }, [syncStatus]);
 
   // Settings state
   const [prefNotifications, setPrefNotifications] = useState(() => {
@@ -311,11 +343,15 @@ export default function App() {
   const handleError = (error: any, operation: OperationType, path: string) => {
     const errorMsg = error?.message || String(error);
     const isQuota = errorMsg.includes('Quota limit exceeded') || errorMsg.includes('Quota exceeded');
-    const isOffline = errorMsg.includes('Could not reach Cloud Firestore backend') || 
-                      errorMsg.includes('client is offline') || 
-                      errorMsg.includes('unavailable');
+    const isConnectivityIssue = errorMsg.includes('Could not reach Cloud Firestore backend') || 
+                                errorMsg.includes('client is offline') || 
+                                errorMsg.includes('unavailable');
 
-    if (isQuota || isOffline) {
+    if (isConnectivityIssue) {
+      setIsOffline(true);
+    }
+
+    if (isQuota || (isConnectivityIssue && !navigator.onLine)) {
       if (!hasDismissedQuota) {
         setQuotaExceeded(true);
       }
@@ -339,6 +375,7 @@ export default function App() {
     return onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as League));
       setLeagues(data);
+      setSyncStatus(prev => ({ ...prev, leagues: true }));
       localStorage.setItem('cache_leagues', JSON.stringify(data));
     }, (error) => handleError(error, OperationType.LIST, path));
   }, []);
@@ -358,6 +395,7 @@ export default function App() {
     return onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Game));
       setGames(data);
+      setSyncStatus(prev => ({ ...prev, games: true }));
       localStorage.setItem('cache_games', JSON.stringify(data));
     }, (error) => handleError(error, OperationType.LIST, path));
   }, []);
@@ -373,6 +411,7 @@ export default function App() {
     return onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
       setTeams(data);
+      setSyncStatus(prev => ({ ...prev, teams: true }));
       localStorage.setItem('cache_teams', JSON.stringify(data));
     }, (error) => handleError(error, OperationType.LIST, path));
   }, []);
@@ -388,6 +427,7 @@ export default function App() {
     return onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Player));
       setPlayers(data);
+      setSyncStatus(prev => ({ ...prev, players: true }));
       localStorage.setItem('cache_players', JSON.stringify(data));
     }, (error) => handleError(error, OperationType.LIST, path));
   }, []);
@@ -467,9 +507,9 @@ export default function App() {
         // New events detected
         const newEvents = currentEvents.slice(prevCount);
         newEvents.forEach(event => {
-          const team = teams.find(t => t.id === event.teamId);
+          const team = teams.find(teamItem => teamItem.id === event.teamId);
           const player = players.find(p => p.id === event.playerId);
-          const opponent = teams.find(t => t.id === (game.homeTeamId === event.teamId ? game.awayTeamId : game.homeTeamId));
+          const opponent = teams.find(oppItem => oppItem.id === (game.homeTeamId === event.teamId ? game.awayTeamId : game.homeTeamId));
           
           let title = '';
           let message = '';
@@ -563,6 +603,51 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FE] text-[#1A1A1A] font-sans selection:bg-blue-100 pb-24">
+      <AnimatePresence>
+        {isLoading && (
+          <motion.div 
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[1000] bg-white flex flex-col items-center justify-center gap-8"
+          >
+            <motion.div 
+              animate={{ 
+                scale: [1, 1.1, 1],
+                rotate: [0, 5, -5, 0]
+              }}
+              transition={{ 
+                repeat: Infinity, 
+                duration: 2,
+                ease: "easeInOut"
+              }}
+              className="w-24 h-24 bg-blue-600 rounded-[32px] flex items-center justify-center shadow-2xl shadow-blue-100"
+            >
+              <TrophyIcon className="text-white w-12 h-12" />
+            </motion.div>
+            <div className="space-y-2 text-center">
+              <h2 className="text-2xl font-black text-blue-900 tracking-tight">LiveScore<span className="text-blue-500">Pro</span></h2>
+              <div className="flex gap-1 justify-center">
+                <motion.div 
+                  animate={{ opacity: [0.3, 1, 0.3] }}
+                  transition={{ repeat: Infinity, duration: 1, delay: 0 }}
+                  className="w-1.5 h-1.5 bg-blue-600 rounded-full" 
+                />
+                <motion.div 
+                  animate={{ opacity: [0.3, 1, 0.3] }}
+                  transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
+                  className="w-1.5 h-1.5 bg-blue-600 rounded-full" 
+                />
+                <motion.div 
+                  animate={{ opacity: [0.3, 1, 0.3] }}
+                  transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
+                  className="w-1.5 h-1.5 bg-blue-600 rounded-full" 
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <Header 
         user={user} 
@@ -588,9 +673,9 @@ export default function App() {
         t={t}
       />
 
-      {hasDismissedQuota && (
+      {(hasDismissedQuota || isOffline) && (
         <div className="bg-orange-500 text-white px-4 py-1.5 text-center text-[10px] font-black uppercase tracking-widest animate-pulse sticky top-0 z-50">
-          OFFLINE MODE • DATA IS STALE • CONNECTION LIMITED
+          {isOffline ? 'OFFLINE • CHECK CONNECTION' : 'STALE DATA • OFFLINE MODE'}
         </div>
       )}
 
@@ -675,7 +760,7 @@ export default function App() {
       <AnimatePresence>
       </AnimatePresence>
 
-      <main className="max-w-4xl mx-auto px-4 pt-6">
+      <main className="max-w-[1092px] mx-auto px-4 pt-6">
         <AnimatePresence mode="wait">
           {view === 'matches' && (
             <motion.div
@@ -940,7 +1025,7 @@ export default function App() {
           )}
           {view === 'team-details' && selectedTeamId && (
             <TeamDetails 
-              team={teams.find(t => t.id === selectedTeamId)!}
+              team={teams.find(teamItem => teamItem.id === selectedTeamId)!}
               teams={teams}
               games={games}
               players={players}
@@ -973,7 +1058,7 @@ export default function App() {
           {view === 'player-details' && selectedPlayerId && (
             <PlayerDetails 
               player={players.find(p => p.id === selectedPlayerId)!}
-              team={teams.find(t => t.id === players.find(p => p.id === selectedPlayerId)?.teamId)}
+              team={teams.find(teamItem => teamItem.id === players.find(p => p.id === selectedPlayerId)?.teamId)}
               onBack={() => navigateTo(previousView)}
               isAdmin={isAdmin}
               onEdit={(id) => {
@@ -1031,12 +1116,12 @@ export default function App() {
 
               <div className="space-y-4">
                 {(() => {
-                  const filtered = transfers.filter(t => {
+                  const filtered = transfers.filter(transferItem => {
                     if (transferFilter === 'worldwide') return true;
-                    const fromTeam = teams.find(team => team.id === t.fromTeamId);
-                    const toTeam = teams.find(team => team.id === t.toTeamId);
-                    const fromLeague = leagues.find(l => l.id === fromTeam?.leagueId);
-                    const toLeague = leagues.find(l => l.id === toTeam?.leagueId);
+                    const fromTeam = teams.find(teamItem => teamItem.id === transferItem.fromTeamId);
+                    const toTeam = teams.find(teamItem => teamItem.id === transferItem.toTeamId);
+                    const fromLeague = leagues.find(leagueItem => leagueItem.id === fromTeam?.leagueId);
+                    const toLeague = leagues.find(leagueItem => leagueItem.id === toTeam?.leagueId);
 
                     if (transferFilter === 'domestic') {
                       return fromLeague?.country && toLeague?.country && fromLeague.country === toLeague.country;
@@ -1368,7 +1453,7 @@ export default function App() {
       {/* Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-100 px-6 py-4 z-40">
         <div className="max-w-md mx-auto flex justify-between items-center">
-          <NavButton active={view === 'matches'} onClick={() => navigateTo('matches')} icon={<ClockIcon />} label={t('matches')} />
+          <NavButton active={view === 'matches'} onClick={() => { navigateTo('matches'); setSelectedLeagueId(null); setSelectedPlayerId(null); setSelectedTeamId(null); }} icon={<ClockIcon />} label={prefLanguage === 'English' ? 'Home' : 'سەرەکی'} />
           <NavButton active={view === 'leagues'} onClick={() => navigateTo('leagues')} icon={<ShieldIcon />} label={t('leagues')} />
           <NavButton active={view === 'transfers'} onClick={() => navigateTo('transfers')} icon={<TransferIcon />} label={t('transfers')} />
           <NavButton active={view === 'settings'} onClick={() => navigateTo('settings')} icon={<SettingsIcon />} label={t('settings')} />

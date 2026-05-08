@@ -83,7 +83,14 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
     winnerId: string;
     editingIndex: number | null;
   }>({ season: '', winnerId: '', editingIndex: null });
-  const [teamForm, setTeamForm] = useState({ name: '', leagueId: defaultLeagueId || '', logo: '' });
+  const [teamForm, setTeamForm] = useState({ 
+    name: '', 
+    leagueId: defaultLeagueId || '', 
+    logo: '', 
+    coachName: '', 
+    coachImageUrl: '', 
+    foundedIn: '' 
+  });
   const [gameForm, setGameForm] = useState<{
     leagueId: string;
     homeTeamId: string;
@@ -223,7 +230,14 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
         await addDoc(collection(db, 'teams'), teamForm);
         showFeedback('Team registered successfully!');
       }
-      setTeamForm({ name: '', leagueId: defaultLeagueId || '', logo: '' });
+      setTeamForm({ 
+        name: '', 
+        leagueId: defaultLeagueId || '', 
+        logo: '',
+        coachName: '',
+        coachImageUrl: '',
+        foundedIn: ''
+      });
       setEditingId(null);
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, path);
@@ -509,7 +523,14 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
 
   const startEditingTeam = (t: Team) => {
     setEditingId(t.id);
-    setTeamForm({ name: t.name, leagueId: t.leagueId, logo: t.logo || '' });
+    setTeamForm({ 
+      name: t.name, 
+      leagueId: t.leagueId, 
+      logo: t.logo || '',
+      coachName: t.coachName || '',
+      coachImageUrl: t.coachImageUrl || '',
+      foundedIn: t.foundedIn || ''
+    });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -549,7 +570,14 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
     setEditingId(null);
     setLeagueForm({ name: '', country: '', logo: '', description: '', currentSeasonId: '', history: [] });
     setHistoryForm({ season: '', winnerId: '', editingIndex: null });
-    setTeamForm({ name: '', leagueId: defaultLeagueId || '', logo: '' });
+    setTeamForm({ 
+      name: '', 
+      leagueId: defaultLeagueId || '', 
+      logo: '',
+      coachName: '',
+      coachImageUrl: '',
+      foundedIn: ''
+    });
     setGameForm({ 
       leagueId: defaultLeagueId || '', homeTeamId: '', awayTeamId: '',
       date: new Date().toISOString().slice(0, 16),
@@ -887,12 +915,12 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
             </AdminCard>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {transfers.map(t => {
-                const p = players.find(player => player.id === t.playerId);
-                const from = teams.find(team => team.id === t.fromTeamId);
-                const to = teams.find(team => team.id === t.toTeamId);
+              {transfers.map(transferItem => {
+                const p = players.find(player => player.id === transferItem.playerId);
+                const from = teams.find(team => team.id === transferItem.fromTeamId);
+                const to = teams.find(team => team.id === transferItem.toTeamId);
                 return (
-                  <div key={t.id} className="p-6 bg-white rounded-3xl border border-gray-100 flex items-center justify-between group">
+                   <div key={transferItem.id} className="p-6 bg-white rounded-3xl border border-gray-100 flex items-center justify-between group">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center overflow-hidden border">
                          {p?.imageUrl ? <img src={p.imageUrl} alt="" className="w-full h-full object-cover" /> : <UsersIcon className="text-gray-200" />}
@@ -905,10 +933,10 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => startEditingTransfer(t)} className="p-3 text-blue-500 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-all">
+                       <button onClick={() => startEditingTransfer(transferItem)} className="p-3 text-blue-500 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-all">
                         <SaveIcon size={18} />
                       </button>
-                      <button onClick={() => handleDelete('transfers', t.id)} className="p-3 text-red-500 bg-red-50 rounded-2xl hover:bg-red-100 transition-all">
+                      <button onClick={() => handleDelete('transfers', transferItem.id)} className="p-3 text-red-500 bg-red-50 rounded-2xl hover:bg-red-100 transition-all">
                         <Trash2Icon size={18} />
                       </button>
                     </div>
@@ -1100,13 +1128,24 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="Team Name" value={teamForm.name} onChange={v => setTeamForm({ ...teamForm, name: v })} placeholder="e.g. Manchester United" />
                 <Select label="Assign to League" value={teamForm.leagueId} onChange={v => setTeamForm({ ...teamForm, leagueId: v })} options={leagues.map(l => ({ label: l.name, value: l.id }))} />
+                <Input label="Founded In" value={teamForm.foundedIn} onChange={v => setTeamForm({ ...teamForm, foundedIn: v })} placeholder="e.g. 1909" />
+                <Input label="Coach Name" value={teamForm.coachName} onChange={v => setTeamForm({ ...teamForm, coachName: v })} placeholder="e.g. Pep Guardiola" />
+                
                 <ImageUpload 
                   label="Team Logo (File or URL)" 
                   value={teamForm.logo} 
                   onChange={v => setTeamForm({ ...teamForm, logo: v })}
                   onFileSelect={handleFileUpload}
                 />
-                <div className="sm:pt-7 flex gap-2">
+
+                <ImageUpload 
+                  label="Coach Image (File or URL)" 
+                  value={teamForm.coachImageUrl} 
+                  onChange={v => setTeamForm({ ...teamForm, coachImageUrl: v })}
+                  onFileSelect={handleFileUpload}
+                />
+
+                <div className="sm:pt-7 flex gap-2 sm:col-span-2">
                   {editingId && (
                     <button onClick={cancelEdit} className="px-6 h-[54px] bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all">
                       Cancel

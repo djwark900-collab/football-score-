@@ -44,6 +44,7 @@ type Tab = 'stats' | 'events' | 'lineups' | 'standings' | 'h2h';
 
 export function GameDetails({ game, teams, games, leagues, players, venues, onBack, onTeamClick, onLeagueClick, onGameClick, onPlayerClick, isAdmin, isFollowing, onToggleFollow }: GameDetailsProps) {
   const [activeTab, setActiveTab] = useState<Tab>('stats');
+  const [lineupView, setLineupView] = useState<'list' | 'field'>('field');
   const homeTeam = teams.find(t => t.id === game.homeTeamId);
   const awayTeam = teams.find(t => t.id === game.awayTeamId);
   const venue = venues.find(v => v.id === game.venueId);
@@ -429,6 +430,31 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
           </button>
         </div>
 
+        {activeTab === 'lineups' && (
+          <div className="flex justify-center mb-6">
+            <div className="bg-gray-50 p-1 rounded-2xl flex gap-1 border border-gray-100">
+              <button 
+                onClick={() => setLineupView('field')}
+                className={cn(
+                  "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                  lineupView === 'field' ? "bg-white text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                )}
+              >
+                Field
+              </button>
+              <button 
+                onClick={() => setLineupView('list')}
+                className={cn(
+                  "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                  lineupView === 'list' ? "bg-white text-blue-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                )}
+              >
+                List
+              </button>
+            </div>
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
           {activeTab === 'events' && (
             <motion.div
@@ -641,60 +667,72 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
               exit={{ opacity: 0, y: -10 }}
               className="space-y-8"
             >
-              {/* Stadium Info */}
-              <div className="p-6 bg-blue-50 rounded-[32px] flex items-center gap-4 border border-blue-100/50">
-                <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm">
-                  <MapPinIcon className="text-blue-600" size={20} />
-                </div>
-                <div>
-                  <h4 className="font-black text-blue-900 text-sm uppercase tracking-tight">{venue?.name || 'To Be Confirmed'}</h4>
-                  <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">
-                    {venue?.city || 'Location Unknown'} {venue?.capacity ? `• Capacity: ${venue.capacity.toLocaleString()}` : ''}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-8">
-                {/* Home Lineup */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 px-2">
-                    <div className="w-6 h-6 rounded-lg bg-gray-50 flex items-center justify-center p-1 border border-gray-100">
-                      {homeTeam?.logo ? <img src={homeTeam.logo} className="w-full h-full object-contain" /> : <ShieldIcon size={12} className="text-gray-300" />}
+              {lineupView === 'field' ? (
+                <StadiumLineup 
+                  game={game} 
+                  homeTeam={homeTeam} 
+                  awayTeam={awayTeam} 
+                  players={players}
+                  onPlayerClick={onPlayerClick}
+                />
+              ) : (
+                <div className="space-y-8">
+                  {/* Stadium Info */}
+                  <div className="p-6 bg-blue-50 rounded-[32px] flex items-center gap-4 border border-blue-100/50">
+                    <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm">
+                      <MapPinIcon className="text-blue-600" size={20} />
                     </div>
-                    <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest truncate">{homeTeam?.name}</span>
-                  </div>
-                  <div className="space-y-3">
-                    {game.lineups?.home && game.lineups.home.length > 0 ? (
-                      game.lineups.home.map(pid => {
-                        const p = players.find(player => player.id === pid);
-                        return <LineupItem key={pid} player={p} onClick={() => onPlayerClick?.(pid)} />;
-                      })
-                    ) : (
-                      <p className="text-[10px] text-gray-400 italic px-2">Lineup not announced</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Away Lineup */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 flex-row-reverse px-2">
-                    <div className="w-6 h-6 rounded-lg bg-gray-50 flex items-center justify-center p-1 border border-gray-100">
-                      {awayTeam?.logo ? <img src={awayTeam.logo} className="w-full h-full object-contain" /> : <ShieldIcon size={12} className="text-gray-300" />}
+                    <div>
+                      <h4 className="font-black text-blue-900 text-sm uppercase tracking-tight">{venue?.name || 'To Be Confirmed'}</h4>
+                      <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">
+                        {venue?.city || 'Location Unknown'} {venue?.capacity ? `• Capacity: ${venue.capacity.toLocaleString()}` : ''}
+                      </p>
                     </div>
-                    <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest truncate text-right">{awayTeam?.name}</span>
                   </div>
-                  <div className="space-y-3">
-                    {game.lineups?.away && game.lineups.away.length > 0 ? (
-                      game.lineups.away.map(pid => {
-                        const p = players.find(player => player.id === pid);
-                        return <LineupItem key={pid} player={p} isRight onClick={() => onPlayerClick?.(pid)} />;
-                      })
-                    ) : (
-                      <p className="text-[10px] text-gray-400 italic text-right px-2">Lineup not announced</p>
-                    )}
+
+                  <div className="grid grid-cols-2 gap-8">
+                    {/* Home Lineup */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 px-2">
+                        <div className="w-6 h-6 rounded-lg bg-gray-50 flex items-center justify-center p-1 border border-gray-100">
+                          {homeTeam?.logo ? <img src={homeTeam.logo} className="w-full h-full object-contain" /> : <ShieldIcon size={12} className="text-gray-300" />}
+                        </div>
+                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest truncate">{homeTeam?.name}</span>
+                      </div>
+                      <div className="space-y-3">
+                        {game.lineups?.home && game.lineups.home.length > 0 ? (
+                          game.lineups.home.map(pid => {
+                            const p = players.find(player => player.id === pid);
+                            return <LineupItem key={pid} player={p} onClick={() => onPlayerClick?.(pid)} />;
+                          })
+                        ) : (
+                          <p className="text-[10px] text-gray-400 italic px-2">Lineup not announced</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Away Lineup */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 flex-row-reverse px-2">
+                        <div className="w-6 h-6 rounded-lg bg-gray-50 flex items-center justify-center p-1 border border-gray-100">
+                          {awayTeam?.logo ? <img src={awayTeam.logo} className="w-full h-full object-contain" /> : <ShieldIcon size={12} className="text-gray-300" />}
+                        </div>
+                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest truncate text-right">{awayTeam?.name}</span>
+                      </div>
+                      <div className="space-y-3">
+                        {game.lineups?.away && game.lineups.away.length > 0 ? (
+                          game.lineups.away.map(pid => {
+                            const p = players.find(player => player.id === pid);
+                            return <LineupItem key={pid} player={p} isRight onClick={() => onPlayerClick?.(pid)} />;
+                          })
+                        ) : (
+                          <p className="text-[10px] text-gray-400 italic text-right px-2">Lineup not announced</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </motion.div>
           )}
 
@@ -862,6 +900,104 @@ function LineupItem({ player, isRight, ...props }: LineupItemProps & { key?: any
         <p className="text-xs font-bold text-gray-900 group-hover:text-blue-600 transition-colors truncate">{player.name}</p>
         <p className="text-[8px] font-black uppercase text-gray-400 tracking-tighter">{player.position}</p>
       </div>
+    </div>
+  );
+}
+
+interface StadiumLineupProps {
+  game: Game;
+  homeTeam?: Team;
+  awayTeam?: Team;
+  players: Player[];
+  onPlayerClick?: (id: string) => void;
+}
+
+const FORMATION_HOME_433 = [
+  { x: 50, y: 92 }, // GKP
+  { x: 15, y: 78 }, { x: 38, y: 82 }, { x: 62, y: 82 }, { x: 85, y: 78 }, // DEF
+  { x: 25, y: 65 }, { x: 50, y: 68 }, { x: 75, y: 65 }, // MID
+  { x: 20, y: 55 }, { x: 50, y: 52 }, { x: 80, y: 55 }, // FWD
+];
+
+const FORMATION_AWAY_433 = [
+  { x: 50, y: 8 }, // GKP
+  { x: 15, y: 22 }, { x: 38, y: 18 }, { x: 62, y: 18 }, { x: 85, y: 22 }, // DEF
+  { x: 25, y: 35 }, { x: 50, y: 32 }, { x: 75, y: 35 }, // MID
+  { x: 20, y: 45 }, { x: 50, y: 48 }, { x: 80, y: 45 }, // FWD
+];
+
+function StadiumLineup({ game, homeTeam, awayTeam, players, onPlayerClick }: StadiumLineupProps) {
+  if (!game.lineups || (!game.lineups.home.length && !game.lineups.away.length)) {
+    return (
+      <div className="py-20 text-center text-gray-400">
+        <UsersIcon className="w-12 h-12 mx-auto mb-4 opacity-10" />
+        <p className="font-bold">Lineups haven't been announced for this match.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full aspect-[2/3] bg-emerald-600 rounded-[40px] overflow-hidden shadow-2xl border-4 border-white shadow-emerald-900/20">
+      {/* Field Markings */}
+      <div className="absolute inset-4 border border-white/50 rounded-[32px] pointer-events-none">
+        {/* Halfway Line */}
+        <div className="absolute top-1/2 left-0 right-0 h-px bg-white/50" />
+        {/* Center Circle */}
+        <div className="absolute top-1/2 left-1/2 w-24 h-24 border border-white/50 rounded-full -translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute top-1/2 left-1/2 w-1 h-1 bg-white/50 rounded-full -translate-x-1/2 -translate-y-1/2" />
+        
+        {/* Penalty Areas */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-[15%] border-b border-x border-white/50" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/4 h-[5%] border-b border-x border-white/50" />
+        
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-[15%] border-t border-x border-white/50" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/4 h-[5%] border-t border-x border-white/50" />
+      </div>
+
+      {/* Players */}
+      {game.lineups.home.slice(0, 11).map((pid, idx) => {
+        const p = players.find(player => player.id === pid);
+        const pos = FORMATION_HOME_433[idx] || { x: 50, y: 50 };
+        return (
+          <div 
+            key={pid} 
+            className="absolute -translate-x-1/2 -translate-y-1/2 transition-all cursor-pointer group"
+            style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+            onClick={() => onPlayerClick?.(pid)}
+          >
+            <div className="flex flex-col items-center gap-1">
+              <div className="w-8 h-8 rounded-full bg-blue-600 border-2 border-white shadow-lg flex items-center justify-center text-white text-[10px] font-black group-hover:scale-125 group-hover:bg-blue-700 transition-all">
+                {p?.number || idx + 1}
+              </div>
+              <div className="bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/10 group-hover:bg-black/60 transition-colors">
+                <span className="text-[7px] font-black text-white whitespace-nowrap uppercase tracking-tighter">{p?.name || 'Loading...'}</span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      {game.lineups.away.slice(0, 11).map((pid, idx) => {
+        const p = players.find(player => player.id === pid);
+        const pos = FORMATION_AWAY_433[idx] || { x: 50, y: 50 };
+        return (
+          <div 
+            key={pid} 
+            className="absolute -translate-x-1/2 -translate-y-1/2 transition-all cursor-pointer group px-2"
+            style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+            onClick={() => onPlayerClick?.(pid)}
+          >
+            <div className="flex flex-col items-center gap-1">
+              <div className="bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/10 group-hover:bg-black/60 transition-colors mb-1">
+                <span className="text-[7px] font-black text-white whitespace-nowrap uppercase tracking-tighter">{p?.name || 'Loading...'}</span>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-white border-2 border-gray-900 shadow-lg flex items-center justify-center text-gray-900 text-[10px] font-black group-hover:scale-125 group-hover:bg-gray-50 transition-all">
+                {p?.number || idx + 1}
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

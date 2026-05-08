@@ -24,6 +24,9 @@ export interface Team {
   name: string;
   logo?: string;
   leagueId: string;
+  coachName?: string;
+  coachImageUrl?: string;
+  foundedIn?: string;
 }
 
 export interface Player {

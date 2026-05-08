@@ -5,21 +5,32 @@ import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
+  // Use auto-detect for better compatibility in various environments
+  experimentalAutoDetectLongPolling: true,
 }, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 
 // Connection test as per guidelines
 async function testConnection() {
   try {
+    // We use getDocFromServer to verify real network connectivity
+    // If this fails, Firestore SDK will automatically switch to offline mode
     await getDocFromServer(doc(db, 'test', 'connection'));
-    console.log("Firestore connection successful");
+    console.log("Firestore connection check: ONLINE");
   } catch (error: any) {
     const errorMsg = error?.message || String(error);
+    const isOffline = errorMsg.includes('Could not reach Cloud Firestore backend') || 
+                      errorMsg.includes('client is offline') || 
+                      errorMsg.includes('unavailable') ||
+                      errorMsg.includes('network');
+    
     if (errorMsg.includes('Quota limit exceeded') || errorMsg.includes('Quota exceeded')) {
-      console.warn("Firestore Limit Exceeded detected during connection test.");
+      console.warn("Firestore Limit Exceeded detected.");
+    } else if (isOffline) {
+      // Quietly log offline status
+      console.log("Firestore connection check: OFFLINE (Operating in cache mode)");
     } else {
-      console.error("Firestore connection failed:", error);
+      console.warn("Firestore connectivity check status:", errorMsg);
     }
   }
 }

@@ -11,7 +11,8 @@ import {
   Trophy as TrophyIcon,
   Heart as HeartIcon,
   TrendingUp as TrendingUpIcon,
-  Plus as PlusIcon
+  Plus as PlusIcon,
+  Zap as ZapIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { GameCard } from './GameCard';
@@ -68,7 +69,7 @@ export function TeamDetails({
   );
 
   const league = leagues.find(l => l.id === team.leagueId);
-  const leagueTeams = teams.filter(t => t.leagueId === team.leagueId);
+  const leagueTeams = teams.filter(teamItem => teamItem.leagueId === team.leagueId);
   const leagueGames = games.filter(g => g.leagueId === team.leagueId);
 
   return (
@@ -229,7 +230,7 @@ export function TeamDetails({
                                    {new Date(g.date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
                                  </p>
                                  <p className="text-xs font-bold text-gray-900">
-                                   vs {teams.find(t => t.id === (isHome ? g.awayTeamId : g.homeTeamId))?.name}
+                                   vs {teams.find(teamItem => teamItem.id === (isHome ? g.awayTeamId : g.homeTeamId))?.name}
                                  </p>
                                </div>
                             </div>
@@ -339,72 +340,150 @@ export function TeamDetails({
             exit={{ opacity: 0, y: -10 }}
             className="grid grid-cols-1 md:grid-cols-2 gap-6"
           >
-            <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-blue-50 rounded-2xl">
-                  <InfoIcon className="text-blue-600" size={24} />
+            <div className="space-y-6">
+              <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-blue-50 rounded-2xl">
+                    <InfoIcon className="text-blue-600" size={24} />
+                  </div>
+                  <h3 className="text-xl font-black">Competitor Details</h3>
                 </div>
-                <h3 className="text-xl font-black">Competitor Details</h3>
+                
+                <div className="space-y-4">
+                  <DetailRow label="Full Name" value={team.name} />
+                  <DetailRow label="Founded In" value={team.foundedIn || 'N/A'} />
+                  {league && (
+                    <div className="flex justify-between items-center py-3 border-b border-gray-50 last:border-0">
+                      <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest text-left">Main Competition</span>
+                      <div className="flex items-center gap-2">
+                        {league.logo && <img src={league.logo} alt="" className="w-5 h-5 object-contain" />}
+                        <span className="font-bold text-sm text-gray-900">{league.name}</span>
+                      </div>
+                    </div>
+                  )}
+                  <DetailRow label="Country" value={league?.country || 'N/A'} />
+                  <DetailRow label="Squad Size" value={`${teamPlayers.length} players`} />
+                </div>
               </div>
-              
-              <div className="space-y-4">
-                <DetailRow label="Full Name" value={team.name} />
-                <DetailRow label="Main Competition" value={league?.name || 'N/A'} />
-                <DetailRow label="Country" value={league?.country || 'N/A'} />
-                <DetailRow label="Squad Size" value={`${teamPlayers.length} players`} />
+
+              {/* Coach Section */}
+              <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-purple-50 rounded-2xl">
+                    <UsersIcon className="text-purple-600" size={24} />
+                  </div>
+                  <h3 className="text-xl font-black">Management</h3>
+                </div>
+                <div className="flex items-center gap-4 p-2">
+                   <div className="w-16 h-16 rounded-2xl bg-gray-50 border border-gray-100 overflow-hidden flex items-center justify-center">
+                     {team.coachImageUrl ? (
+                       <img src={team.coachImageUrl} alt={team.coachName} className="w-full h-full object-cover" />
+                     ) : (
+                       <UsersIcon className="text-gray-200" size={32} />
+                     )}
+                   </div>
+                   <div>
+                     <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Head Coach</p>
+                     <p className="text-lg font-black text-gray-900">{team.coachName || 'Unknown Coach'}</p>
+                   </div>
+                </div>
               </div>
             </div>
 
-            <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-blue-50 rounded-2xl">
-                  <TrendingUpIcon size={24} className="text-blue-600" />
-                </div>
-                <h3 className="text-xl font-black">Performance</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Recent Form</p>
-                  <div className="flex items-center gap-2">
-                    {(() => {
-                      const finishedGames = games.filter(g => (g.homeTeamId === team.id || g.awayTeamId === team.id) && g.status === 'finished')
-                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                        .slice(0, 5);
-                      
-                      return finishedGames.reverse().map((g, i) => {
-                        const isHome = g.homeTeamId === team.id;
-                        const result = isHome 
-                          ? (g.homeScore > g.awayScore ? 'W' : g.homeScore < g.awayScore ? 'L' : 'D')
-                          : (g.awayScore > g.homeScore ? 'W' : g.awayScore < g.homeScore ? 'L' : 'D');
-                        
-                        return (
-                          <div 
-                            key={i} 
-                            className={cn(
-                              "w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black text-white shadow-md",
-                              result === 'W' ? "bg-green-500 shadow-green-100" : 
-                              result === 'D' ? "bg-yellow-500 shadow-yellow-100" : 
-                              "bg-red-500 shadow-red-100"
-                            )}
-                          >
-                            {result}
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
-                </div>
+            <div className="space-y-6">
+              {/* Next Game Hook */}
+              {(() => {
+                const nextGame = games.find(g => (g.homeTeamId === team.id || g.awayTeamId === team.id) && g.status === 'scheduled');
+                if (!nextGame) return null;
 
-                <div className="grid grid-cols-2 gap-4">
-                   <StatBox label="Wins" value={teamGames.filter(g => {
-                     if (g.status !== 'finished') return false;
-                     const isHome = g.homeTeamId === team.id;
-                     return isHome ? g.homeScore > g.awayScore : g.awayScore > g.homeScore;
-                   }).length} />
-                   <StatBox label="Goals" value={teamGames.reduce((acc, g) => {
-                     return acc + (g.homeTeamId === team.id ? g.homeScore : g.awayScore);
-                   }, 0)} />
+                return (
+                  <div className="bg-blue-600 p-8 rounded-[40px] shadow-2xl shadow-blue-200 text-white space-y-6 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                      <CalendarIcon size={120} />
+                    </div>
+                    <div className="flex items-center gap-3 relative z-10">
+                      <div className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
+                        <ZapIcon className="text-white" size={20} />
+                      </div>
+                      <h3 className="text-xl font-black">Next Match</h3>
+                    </div>
+                    <div 
+                      onClick={() => onGameClick(nextGame.id)}
+                      className="bg-white/10 backdrop-blur-sm p-6 rounded-[32px] border border-white/20 hover:bg-white/20 transition-all cursor-pointer relative z-10"
+                    >
+                      <div className="flex justify-between items-center mb-4">
+                        <span className="text-[10px] font-black uppercase tracking-widest opacity-60">
+                          {new Date(nextGame.date).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
+                        </span>
+                        <span className="text-[10px] font-black bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                          {new Date(nextGame.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-4">
+                         <div className="flex-1 text-center">
+                            <p className="font-black text-sm uppercase truncate">{teams.find(teamItem => teamItem.id === nextGame.homeTeamId)?.name}</p>
+                         </div>
+                         <div className="px-3 py-1 bg-white text-blue-600 rounded-lg font-black text-xs">VS</div>
+                         <div className="flex-1 text-center">
+                            <p className="font-black text-sm uppercase truncate">{teams.find(teamItem => teamItem.id === nextGame.awayTeamId)?.name}</p>
+                         </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-blue-50 rounded-2xl">
+                    <TrendingUpIcon size={24} className="text-blue-600" />
+                  </div>
+                  <h3 className="text-xl font-black">Performance</h3>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-6">
+                  <div className="space-y-4">
+                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Recent Form</p>
+                    <div className="flex items-center gap-2">
+                      {(() => {
+                        const finishedGames = games.filter(g => (g.homeTeamId === team.id || g.awayTeamId === team.id) && g.status === 'finished')
+                          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                          .slice(0, 5);
+                        
+                        return finishedGames.reverse().map((g, i) => {
+                          const isHome = g.homeTeamId === team.id;
+                          const result = isHome 
+                            ? (g.homeScore > g.awayScore ? 'W' : g.homeScore < g.awayScore ? 'L' : 'D')
+                            : (g.awayScore > g.homeScore ? 'W' : g.awayScore < g.homeScore ? 'L' : 'D');
+                          
+                          return (
+                            <div 
+                              key={i} 
+                              className={cn(
+                                "w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black text-white shadow-md",
+                                result === 'W' ? "bg-green-500 shadow-green-100" : 
+                                result === 'D' ? "bg-yellow-500 shadow-yellow-100" : 
+                                "bg-red-500 shadow-red-100"
+                              )}
+                            >
+                              {result}
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                     <StatBox label="Wins" value={teamGames.filter(g => {
+                       if (g.status !== 'finished') return false;
+                       const isHome = g.homeTeamId === team.id;
+                       return isHome ? g.homeScore > g.awayScore : g.awayScore > g.homeScore;
+                     }).length} />
+                     <StatBox label="Goals" value={teamGames.reduce((acc, g) => {
+                       return acc + (g.homeTeamId === team.id ? g.homeScore : g.awayScore);
+                     }, 0)} />
+                  </div>
                 </div>
               </div>
             </div>

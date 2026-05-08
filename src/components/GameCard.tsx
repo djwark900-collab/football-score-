@@ -79,10 +79,11 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       className={cn(
-        "p-6 cursor-pointer relative overflow-hidden transition-all",
+        "p-6 cursor-pointer relative overflow-hidden transition-all flex flex-col justify-center",
         isLive 
           ? "bg-blue-600 text-white rounded-[32px] shadow-2xl shadow-blue-200" 
-          : "bg-white border border-gray-100 rounded-3xl hover:shadow-lg hover:shadow-gray-100"
+          : "bg-white border border-gray-100 rounded-3xl hover:shadow-lg hover:shadow-gray-100",
+        !isLive && game.status === 'scheduled' && "h-[180px]"
       )}
     >
       <AnimatePresence>

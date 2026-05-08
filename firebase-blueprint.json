@@ -30,7 +30,10 @@
       "properties": {
         "name": { "type": "string" },
         "logo": { "type": "string" },
-        "leagueId": { "type": "string" }
+        "leagueId": { "type": "string" },
+        "coachName": { "type": "string" },
+        "coachImageUrl": { "type": "string" },
+        "foundedIn": { "type": "string" }
       },
       "required": ["name", "leagueId"]
     },
