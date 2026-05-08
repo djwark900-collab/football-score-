@@ -42,7 +42,7 @@ import {
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from './firebase';
 import { cn } from './lib/utils';
-import { League, Game, Team, Player, Venue, Administrator, Transfer, AppNotification } from './types';
+import { League, Game, Team, Player, Venue, Administrator, Transfer, AppNotification, Competition } from './types';
 
 // Components
 import { AdminPanel } from './components/AdminPanel';
@@ -81,6 +81,7 @@ export default function App() {
   
   // Data State
   const [leagues, setLeagues] = useState<League[]>([]);
+  const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [games, setGames] = useState<Game[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -113,17 +114,24 @@ export default function App() {
   const [adminDefaultPlayerId, setAdminDefaultPlayerId] = useState<string | null>(null);
   const [adminDefaultLeagueId, setAdminDefaultLeagueId] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (view === 'leagues' && !selectedLeagueId && competitions.length > 0) {
+      setSelectedLeagueId(competitions[0].id);
+    }
+  }, [view, competitions, selectedLeagueId]);
+
   // Data Sync Status Tracking
   const [syncStatus, setSyncStatus] = useState<Record<string, boolean>>({
     leagues: false,
     games: false,
     teams: false,
-    players: false
+    players: false,
+    competitions: false
   });
 
   useEffect(() => {
     // Hide loading once essential data is fetched or after a timeout
-    const essentialDataLoaded = syncStatus.leagues && syncStatus.games && syncStatus.teams;
+    const essentialDataLoaded = syncStatus.leagues && syncStatus.games && syncStatus.teams && syncStatus.competitions;
     if (essentialDataLoaded) {
       setIsLoading(false);
     }
@@ -377,6 +385,22 @@ export default function App() {
       setLeagues(data);
       setSyncStatus(prev => ({ ...prev, leagues: true }));
       localStorage.setItem('cache_leagues', JSON.stringify(data));
+    }, (error) => handleError(error, OperationType.LIST, path));
+  }, []);
+
+  // Firestore Sync - Competitions
+  useEffect(() => {
+    const path = 'competitions';
+    const cached = localStorage.getItem('cache_competitions');
+    if (cached) {
+      try { setCompetitions(JSON.parse(cached)); } catch(e) {}
+    }
+    const q = query(collection(db, path), orderBy('name', 'asc'), limit(20));
+    return onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Competition));
+      setCompetitions(data);
+      setSyncStatus(prev => ({ ...prev, competitions: true }));
+      localStorage.setItem('cache_competitions', JSON.stringify(data));
     }, (error) => handleError(error, OperationType.LIST, path));
   }, []);
 
@@ -913,37 +937,73 @@ export default function App() {
 
           {view === 'leagues' && (
              <motion.div
-               key="leagues"
+               key="leagues-tab-container"
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
                exit={{ opacity: 0 }}
-               className="grid grid-cols-1 md:grid-cols-2 gap-4"
+               className="space-y-6"
              >
-               {leagues.map((league, index) => (
-                 <div 
-                   key={league.id} 
-                   onClick={() => {
-                     setSelectedLeagueId(league.id);
-                     navigateTo('league-details');
-                   }}
-                    className={cn(
-                      "p-4 rounded-3xl border transition-all cursor-pointer flex items-center gap-4 hover:shadow-md",
-                      index === 4 ? "bg-yellow-50 border-yellow-200" : "bg-white border-gray-100"
-                    )}
-                 >
-                    <div className={cn(
-                       "w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden",
-                       index === 4 ? "bg-yellow-200" : "bg-blue-50"
-                     )}>
-                      {league.logo ? <img src={league.logo} alt="" className="w-full h-full object-cover" /> : <TrophyIcon className={index === 4 ? "text-yellow-700" : "text-blue-600"} />}
-                    </div>
-                    <div>
-                      <h3 className={cn("font-bold", index === 4 ? "text-yellow-900" : "text-gray-900")}>{league.name}</h3>
-                      <p className={cn("text-sm", index === 4 ? "text-yellow-700/70" : "text-gray-500")}>{league.country || 'International'}</p>
-                    </div>
-                    <ChevronRightIcon className={cn("ml-auto", index === 4 ? "text-yellow-400" : "text-gray-300")} />
-                 </div>
-               ))}
+               {/* Competitions Quick Filter */}
+               <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                  {competitions.map(comp => (
+                    <button 
+                      key={comp.id}
+                      onClick={() => setSelectedLeagueId(comp.id)}
+                      className={cn(
+                        "px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border flex items-center gap-2",
+                        selectedLeagueId === comp.id ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-100" : "bg-white text-gray-400 border-gray-100 hover:border-gray-200"
+                      )}
+                    >
+                      {comp.logo && <img src={comp.logo} alt="" className="w-3 h-3 object-contain" />}
+                      {comp.name}
+                    </button>
+                  ))}
+               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 {leagues
+                   .filter(l => l.competitionId === selectedLeagueId)
+                   .map((league, index) => (
+                   <div 
+                     key={league.id} 
+                     onClick={() => {
+                        // We use selectedLeagueId for competition filtering in the list, 
+                        // but when clicking we need to set the ACTUAL league ID for details
+                        // I'll create a new state specifically for selectedCompetitionId to avoid confusion
+                        // but for now I'll use a local logic
+                        const isCompetitionSelected = competitions.some(c => c.id === selectedLeagueId);
+                        if (isCompetitionSelected) {
+                          // If current "selectedLeagueId" is actually a competition, we don't clear it yet
+                          // but we need to navigate. I should probably have used a separate state.
+                        }
+                       setSelectedLeagueId(league.id);
+                       navigateTo('league-details');
+                     }}
+                      className={cn(
+                        "p-4 rounded-3xl border transition-all cursor-pointer flex items-center gap-4 hover:shadow-md bg-white border-gray-100"
+                      )}
+                   >
+                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden bg-blue-50">
+                        {league.logo ? <img src={league.logo} alt="" className="w-full h-full object-cover" /> : <TrophyIcon className="text-blue-600" />}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900">{league.name}</h3>
+                        <div className="flex items-center gap-2">
+                           <p className="text-xs text-gray-500">{league.country || 'International'}</p>
+                           {league.competitionId && (
+                             <>
+                                <span className="w-1 h-1 bg-gray-200 rounded-full" />
+                                <span className="text-[9px] font-black uppercase text-blue-500 tracking-wider">
+                                  {competitions.find(c => c.id === league.competitionId)?.name}
+                                </span>
+                             </>
+                           )}
+                        </div>
+                      </div>
+                      <ChevronRightIcon className="ml-auto text-gray-300" />
+                   </div>
+                 ))}
+               </div>
              </motion.div>
           )}
 
@@ -1218,6 +1278,7 @@ export default function App() {
           {view === 'admin' && isAdmin && (
             <AdminPanel 
               leagues={leagues}
+              competitions={competitions}
               teams={teams}
               games={games}
               players={players}

@@ -30,12 +30,23 @@ service cloud.firestore {
     }
 
     // Entity Validation Blueprints
+    function isValidCompetition(data) {
+      return data.keys().hasAll(['name', 'type']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.type in ['league', 'cup', 'international'] &&
+             (!('logo' in data) || (data.logo is string && data.logo.size() <= 1000000));
+    }
+
     function isValidLeague(data) {
       return data.keys().hasAll(['name']) &&
              data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
              (!('logo' in data) || (data.logo is string && data.logo.size() <= 1000000)) &&
+             (!('competitionId' in data) || (data.competitionId is string && (data.competitionId == "" || isValidId(data.competitionId)))) &&
              (!('country' in data) || (data.country is string && data.country.size() <= 100)) &&
-             (!('currentSeasonId' in data) || (data.currentSeasonId is string && isValidId(data.currentSeasonId)));
+             (!('description' in data) || (data.description is string && data.description.size() <= 5000)) &&
+             (!('type' in data) || (data.type in ['league', 'cup'])) &&
+             (!('history' in data) || (data.history is list)) &&
+             (!('currentSeasonId' in data) || (data.currentSeasonId is string && (data.currentSeasonId == "" || isValidId(data.currentSeasonId))));
     }
 
     function isValidSeason(data) {
@@ -103,6 +114,13 @@ service cloud.firestore {
     // Collection Rules
     match /test/connection {
       allow read: if true;
+    }
+
+    match /competitions/{competitionId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidCompetition(incoming());
+      allow update: if isAdmin() && isValidCompetition(incoming());
+      allow delete: if isAdmin();
     }
 
     match /admins/{adminId} {

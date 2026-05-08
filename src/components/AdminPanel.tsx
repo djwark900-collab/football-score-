@@ -22,11 +22,12 @@ import {
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { League, Team, Game, Venue, Player, MatchEvent, Administrator, Transfer } from '../types';
+import { Competition, League, Team, Game, Venue, Player, MatchEvent, Administrator, Transfer } from '../types';
 import { cn } from '../lib/utils';
 
 interface AdminPanelProps {
   leagues: League[];
+  competitions: Competition[];
   teams: Team[];
   games: Game[];
   players: Player[];
@@ -41,9 +42,9 @@ interface AdminPanelProps {
   quotaExceeded?: boolean;
 }
 
-type Tab = 'leagues' | 'teams' | 'games' | 'venues' | 'players' | 'admins' | 'transfers';
+type Tab = 'competitions' | 'leagues' | 'teams' | 'games' | 'venues' | 'players' | 'admins' | 'transfers';
 
-export function AdminPanel({ leagues, teams, games, players, venues, transfers, administrators, user, onLogin, defaultLeagueId, defaultTeamId, defaultPlayerId, quotaExceeded }: AdminPanelProps) {
+export function AdminPanel({ leagues, competitions, teams, games, players, venues, transfers, administrators, user, onLogin, defaultLeagueId, defaultTeamId, defaultPlayerId, quotaExceeded }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>(defaultPlayerId || defaultTeamId ? 'players' : (defaultLeagueId ? 'games' : 'leagues'));
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(defaultPlayerId || null);
@@ -74,9 +75,16 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
     logo: string;
     description: string;
     type: 'league' | 'cup';
+    competitionId: string;
     currentSeasonId: string;
     history: { season: string; winnerId: string; }[];
-  }>({ name: '', country: '', logo: '', description: '', type: 'league', currentSeasonId: '', history: [] });
+  }>({ name: '', country: '', logo: '', description: '', type: 'league', competitionId: '', currentSeasonId: '', history: [] });
+
+  const [competitionForm, setCompetitionForm] = useState({
+    name: '',
+    logo: '',
+    type: 'league' as const
+  });
   
   const [historyForm, setHistoryForm] = useState<{
     season: string;
@@ -156,6 +164,27 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
     setTimeout(() => setSuccessMessage(null), 3000);
   };
 
+  const handleAddCompetition = async () => {
+    if (!competitionForm.name) return;
+    setLoading(true);
+    const path = editingId ? `competitions/${editingId}` : 'competitions';
+    try {
+      if (editingId) {
+        await updateDoc(doc(db, 'competitions', editingId), competitionForm);
+        showFeedback('Competition updated!');
+      } else {
+        await addDoc(collection(db, 'competitions'), competitionForm);
+        showFeedback('Competition added!');
+      }
+      setCompetitionForm({ name: '', logo: '', type: 'league' });
+      setEditingId(null);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, path);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAddLeague = async () => {
     if (!leagueForm.name) return;
     setLoading(true);
@@ -168,7 +197,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
         await addDoc(collection(db, 'leagues'), leagueForm);
         showFeedback('League added successfully!');
       }
-      setLeagueForm({ name: '', country: '', logo: '', description: '', type: 'league', currentSeasonId: '', history: [] });
+      setLeagueForm({ name: '', country: '', logo: '', description: '', type: 'league', competitionId: '', currentSeasonId: '', history: [] });
       setEditingId(null);
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, path);
@@ -506,6 +535,16 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
     }
   };
 
+  const startEditingCompetition = (c: Competition) => {
+    setEditingId(c.id);
+    setCompetitionForm({
+      name: c.name,
+      logo: c.logo || '',
+      type: c.type
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const startEditingLeague = (l: League) => {
     setEditingId(l.id);
     setLeagueForm({ 
@@ -514,6 +553,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
       logo: l.logo || '', 
       description: l.description || '',
       type: l.type || 'league',
+      competitionId: l.competitionId || '',
       currentSeasonId: l.currentSeasonId || '',
       history: l.history || []
     });
@@ -568,7 +608,8 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
     });
     setVenueForm({ name: '', city: '', capacity: 0 });
     setEditingId(null);
-    setLeagueForm({ name: '', country: '', logo: '', description: '', currentSeasonId: '', history: [] });
+    setLeagueForm({ name: '', country: '', logo: '', description: '', type: 'league', competitionId: '', currentSeasonId: '', history: [] });
+    setCompetitionForm({ name: '', logo: '', type: 'league' });
     setHistoryForm({ season: '', winnerId: '', editingIndex: null });
     setTeamForm({ 
       name: '', 
@@ -660,6 +701,7 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h2 className="text-3xl font-black">Management</h2>
         <div className="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm overflow-x-auto scrollbar-none w-full sm:w-auto">
+          <TabButton active={activeTab === 'competitions'} onClick={() => { setActiveTab('competitions'); cancelEdit(); }} icon={<TrophyIcon size={18} />} label="Competitions" />
           <TabButton active={activeTab === 'leagues'} onClick={() => { setActiveTab('leagues'); cancelEdit(); }} icon={<GlobeIcon size={18} />} label="Leagues" />
           <TabButton active={activeTab === 'teams'} onClick={() => { setActiveTab('teams'); cancelEdit(); }} icon={<UsersIcon size={18} />} label="Teams" />
           <TabButton active={activeTab === 'games'} onClick={() => { setActiveTab('games'); cancelEdit(); }} icon={<CalendarIcon size={18} />} label="Games" />
@@ -672,15 +714,27 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <button 
+          onClick={() => { setActiveTab('competitions'); cancelEdit(); }}
+          className="p-6 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-3 text-center"
+        >
+          <div className="p-3 bg-blue-50 rounded-2xl">
+            <TrophyIcon className="text-blue-600" />
+          </div>
+          <div>
+            <p className="font-black text-sm">Competitions</p>
+            <p className="text-[10px] text-gray-400 font-bold uppercase">Main Categories</p>
+          </div>
+        </button>
+        <button 
           onClick={() => { setActiveTab('leagues'); cancelEdit(); }}
           className="p-6 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-3 text-center"
         >
           <div className="p-3 bg-blue-50 rounded-2xl">
-            <PlusIcon className="text-blue-600" />
+            <GlobeIcon className="text-blue-600" />
           </div>
           <div>
-            <p className="font-black text-sm">Add League</p>
-            <p className="text-[10px] text-gray-400 font-bold uppercase">Create League</p>
+            <p className="font-black text-sm">Leagues</p>
+            <p className="text-[10px] text-gray-400 font-bold uppercase">Manage Leagues</p>
           </div>
         </button>
         <button 
@@ -1001,11 +1055,72 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
             </div>
           </motion.div>
         )}
+        {activeTab === 'competitions' && (
+          <motion.div key="competitions-tab" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+            <AdminCard title={editingId ? "Edit Competition" : "Add New Competition"} icon={<TrophyIcon className="text-blue-600" />}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input label="Competition Name" value={competitionForm.name} onChange={v => setCompetitionForm({ ...competitionForm, name: v })} placeholder="e.g. European Football" />
+                <Select 
+                  label="Type" 
+                  value={competitionForm.type} 
+                  onChange={v => setCompetitionForm({ ...competitionForm, type: v as any })} 
+                  options={[
+                    { label: 'League System', value: 'league' },
+                    { label: 'Cup Tournament', value: 'cup' },
+                    { label: 'International', value: 'international' }
+                  ]} 
+                />
+                <ImageUpload 
+                  label="Competition Logo (File or URL)" 
+                  value={competitionForm.logo} 
+                  onChange={v => setCompetitionForm({ ...competitionForm, logo: v })}
+                  onFileSelect={handleFileUpload}
+                />
+                <div className="sm:pt-7 flex gap-2">
+                  {editingId && (
+                    <button onClick={cancelEdit} className="px-6 h-[54px] bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all">
+                      Cancel
+                    </button>
+                  )}
+                  <button onClick={handleAddCompetition} disabled={loading} className="flex-1 h-[54px] bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">
+                    {editingId ? <SaveIcon size={20} /> : <PlusIcon size={20} />}
+                    {editingId ? "Save Competition" : "Add Competition"}
+                  </button>
+                </div>
+              </div>
+            </AdminCard>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {competitions.map(c => (
+                <div key={c.id} className="p-4 bg-white rounded-3xl border border-gray-100 flex items-center justify-between group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden">
+                      {c.logo ? <img src={c.logo} alt="" className="w-full h-full object-contain" /> : <TrophyIcon className="text-gray-300" />}
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm">{c.name}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">{c.type}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => startEditingCompetition(c)} className="p-3 text-blue-500 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-colors">
+                      <SaveIcon size={18} />
+                    </button>
+                    <button onClick={() => handleDelete('competitions', c.id)} className="p-3 text-red-500 bg-red-50 rounded-2xl hover:bg-red-100 transition-colors">
+                      <Trash2Icon size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
         {activeTab === 'leagues' && (
           <motion.div key="leagues-tab" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
             <AdminCard title={editingId ? "Edit League" : "Add New League"} icon={<TrophyIcon className="text-blue-600" />}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="League Name" value={leagueForm.name} onChange={v => setLeagueForm({ ...leagueForm, name: v })} placeholder="e.g. Premier League" />
+                <Select label="Assign to Competition" value={leagueForm.competitionId} onChange={v => setLeagueForm({ ...leagueForm, competitionId: v })} options={competitions.map(c => ({ label: c.name, value: c.id }))} />
                 <Select label="Type" value={leagueForm.type} onChange={v => setLeagueForm({ ...leagueForm, type: v as any })} options={[{ label: 'Standard League', value: 'league' }, { label: 'Cup / Tournament', value: 'cup' }]} />
                 <Input label="Country" value={leagueForm.country} onChange={v => setLeagueForm({ ...leagueForm, country: v })} placeholder="e.g. England" />
                 <div className="sm:col-span-2">
@@ -1093,12 +1208,10 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
                     <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden">
                       {l.logo ? <img src={l.logo} alt="" className="w-full h-full object-contain" /> : <GlobeIcon className="text-gray-300" />}
                     </div>
-                    <span className={cn(
-                      "text-[8px] font-black uppercase px-2 py-0.5 rounded-full ml-2",
-                      l.type === 'cup' ? "bg-purple-50 text-purple-600" : "bg-blue-50 text-blue-600"
-                    )}>
-                      {l.type || 'league'}
-                    </span>
+                    <div>
+                      <p className="font-bold text-sm tracking-tight">{l.name}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{competitions.find(c => c.id === l.competitionId)?.name || 'Unassigned'}</p>
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <button 
@@ -1422,17 +1535,23 @@ export function AdminPanel({ leagues, teams, games, players, venues, transfers, 
                       className="w-12 h-10 bg-gray-50 rounded-xl text-center font-black border-none"
                     />
                    </div>
-                   <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-black uppercase text-gray-300 tracking-widest whitespace-nowrap">{g.status}</span>
-                    <div className="w-px h-2 bg-gray-100" />
-                    {g.events && g.events.length > 0 && (
-                      <div className="flex items-center gap-1 text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">
-                        <ZapIcon size={10} />
-                        <span className="text-[10px] font-black">{g.events.length}</span>
-                      </div>
-                    )}
-                    <div className="w-px h-2 bg-gray-100" />
-                   </div>
+                    <div className="flex flex-col items-center">
+                     <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest whitespace-nowrap">{g.status}</span>
+                     <span className="text-[9px] font-bold text-gray-400 tabular-nums">
+                       {new Date(g.date).toLocaleDateString([], { month: 'short', day: 'numeric' })} • {new Date(g.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                     </span>
+                     <div className="w-px h-2 bg-gray-100 mt-1" />
+                     {g.status === 'live' && g.currentTime && (
+                       <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full animate-pulse">{g.currentTime}</span>
+                     )}
+                     {g.events && g.events.length > 0 && (
+                       <div className="flex items-center gap-1 text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full mt-1">
+                         <ZapIcon size={10} />
+                         <span className="text-[10px] font-black">{g.events.length}</span>
+                       </div>
+                     )}
+                     <div className="w-px h-2 bg-gray-100 mt-1" />
+                    </div>
                    <div className="flex-1 flex justify-start gap-2 items-center font-bold">
                     <input 
                       type="number" 

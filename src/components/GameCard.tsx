@@ -173,12 +173,25 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
           </div>
             <div className="flex flex-col items-center mt-3">
             <div className={cn(
-              "px-2 py-0.5 rounded-full font-black uppercase tracking-widest text-[9px] shadow-sm transition-all",
+              "px-2 py-0.5 rounded-full font-black uppercase tracking-widest text-[9px] shadow-sm transition-all flex flex-col items-center",
               isLive 
                 ? "bg-white text-blue-600 animate-pulse" 
                 : "bg-gray-100 text-gray-900 border border-gray-200"
             )}>
-              {game.status === 'live' ? (game.currentTime || 'Playing') : game.status === 'finished' ? 'Final' : new Date(game.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: localStorage.getItem('pref_time_format') === '12h' })}
+              {game.status === 'live' ? (
+                <span>{game.currentTime || 'Playing'}</span>
+              ) : game.status === 'finished' ? (
+                <span>Final</span>
+              ) : (
+                <>
+                  {new Date(game.date).toDateString() !== new Date().toDateString() && (
+                    <span className="text-[7px] leading-none mb-0.5 opacity-50 tracking-normal">
+                      {new Date(game.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                    </span>
+                  )}
+                  <span>{new Date(game.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: localStorage.getItem('pref_time_format') === '12h' })}</span>
+                </>
+              )}
             </div>
             
             {!isLive && game.status === 'scheduled' && timeLeft && (

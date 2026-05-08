@@ -1,5 +1,16 @@
 {
   "entities": {
+    "Competition": {
+      "title": "Competition",
+      "description": "Top level competition categories",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "logo": { "type": "string" },
+        "type": { "type": "string", "enum": ["league", "cup", "international"] }
+      },
+      "required": ["name", "type"]
+    },
     "League": {
       "title": "League",
       "description": "A sports league or championship",
@@ -8,6 +19,7 @@
         "name": { "type": "string", "description": "Name of the league" },
         "logo": { "type": "string", "description": "URL to league logo" },
         "country": { "type": "string", "description": "Country of the league" },
+        "competitionId": { "type": "string", "description": "ID of the parent competition" },
         "currentSeasonId": { "type": "string", "description": "ID of the current active season" }
       },
       "required": ["name"]
@@ -142,6 +154,7 @@
     }
   },
   "firestore": {
+    "/competitions/{competitionId}": { "schema": "Competition", "description": "Top level competitions" },
     "/leagues/{leagueId}": { "schema": "League", "description": "Global leagues" },
     "/leagues/{leagueId}/seasons/{seasonId}": { "schema": "Season", "description": "Seasons per league" },
     "/teams/{teamId}": { "schema": "Team", "description": "Teams in the system" },

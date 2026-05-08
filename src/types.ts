@@ -1,3 +1,10 @@
+export interface Competition {
+  id: string;
+  name: string;
+  logo?: string;
+  type: 'league' | 'cup' | 'international';
+}
+
 export interface League {
   id: string;
   name: string;
@@ -5,6 +12,7 @@ export interface League {
   country?: string;
   description?: string;
   type?: 'league' | 'cup';
+  competitionId?: string;
   currentSeasonId?: string;
   history?: {
     season: string;
