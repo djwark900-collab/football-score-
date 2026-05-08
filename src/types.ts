@@ -80,7 +80,7 @@ export interface Game {
   date: string;
   venueId?: string;
   attendance?: number;
-  round?: 'Group Stage' | 'Playoff' | 'Quarter-final' | 'Semi-final' | 'Final' | string;
+  round?: 'Group Stage' | 'Knockout' | 'Knockout Stage' | 'Playoff' | 'Quarter-final' | 'Semi-final' | 'Semi-finals' | 'semi finals' | 'Final' | string;
   // Stats
   stats?: {
     possession: { home: number; away: number };

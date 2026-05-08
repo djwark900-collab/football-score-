@@ -1121,7 +1121,7 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="League Name" value={leagueForm.name} onChange={v => setLeagueForm({ ...leagueForm, name: v })} placeholder="e.g. Premier League" />
                 <Select label="Assign to Competition" value={leagueForm.competitionId} onChange={v => setLeagueForm({ ...leagueForm, competitionId: v })} options={competitions.map(c => ({ label: c.name, value: c.id }))} />
-                <Select label="Type" value={leagueForm.type} onChange={v => setLeagueForm({ ...leagueForm, type: v as any })} options={[{ label: 'Standard League', value: 'league' }, { label: 'Cup / Tournament', value: 'cup' }]} />
+                <Select label="Type" value={leagueForm.type} onChange={v => setLeagueForm({ ...leagueForm, type: v as any })} options={[{ label: 'Standard League', value: 'league' }, { label: 'Knockout Stage', value: 'cup' }]} />
                 <Input label="Country" value={leagueForm.country} onChange={v => setLeagueForm({ ...leagueForm, country: v })} placeholder="e.g. England" />
                 <div className="sm:col-span-2">
                    <Input label="Description" value={leagueForm.description} onChange={v => setLeagueForm({ ...leagueForm, description: v })} placeholder="League history and details..." />
@@ -1368,9 +1368,10 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
                     onChange={v => setGameForm({ ...gameForm, round: v })}
                     options={[
                       { label: 'Group Stage', value: 'Group Stage' },
+                      { label: 'Knockout', value: 'Knockout' },
                       { label: 'Playoff', value: 'Playoff' },
                       { label: 'Quarter-final', value: 'Quarter-final' },
-                      { label: 'Semi-final', value: 'Semi-final' },
+                      { label: 'semi finals', value: 'semi finals' },
                       { label: 'Final', value: 'Final' },
                       { label: 'Matchday 1', value: 'Matchday 1' },
                       { label: 'Matchday 2', value: 'Matchday 2' }

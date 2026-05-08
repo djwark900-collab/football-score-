@@ -22,6 +22,9 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
   const league = leagues.find(l => l.id === game.leagueId);
   const [pulse, setPulse] = useState<'home' | 'away' | null>(null);
 
+  const homeRedCards = (game.events || []).filter(e => e.type === 'red' && e.teamId === game.homeTeamId).length;
+  const awayRedCards = (game.events || []).filter(e => e.type === 'red' && e.teamId === game.awayTeamId).length;
+
   useEffect(() => {
     // Basic detection for score change (upward only usually)
     const timer = setTimeout(() => setPulse(null), 2000);
@@ -137,10 +140,13 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
         >
           <TeamLogo logo={homeTeam?.logo} name={homeTeam?.name} dark={isLive} />
           <span className={cn(
-            "font-bold text-sm transition-colors", 
+            "font-bold text-sm transition-colors flex items-center gap-1.5", 
             isLive ? "text-white group-hover/team:text-blue-200" : "text-gray-900 dark:text-white group-hover/team:text-blue-600 dark:group-hover/team:text-blue-400"
           )}>
             {homeTeam?.name || 'Loading...'}
+            {homeRedCards > 0 && (
+              <span className="w-2.5 h-3.5 bg-red-500 rounded-[2px] shadow-sm animate-in zoom-in duration-300" title={`${homeRedCards} Red Card(s)`} />
+            )}
           </span>
         </div>
 
@@ -215,9 +221,12 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
         >
           <TeamLogo logo={awayTeam?.logo} name={awayTeam?.name} dark={isLive} />
           <span className={cn(
-            "font-bold text-sm transition-colors", 
+            "font-bold text-sm transition-colors flex items-center gap-1.5", 
             isLive ? "text-white group-hover/team:text-blue-200" : "text-gray-900 dark:text-white group-hover/team:text-blue-600 dark:group-hover/team:text-blue-400"
           )}>
+            {awayRedCards > 0 && (
+              <span className="w-2.5 h-3.5 bg-red-500 rounded-[2px] shadow-sm animate-in zoom-in duration-300" title={`${awayRedCards} Red Card(s)`} />
+            )}
             {awayTeam?.name || 'Loading...'}
           </span>
         </div>

@@ -50,7 +50,7 @@ export function LeagueDetails({ league, teams, games, leagues, players, onBack, 
 
   const gamesByRound = useMemo(() => {
     const grouped: Record<string, Game[]> = {};
-    const roundsOrder = ['Group Stage', 'Playoff', 'Quarter-final', 'Semi-final', 'Final'];
+    const roundsOrder = ['Group Stage', 'Knockout Stage', 'Knockout', 'Playoff', 'Quarter-final', 'Semi-final', 'Semi-finals', 'semi finals', 'Final'];
     
     leagueGames.forEach(g => {
       const round = g.round || 'Other';
@@ -105,9 +105,6 @@ export function LeagueDetails({ league, teams, games, leagues, players, onBack, 
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-2xl font-black text-gray-900 dark:text-white leading-tight">{league.name}</h2>
-              {league.type === 'cup' && (
-                <span className="px-3 py-1 bg-purple-600 text-white text-[8px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-purple-200 dark:shadow-purple-900/40">Cup</span>
-              )}
             </div>
             <div className="flex items-center gap-3 mt-1">
               <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2">
