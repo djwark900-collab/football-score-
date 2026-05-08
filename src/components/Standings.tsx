@@ -124,11 +124,11 @@ export function Standings({ leagues, teams, games, onTeamClick }: StandingsProps
             <tr className="bg-gray-50/50 dark:bg-gray-800/50 text-[10px] font-black uppercase tracking-widest text-gray-400">
               <th className="px-6 sm:px-8 py-4 w-12 text-center sm:text-left">Pos</th>
               <th className="px-2 sm:px-4 py-4 min-w-[150px] sm:min-w-[200px]">Team</th>
-              <th className="px-2 sm:px-4 py-4 text-center">PL</th>
+              <th className="px-2 sm:px-4 py-4 text-center">M</th>
               <th className="px-2 sm:px-4 py-4 text-center">W</th>
               <th className="px-2 sm:px-4 py-4 text-center">D</th>
               <th className="px-2 sm:px-4 py-4 text-center">L</th>
-              <th className="hidden lg:table-cell px-4 py-4 text-center">GD</th>
+              <th className="hidden lg:table-cell px-4 py-4 text-center">G</th>
               <th className="px-4 sm:px-6 py-4 text-center">PTS</th>
               <th className="hidden md:table-cell px-6 py-4 text-center">Form</th>
             </tr>

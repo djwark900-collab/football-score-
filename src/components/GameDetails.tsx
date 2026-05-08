@@ -151,6 +151,38 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
     };
   }, [game.stats]);
 
+  const homeForm = useMemo(() => {
+    if (!homeTeam) return [];
+    return games
+      .filter(g => (g.homeTeamId === homeTeam.id || g.awayTeamId === homeTeam.id) && g.status === 'finished' && new Date(g.date) < new Date(game.date))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5)
+      .map(g => {
+        const isHome = g.homeTeamId === homeTeam.id;
+        const score = isHome ? g.homeScore : g.awayScore;
+        const opponentScore = isHome ? g.awayScore : g.homeScore;
+        if (score > opponentScore) return 'W';
+        if (score < opponentScore) return 'L';
+        return 'D';
+      }).reverse();
+  }, [games, homeTeam, game.date]);
+
+  const awayForm = useMemo(() => {
+    if (!awayTeam) return [];
+    return games
+      .filter(g => (g.homeTeamId === awayTeam.id || g.awayTeamId === awayTeam.id) && g.status === 'finished' && new Date(g.date) < new Date(game.date))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5)
+      .map(g => {
+        const isHome = g.homeTeamId === awayTeam.id;
+        const score = isHome ? g.homeScore : g.awayScore;
+        const opponentScore = isHome ? g.awayScore : g.homeScore;
+        if (score > opponentScore) return 'W';
+        if (score < opponentScore) return 'L';
+        return 'D';
+      }).reverse();
+  }, [games, awayTeam, game.date]);
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -372,6 +404,39 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
             </div>
           </div>
         )}
+      </div>
+
+      {/* Recent Form Display */}
+      <div className="flex justify-between items-center px-8 bg-gray-50/50 dark:bg-gray-800/30 py-3 rounded-full border border-gray-100/50 dark:border-gray-800/50">
+        <div className="flex items-center gap-1">
+          {homeForm.map((f, i) => (
+            <div 
+              key={i} 
+              className={cn(
+                "w-4 h-4 rounded-[4px] flex items-center justify-center text-[7px] font-black text-white",
+                f === 'W' ? "bg-green-500" : f === 'L' ? "bg-red-500" : "bg-yellow-500"
+              )}
+            >
+              {f}
+            </div>
+          ))}
+          {homeForm.length === 0 && <span className="text-[10px] text-gray-400 font-bold">NO HISTORY</span>}
+        </div>
+        <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">Recent Form</span>
+        <div className="flex items-center gap-1">
+          {awayForm.map((f, i) => (
+            <div 
+              key={i} 
+              className={cn(
+                "w-4 h-4 rounded-[4px] flex items-center justify-center text-[7px] font-black text-white",
+                f === 'W' ? "bg-green-500" : f === 'L' ? "bg-red-500" : "bg-yellow-500"
+              )}
+            >
+              {f}
+            </div>
+          ))}
+          {awayForm.length === 0 && <span className="text-[10px] text-gray-400 font-bold">NO HISTORY</span>}
+        </div>
       </div>
 
       {/* Tabs Section */}
