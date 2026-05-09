@@ -43,6 +43,7 @@
         "name": { "type": "string" },
         "logo": { "type": "string" },
         "leagueId": { "type": "string" },
+        "leagueId2": { "type": "string" },
         "coachName": { "type": "string" },
         "coachImageUrl": { "type": "string" },
         "foundedIn": { "type": "string" }
@@ -97,6 +98,7 @@
       "type": "object",
       "properties": {
         "leagueId": { "type": "string" },
+        "leagueId2": { "type": "string" },
         "seasonId": { "type": "string" },
         "homeTeamId": { "type": "string" },
         "awayTeamId": { "type": "string" },

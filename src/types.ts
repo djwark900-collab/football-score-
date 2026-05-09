@@ -32,9 +32,14 @@ export interface Team {
   name: string;
   logo?: string;
   leagueId: string;
+  leagueId2?: string;
   coachName?: string;
   coachImageUrl?: string;
   foundedIn?: string;
+  marketValue?: string;
+  foreignPlayers?: number;
+  nationalPlayers?: number;
+  stadiumImageUrl?: string;
 }
 
 export interface Player {
@@ -47,6 +52,20 @@ export interface Player {
   overview?: string;
   career?: string;
   transferHistory?: string;
+  // New detailed fields
+  birthDate?: string;
+  height?: string;
+  weight?: string;
+  nationality?: string;
+  foot?: 'Left' | 'Right' | 'Both';
+  statsRadar?: {
+    attacking: number;
+    creativity: number;
+    defending: number;
+    tactical: number;
+    technical: number;
+  };
+  recentRatings?: number[];
 }
 
 export interface Venue {
@@ -70,6 +89,7 @@ export interface MatchEvent {
 export interface Game {
   id: string;
   leagueId: string;
+  leagueId2?: string;
   seasonId: string;
   homeTeamId: string;
   awayTeamId: string;
@@ -96,6 +116,12 @@ export interface Game {
     home: string[];
     away: string[];
   };
+  refereeName?: string;
+  broadcastChannels?: {
+    name: string;
+    commentator?: string;
+    isImportant?: boolean;
+  }[];
 }
 
 export interface AppNotification {

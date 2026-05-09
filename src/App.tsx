@@ -628,7 +628,7 @@ export default function App() {
 
   const filteredGames = useMemo(() => {
     let g = games;
-    if (selectedLeagueId) g = g.filter(game => game.leagueId === selectedLeagueId);
+    if (selectedLeagueId) g = g.filter(game => game.leagueId === selectedLeagueId || game.leagueId2 === selectedLeagueId);
     if (showOnlyLive) g = g.filter(game => game.status === 'live');
     return g;
   }, [games, selectedLeagueId, showOnlyLive]);
@@ -1024,6 +1024,7 @@ export default function App() {
               games={games}
               leagues={leagues}
               players={players}
+              transfers={transfers}
               onBack={() => navigateTo('leagues')}
               onGameClick={(id) => {
                 setSelectedGameId(id);
@@ -1118,7 +1119,7 @@ export default function App() {
                 navigateTo('player-details');
               }}
               isAdmin={isAdmin}
-              onAddPlayer={(teamId) => {
+              onEditTeam={(teamId) => {
                 setAdminDefaultTeamId(teamId);
                 navigateTo('admin');
               }}

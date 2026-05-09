@@ -20,6 +20,7 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
   const homeTeam = teams.find(t => t.id === game.homeTeamId);
   const awayTeam = teams.find(t => t.id === game.awayTeamId);
   const league = leagues.find(l => l.id === game.leagueId);
+  const league2 = game.leagueId2 ? leagues.find(l => l.id === game.leagueId2) : null;
   const [pulse, setPulse] = useState<'home' | 'away' | null>(null);
 
   const homeRedCards = (game.events || []).filter(e => e.type === 'red' && e.teamId === game.homeTeamId).length;
@@ -122,9 +123,16 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
         "absolute top-4 left-6 flex items-center gap-2 px-2 py-0.5 rounded-full",
         isLive ? "bg-white/10 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-400"
       )}>
-        {league?.logo && <img src={league.logo} alt="" className="w-3 h-3 rounded-full object-cover" />}
-        <span className="text-[8px] font-black uppercase tracking-widest">
-          {league?.name} {game.round ? `• ${game.round}` : ''}
+        <div className="flex -space-x-1.5 overflow-hidden">
+          {league?.logo && (
+            <img src={league.logo} alt="" className="w-3 h-3 rounded-full object-cover ring-1 ring-white dark:ring-gray-900" />
+          )}
+          {league2?.logo && (
+            <img src={league2.logo} alt="" className="w-3 h-3 rounded-full object-cover ring-1 ring-white dark:ring-gray-900" />
+          )}
+        </div>
+        <span className="text-[8px] font-black uppercase tracking-widest flex gap-1">
+          {league?.name}{league2 ? ` / ${league2.name}` : ''} {game.round ? `• ${game.round}` : ''}
         </span>
       </div>
 

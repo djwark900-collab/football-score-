@@ -1,18 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Player, Team } from '../types';
 import { 
-  X as XIcon, 
-  Target as TargetIcon,
   ChevronLeft as ChevronLeftIcon,
   Shield as ShieldIcon,
-  Info as InfoIcon,
   TrendingUp as TrendingUpIcon,
-  Calendar as CalendarIcon,
   User as UserIcon,
-  Save as SaveIcon
+  Pencil as PencilIcon,
+  Footprints as FootprintsIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { 
+  Radar, 
+  RadarChart, 
+  PolarGrid, 
+  PolarAngleAxis, 
+  ResponsiveContainer 
+} from 'recharts';
 
 interface PlayerDetailsProps {
   player: Player;
@@ -22,183 +26,282 @@ interface PlayerDetailsProps {
   onEdit?: (playerId: string) => void;
 }
 
-type Tab = 'overview' | 'career';
+type Tab = 'overview' | 'stats' | 'career' | 'honors';
 
 export function PlayerDetails({ player, team, onBack, isAdmin, onEdit }: PlayerDetailsProps) {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
+  const shortName = useMemo(() => {
+    const parts = player.name.split(' ');
+    if (parts.length > 1) {
+      return `${parts[0][0]}.${parts[parts.length - 1]}`;
+    }
+    return player.name;
+  }, [player.name]);
+
+  const radarData = useMemo(() => {
+    if (!player.statsRadar) {
+      return [
+        { subject: 'Attacking', A: 40, fullMark: 100 },
+        { subject: 'Creativity', A: 47, fullMark: 100 },
+        { subject: 'Defending', A: 78, fullMark: 100 },
+        { subject: 'Tactical', A: 64, fullMark: 100 },
+        { subject: 'Technical', A: 48, fullMark: 100 },
+      ];
+    }
+    return [
+      { subject: 'Attacking', A: player.statsRadar.attacking, fullMark: 100 },
+      { subject: 'Creativity', A: player.statsRadar.creativity, fullMark: 100 },
+      { subject: 'Defending', A: player.statsRadar.defending, fullMark: 100 },
+      { subject: 'Tactical', A: player.statsRadar.tactical, fullMark: 100 },
+      { subject: 'Technical', A: player.statsRadar.technical, fullMark: 100 },
+    ];
+  }, [player.statsRadar]);
+
+  const age = useMemo(() => {
+    if (!player.birthDate) return '26';
+    const birth = new Date(player.birthDate);
+    const now = new Date();
+    let age = now.getFullYear() - birth.getFullYear();
+    const m = now.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age.toString();
+  }, [player.birthDate]);
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="relative overflow-hidden bg-white dark:bg-gray-900 rounded-[40px] border border-gray-100 dark:border-gray-800 shadow-sm transition-all duration-300">
-        <div className="absolute top-0 right-0 p-12 opacity-[0.03] dark:opacity-[0.1] scale-[4] rotate-12 pointer-events-none text-gray-900 dark:text-white">
-          <UserIcon size={120} />
-        </div>
-
-        <div className="p-8 pb-32 bg-gradient-to-br from-blue-600 to-blue-800 dark:from-blue-700 dark:to-blue-900 relative">
-          <button 
-            onClick={onBack}
-            className="p-3 bg-white/10 backdrop-blur-md rounded-2xl text-white hover:bg-white/20 transition-all mb-8"
-          >
-            <ChevronLeftIcon size={24} />
-          </button>
-          
-          <div className="flex flex-col sm:flex-row items-center gap-8">
-            <div className="w-32 h-32 bg-white dark:bg-gray-800 rounded-[40px] shadow-2xl flex items-center justify-center overflow-hidden border-4 border-white dark:border-gray-700 shrink-0 transition-all">
-               {player.imageUrl ? (
-                 <img src={player.imageUrl} alt={player.name} className="w-full h-full object-cover" />
-               ) : (
-                 <UserIcon className="text-gray-200 dark:text-gray-700 w-16 h-16" />
-               )}
-            </div>
-            
-            <div className="text-center sm:text-left text-white">
-              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full mb-3">
-                <TargetIcon size={12} className="text-white/70" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-white">#{player.number} • {player.position}</span>
-              </div>
-              <div className="flex items-center justify-center sm:justify-start gap-4">
-                <h2 className="text-4xl sm:text-5xl font-black mb-2 tracking-tight">{player.name}</h2>
-                {isAdmin && (
-                  <button 
-                    onClick={() => onEdit?.(player.id)}
-                    className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white transition-all shadow-lg"
-                    title="Edit Player"
-                  >
-                    <SaveIcon size={20} />
-                  </button>
-                )}
-              </div>
-              {team && (
-                <div className="flex items-center justify-center sm:justify-start gap-3">
-                   <div className="w-6 h-6 bg-white/90 dark:bg-white/80 rounded-lg flex items-center justify-center p-1">
-                      {team.logo ? <img src={team.logo} alt="" className="w-full h-full object-contain" /> : <ShieldIcon className="text-blue-600" size={12} />}
-                   </div>
-                   <span className="font-bold text-white/90">{team.name}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Overlapping Content */}
-        <div className="px-6 -mt-24 relative z-10 pb-6">
-          <div className="bg-white dark:bg-gray-800 rounded-[32px] p-2 flex border border-gray-100 dark:border-gray-700 shadow-xl dark:shadow-black/40 w-full sm:w-fit mx-auto sm:mx-0 overflow-x-auto scrollbar-none transition-all duration-300">
-            <TabButton 
-              active={activeTab === 'overview'} 
-              onClick={() => setActiveTab('overview')} 
-              icon={<InfoIcon size={18} />} 
-              label="Overview" 
-            />
-            <TabButton 
-              active={activeTab === 'career'} 
-              onClick={() => setActiveTab('career')} 
-              icon={<TrendingUpIcon size={18} />} 
-              label="Career" 
-            />
-          </div>
-        </div>
+    <div className="flex flex-col min-h-screen bg-[#F8F9FA] dark:bg-gray-950 font-sans">
+      {/* Top Header Navigation */}
+      <div className="flex items-center justify-between px-6 py-4 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 transition-colors">
+        <button 
+          onClick={onBack}
+          className="p-4 bg-white dark:bg-gray-800 rounded-full shadow-sm border border-gray-100 dark:border-gray-700 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+        >
+          <ChevronLeftIcon size={24} />
+        </button>
+        
+        <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">{shortName}</h1>
+        
+        <button 
+          onClick={() => isAdmin && onEdit?.(player.id)}
+          className={cn(
+            "p-4 bg-white dark:bg-gray-800 rounded-full shadow-sm border border-gray-100 dark:border-gray-700 text-gray-900 dark:text-white transition-all",
+            !isAdmin && "opacity-20 cursor-not-allowed"
+          )}
+        >
+          <PencilIcon size={24} />
+        </button>
       </div>
 
-      <AnimatePresence mode="wait">
-        {activeTab === 'overview' && (
-          <motion.div
-            key="overview"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-6"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-2 bg-white dark:bg-gray-900 p-8 rounded-[40px] border border-gray-100 dark:border-gray-800 shadow-sm space-y-6 transition-all duration-300">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl">
-                    <InfoIcon className="text-blue-600 dark:text-blue-400" size={24} />
-                  </div>
-                  <h3 className="text-xl font-black dark:text-white">Player Summary</h3>
-                </div>
-                <div className="text-gray-600 dark:text-gray-400 leading-relaxed font-medium">
-                  {player.overview || `Description for ${player.name} is currently being prepared. Check back soon for detailed analysis and performance traits.`}
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-900 p-8 rounded-[40px] border border-gray-100 dark:border-gray-800 shadow-sm space-y-6 transition-all duration-300">
-                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl">
-                    <TargetIcon className="text-blue-600 dark:text-blue-400" size={24} />
-                  </div>
-                  <h3 className="text-xl font-black dark:text-white">Details</h3>
-                </div>
-                <div className="space-y-4">
-                  <DetailRow label="Position" value={player.position} />
-                  <DetailRow label="Jersey" value={`#${player.number}`} />
-                  <DetailRow label="Current Club" value={team?.name || 'N/A'} />
-                  <DetailRow label="Status" value="Active" />
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {activeTab === 'career' && (
-          <motion.div
-            key="career"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="bg-white dark:bg-gray-900 p-8 rounded-[40px] border border-gray-100 dark:border-gray-800 shadow-sm space-y-8 transition-all duration-300"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl">
-                <TrendingUpIcon className="text-blue-600 dark:text-blue-400" size={24} />
-              </div>
-              <h3 className="text-xl font-black dark:text-white">Career Path & Achievements</h3>
-            </div>
-            
-            <div className="text-gray-600 dark:text-gray-400 leading-relaxed font-medium whitespace-pre-line">
-              {player.career || `${player.name}'s career path at professional level is being updated by the scouting team.`}
-            </div>
-
-            {player.transferHistory && (
-              <div className="mt-12 pt-12 border-t border-gray-100 dark:border-gray-800 space-y-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-2xl">
-                    <TrendingUpIcon className="text-green-600 dark:text-green-400" size={24} />
-                  </div>
-                  <h3 className="text-xl font-black dark:text-white">Transfer History</h3>
-                </div>
-                <div className="text-gray-600 dark:text-gray-400 leading-relaxed font-medium whitespace-pre-line bg-gray-50/50 dark:bg-gray-800/50 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 transition-colors">
-                  {player.transferHistory}
-                </div>
-              </div>
+      {/* Tabs Navigation */}
+      <div className="flex justify-between px-6 py-4 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 overflow-x-auto scrollbar-none transition-colors">
+        {(['overview', 'stats', 'career', 'honors'] as Tab[]).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={cn(
+              "px-4 py-2 text-sm font-black uppercase tracking-tighter transition-all relative",
+              activeTab === tab 
+                ? "text-blue-900 dark:text-blue-400" 
+                : "text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400"
             )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+          >
+            {tab}
+            {activeTab === tab && (
+              <motion.div 
+                layoutId="activeTab" 
+                className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-blue-600 rounded-full" 
+              />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Content Area */}
+      <div className="flex-1 p-6 space-y-6">
+        <AnimatePresence mode="wait">
+          {activeTab === 'overview' && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-6"
+            >
+              {/* Profile Overview Card */}
+              <div className="bg-white dark:bg-gray-900 p-8 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all">
+                <div className="flex items-center gap-6 mb-8">
+                  <div className="w-24 h-24 rounded-3xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex items-center justify-center overflow-hidden">
+                    {player.imageUrl ? (
+                      <img src={player.imageUrl} alt={player.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <UserIcon size={32} className="text-gray-300" />
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-gray-900 dark:text-white leading-tight">{player.name}</h2>
+                    <div className="flex items-center gap-2 mt-2">
+                       <div className="w-5 h-5 flex items-center justify-center">
+                         {team?.logo ? <img src={team.logo} alt="" className="w-full h-full object-contain" /> : <ShieldIcon size={14} className="text-blue-600" />}
+                       </div>
+                       <span className="text-xs font-bold text-gray-500 dark:text-gray-400">{team?.name || 'Free Agent'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-y-8 gap-x-4">
+                  <InfoItem label="Age" value={age} subValue={player.birthDate || '15/02/2000'} />
+                  <InfoItem label="Height" value={player.height || '189cm'} />
+                  <InfoItem label="Weight" value={player.weight || '78kg'} />
+                  <InfoItem 
+                    label="Nationality" 
+                    value={player.nationality || 'Poland'} 
+                    icon={player.nationality === 'Poland' ? <span className="text-xl">🇵🇱</span> : <span className="text-xl">🏳️</span>} 
+                  />
+                  <InfoItem label="Position" value={player.position} />
+                  <InfoItem 
+                    label="Foot" 
+                    value={player.foot || 'Right'} 
+                    icon={<FootprintsIcon size={24} className="text-green-500" />} 
+                  />
+                </div>
+              </div>
+
+              {/* Stats Card (Radar) */}
+              <div className="bg-white dark:bg-gray-900 p-8 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm relative transition-all">
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                      <PolarGrid stroke="#E5E7EB" />
+                      <PolarAngleAxis 
+                        dataKey="subject" 
+                        tick={(props) => {
+                          const { x, y, payload } = props;
+                          const percentage = radarData.find(d => d.subject === payload.value)?.A;
+                          return (
+                            <g transform={`translate(${x},${y})`}>
+                              <text
+                                x={0}
+                                y={0}
+                                dy={-10}
+                                textAnchor="middle"
+                                className="fill-gray-900 dark:fill-white text-[12px] font-black"
+                              >
+                                {payload.value}
+                              </text>
+                              <text
+                                x={0}
+                                y={0}
+                                dy={8}
+                                textAnchor="middle"
+                                className="fill-gray-500 dark:fill-gray-400 text-[10px] font-bold"
+                              >
+                                ({percentage}%)
+                              </text>
+                            </g>
+                          );
+                        }}
+                      />
+                      <Radar
+                        name={player.name}
+                        dataKey="A"
+                        stroke="#22C55E"
+                        strokeWidth={2}
+                        fill="#22C55E"
+                        fillOpacity={0.2}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Recent Ratings List */}
+              <div className="bg-gray-50 dark:bg-gray-800/50 py-4 rounded-2xl flex items-center justify-center border border-dashed border-gray-200 dark:border-gray-700">
+                <span className="text-sm font-black text-gray-400 uppercase tracking-widest">Recent ratings</span>
+              </div>
+              
+              {player.recentRatings && player.recentRatings.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+                  {player.recentRatings.map((rating, i) => (
+                    <div 
+                      key={i} 
+                      className={cn(
+                        "flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center font-black text-sm",
+                        rating >= 8 ? "bg-green-100 text-green-700" : 
+                        rating >= 7 ? "bg-blue-100 text-blue-700" : 
+                        "bg-gray-100 text-gray-700"
+                      )}
+                    >
+                      {rating.toFixed(1)}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {activeTab === 'stats' && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-gray-900 p-8 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all"
+            >
+              <h3 className="text-lg font-black dark:text-white mb-6">Detailed Season Stats</h3>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">Detailed performance statistics are being aggregated for the current season.</p>
+            </motion.div>
+          )}
+
+          {activeTab === 'career' && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="bg-white dark:bg-gray-900 p-8 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all space-y-6"
+            >
+              <div className="flex items-center gap-3">
+                <TrendingUpIcon className="text-blue-600" size={24} />
+                <h3 className="text-xl font-black dark:text-white">Career Path</h3>
+              </div>
+              <p className="text-gray-600 dark:text-gray-400 whitespace-pre-line leading-relaxed font-medium">
+                {player.career || "Career information details are being processed."}
+              </p>
+            </motion.div>
+          )}
+
+          {activeTab === 'honors' && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="bg-white dark:bg-gray-900 p-8 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all space-y-6"
+            >
+              <h3 className="text-lg font-black dark:text-white">Achievements & Honors</h3>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">No recorded honors for this season yet.</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
 
-function TabButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+function InfoItem({ label, value, subValue, icon }: { label: string; value: string; subValue?: string; icon?: React.ReactNode }) {
   return (
-    <button 
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-2 px-8 py-3 rounded-2xl font-bold text-sm transition-all whitespace-nowrap",
-        active ? "bg-blue-600 text-white shadow-lg shadow-blue-100 dark:shadow-blue-900/40" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+    <div className="flex flex-col items-center text-center space-y-2">
+      {icon ? (
+        <div className="h-6 flex items-center justify-center">
+          {icon}
+        </div>
+      ) : (
+        <span className="text-lg font-black text-gray-900 dark:text-white leading-none">{value}</span>
       )}
-    >
-      {icon}
-      <span>{label}</span>
-    </button>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between items-center py-3 border-b border-gray-50 dark:border-gray-800 last:border-0 transition-colors">
-      <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{label}</span>
-      <span className="font-bold text-sm text-gray-900 dark:text-white transition-colors">{value}</span>
+      <div className="flex flex-col gap-0.5">
+        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{label}</span>
+        {subValue && !icon && <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500">{subValue}</span>}
+        {icon && <span className="text-lg font-black text-gray-900 dark:text-white leading-none">{value}</span>}
+      </div>
     </div>
   );
 }
+

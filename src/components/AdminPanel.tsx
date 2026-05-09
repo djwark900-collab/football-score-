@@ -18,7 +18,9 @@ import {
   Shield as ShieldIcon,
   Lock as LockIcon,
   Zap as ZapIcon,
-  ArrowLeftRight as TransferIcon
+  ArrowLeftRight as TransferIcon,
+  Copy as CopyIcon,
+  ClipboardPaste as PasteIcon
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
@@ -49,6 +51,7 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(defaultPlayerId || null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [copiedTeamData, setCopiedTeamData] = useState<any>(null);
 
   useEffect(() => {
     if (defaultPlayerId) {
@@ -62,7 +65,20 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
           imageUrl: p.imageUrl || '',
           overview: p.overview || '',
           career: p.career || '',
-          transferHistory: p.transferHistory || ''
+          transferHistory: p.transferHistory || '',
+          birthDate: p.birthDate || '',
+          height: p.height || '',
+          weight: p.weight || '',
+          nationality: p.nationality || '',
+          foot: p.foot || 'Right',
+          statsRadar: p.statsRadar || {
+            attacking: 50,
+            creativity: 50,
+            defending: 50,
+            tactical: 50,
+            technical: 50
+          },
+          recentRatingsRaw: p.recentRatings?.join(', ') || ''
         });
       }
     }
@@ -91,16 +107,25 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
     winnerId: string;
     editingIndex: number | null;
   }>({ season: '', winnerId: '', editingIndex: null });
+  const [teamFilter, setTeamFilter] = useState('');
+  const [teamListLeagueFilter, setTeamListLeagueFilter] = useState('');
+  const [gameListLeagueFilter, setGameListLeagueFilter] = useState('');
   const [teamForm, setTeamForm] = useState({ 
     name: '', 
     leagueId: defaultLeagueId || '', 
+    leagueId2: '', 
     logo: '', 
     coachName: '', 
     coachImageUrl: '', 
-    foundedIn: '' 
+    foundedIn: '',
+    marketValue: '',
+    foreignPlayers: 0,
+    nationalPlayers: 0,
+    stadiumImageUrl: ''
   });
   const [gameForm, setGameForm] = useState<{
     leagueId: string;
+    leagueId2: string;
     homeTeamId: string;
     awayTeamId: string;
     date: string;
@@ -111,10 +136,13 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
     venueId: string;
     round: string;
     currentTime: string;
+    refereeName: string;
+    broadcastChannels: { name: string; commentator?: string; isImportant?: boolean; }[];
     events: MatchEvent[];
     lineups: { home: string[]; away: string[]; };
   }>({ 
     leagueId: defaultLeagueId || '', 
+    leagueId2: '',
     homeTeamId: '', 
     awayTeamId: '', 
     date: new Date().toISOString().slice(0, 16),
@@ -125,6 +153,8 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
     venueId: '',
     round: '',
     currentTime: '',
+    refereeName: '',
+    broadcastChannels: [],
     events: [],
     lineups: { home: [], away: [] }
   });
@@ -137,6 +167,7 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
     playerInId: '',
     playerOutId: ''
   });
+  const [broadcastChannelForm, setBroadcastChannelForm] = useState({ name: '', commentator: '', isImportant: false });
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [playerForm, setPlayerForm] = useState({ 
     name: '', 
@@ -146,7 +177,21 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
     imageUrl: '',
     overview: '',
     career: '',
-    transferHistory: '' 
+    transferHistory: '',
+    // Detailed fields
+    birthDate: '',
+    height: '',
+    weight: '',
+    nationality: '',
+    foot: 'Right' as 'Left' | 'Right' | 'Both',
+    statsRadar: {
+      attacking: 50,
+      creativity: 50,
+      defending: 50,
+      tactical: 50,
+      technical: 50
+    },
+    recentRatingsRaw: ''
   });
   const [venueForm, setVenueForm] = useState({ name: '', city: '', capacity: 0 });
   const [adminForm, setAdminForm] = useState({ email: '', role: 'editor' as 'editor' | 'super' });
@@ -262,10 +307,15 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
       setTeamForm({ 
         name: '', 
         leagueId: defaultLeagueId || '', 
+        leagueId2: '',
         logo: '',
         coachName: '',
         coachImageUrl: '',
-        foundedIn: ''
+        foundedIn: '',
+        marketValue: '',
+        foreignPlayers: 0,
+        nationalPlayers: 0,
+        stadiumImageUrl: ''
       });
       setEditingId(null);
     } catch (e) {
@@ -289,6 +339,7 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
       }
       setGameForm({ 
         leagueId: defaultLeagueId || '', 
+        leagueId2: '',
         homeTeamId: '', 
         awayTeamId: '', 
         date: new Date().toISOString().slice(0, 16),
@@ -299,6 +350,8 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
         venueId: '',
         round: '',
         currentTime: '',
+        refereeName: '',
+        broadcastChannels: [],
         events: [],
         lineups: { home: [], away: [] }
       });
@@ -397,22 +450,41 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
     setLoading(true);
     const path = editingId ? `players/${editingId}` : 'players';
     try {
+      const recentRatings = playerForm.recentRatingsRaw
+        .split(',')
+        .map(s => parseFloat(s.trim()))
+        .filter(n => !isNaN(n));
+
+      const finalData = {
+        name: playerForm.name,
+        teamId: playerForm.teamId,
+        position: playerForm.position,
+        number: playerForm.number,
+        imageUrl: playerForm.imageUrl,
+        overview: playerForm.overview,
+        career: playerForm.career,
+        transferHistory: playerForm.transferHistory,
+        birthDate: playerForm.birthDate,
+        height: playerForm.height,
+        weight: playerForm.weight,
+        nationality: playerForm.nationality,
+        foot: playerForm.foot,
+        statsRadar: playerForm.statsRadar,
+        recentRatings
+      };
+
       if (editingId) {
-        await updateDoc(doc(db, 'players', editingId), playerForm);
-        showFeedback('Player profile & photo updated!');
+        await updateDoc(doc(db, 'players', editingId), finalData);
+        showFeedback('Player details & stats updated!');
       } else {
-        await addDoc(collection(db, 'players'), playerForm);
-        showFeedback('Player & photo saved successfully!');
+        await addDoc(collection(db, 'players'), finalData);
+        showFeedback('Player added successfully!');
       }
       setPlayerForm({ 
-        name: '', 
-        teamId: defaultTeamId || '', 
-        position: '', 
-        number: 0,
-        imageUrl: '',
-        overview: '',
-        career: '',
-        transferHistory: '' 
+        name: '', teamId: '', position: '', number: 0, imageUrl: '', overview: '', career: '', transferHistory: '',
+        birthDate: '', height: '', weight: '', nationality: '', foot: 'Right',
+        statsRadar: { attacking: 50, creativity: 50, defending: 50, tactical: 50, technical: 50 },
+        recentRatingsRaw: ''
       });
       setEditingId(null);
     } catch (e) {
@@ -432,7 +504,20 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
       imageUrl: p.imageUrl || '',
       overview: p.overview || '',
       career: p.career || '',
-      transferHistory: p.transferHistory || ''
+      transferHistory: p.transferHistory || '',
+      birthDate: p.birthDate || '',
+      height: p.height || '',
+      weight: p.weight || '',
+      nationality: p.nationality || '',
+      foot: p.foot || 'Right',
+      statsRadar: p.statsRadar || {
+        attacking: 50,
+        creativity: 50,
+        defending: 50,
+        tactical: 50,
+        technical: 50
+      },
+      recentRatingsRaw: p.recentRatings?.join(', ') || ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -566,10 +651,15 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
     setTeamForm({ 
       name: t.name, 
       leagueId: t.leagueId, 
+      leagueId2: t.leagueId2 || '',
       logo: t.logo || '',
       coachName: t.coachName || '',
       coachImageUrl: t.coachImageUrl || '',
-      foundedIn: t.foundedIn || ''
+      foundedIn: t.foundedIn || '',
+      marketValue: t.marketValue || '',
+      foreignPlayers: t.foreignPlayers || 0,
+      nationalPlayers: t.nationalPlayers || 0,
+      stadiumImageUrl: t.stadiumImageUrl || ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -578,6 +668,7 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
     setEditingId(g.id);
     setGameForm({ 
       leagueId: g.leagueId, 
+      leagueId2: g.leagueId2 || '',
       homeTeamId: g.homeTeamId, 
       awayTeamId: g.awayTeamId, 
       seasonId: g.seasonId || '',
@@ -589,6 +680,8 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
       venueId: g.venueId || '',
       round: g.round || '',
       currentTime: g.currentTime || '',
+      refereeName: g.refereeName || '',
+      broadcastChannels: g.broadcastChannels || [],
       events: g.events || [],
       lineups: g.lineups || { home: [], away: [] }
     });
@@ -614,17 +707,26 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
     setTeamForm({ 
       name: '', 
       leagueId: defaultLeagueId || '', 
+      leagueId2: '',
       logo: '',
       coachName: '',
       coachImageUrl: '',
-      foundedIn: ''
+      foundedIn: '',
+      marketValue: '',
+      foreignPlayers: 0,
+      nationalPlayers: 0,
+      stadiumImageUrl: ''
     });
     setGameForm({ 
-      leagueId: defaultLeagueId || '', homeTeamId: '', awayTeamId: '',
+      leagueId: defaultLeagueId || '', 
+      leagueId2: '',
+      homeTeamId: '', awayTeamId: '',
       date: new Date().toISOString().slice(0, 16),
       status: 'scheduled', homeScore: 0, awayScore: 0,
       attendance: 0, venueId: '', round: '',
       currentTime: '',
+      refereeName: '',
+      broadcastChannels: [],
       events: [],
       lineups: { home: [], away: [] }
     });
@@ -846,11 +948,16 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
         {activeTab === 'players' && (
           <motion.div key="players-tab" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
             <AdminCard title={editingId ? "Edit Player" : "Add New Player"} icon={<TargetIcon className="text-blue-600" />}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <Input label="Player Name" value={playerForm.name} onChange={v => setPlayerForm({ ...playerForm, name: v })} placeholder="e.g. Cristiano Ronaldo" />
                 <Select label="Assign to Team" value={playerForm.teamId} onChange={v => setPlayerForm({ ...playerForm, teamId: v })} options={teams.map(t => ({ label: `${t.name} (${leagues.find(l => l.id === t.leagueId)?.name})`, value: t.id }))} />
                 <Input label="Position" value={playerForm.position} onChange={v => setPlayerForm({ ...playerForm, position: v })} placeholder="e.g. Forward" />
                 <Input type="number" label="Shirt Number" value={playerForm.number} onChange={v => setPlayerForm({ ...playerForm, number: parseInt(v) })} />
+                <Input type="date" label="Birth Date" value={playerForm.birthDate} onChange={v => setPlayerForm({ ...playerForm, birthDate: v })} />
+                <Input label="Height" value={playerForm.height} onChange={v => setPlayerForm({ ...playerForm, height: v })} placeholder="e.g. 189cm" />
+                <Input label="Weight" value={playerForm.weight} onChange={v => setPlayerForm({ ...playerForm, weight: v })} placeholder="e.g. 78kg" />
+                <Input label="Nationality" value={playerForm.nationality} onChange={v => setPlayerForm({ ...playerForm, nationality: v })} placeholder="e.g. Poland" />
+                <Select label="Preferred Foot" value={playerForm.foot} onChange={v => setPlayerForm({ ...playerForm, foot: v as any })} options={[{label: 'Right', value: 'Right'}, {label: 'Left', value: 'Left'}, {label: 'Both', value: 'Both'}]} />
                 
                 <ImageUpload 
                   label="Player Image (File or URL)" 
@@ -859,7 +966,23 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
                   onFileSelect={handleFileUpload}
                 />
 
-                <div className="sm:col-span-2 space-y-4">
+                <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 bg-gray-50/50 p-6 rounded-3xl border border-gray-100">
+                  <h5 className="md:col-span-5 text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Performance Radar Stats (0-100)</h5>
+                  <Input type="number" label="Attacking" value={playerForm.statsRadar.attacking} onChange={v => setPlayerForm({ ...playerForm, statsRadar: { ...playerForm.statsRadar, attacking: parseInt(v) } })} />
+                  <Input type="number" label="Creativity" value={playerForm.statsRadar.creativity} onChange={v => setPlayerForm({ ...playerForm, statsRadar: { ...playerForm.statsRadar, creativity: parseInt(v) } })} />
+                  <Input type="number" label="Defending" value={playerForm.statsRadar.defending} onChange={v => setPlayerForm({ ...playerForm, statsRadar: { ...playerForm.statsRadar, defending: parseInt(v) } })} />
+                  <Input type="number" label="Tactical" value={playerForm.statsRadar.tactical} onChange={v => setPlayerForm({ ...playerForm, statsRadar: { ...playerForm.statsRadar, tactical: parseInt(v) } })} />
+                  <Input type="number" label="Technical" value={playerForm.statsRadar.technical} onChange={v => setPlayerForm({ ...playerForm, statsRadar: { ...playerForm.statsRadar, technical: parseInt(v) } })} />
+                </div>
+
+                <div className="lg:col-span-3 space-y-4">
+                  <Input 
+                    label="Recent Ratings (comma separated)" 
+                    value={playerForm.recentRatingsRaw} 
+                    onChange={v => setPlayerForm({ ...playerForm, recentRatingsRaw: v })} 
+                    placeholder="e.g. 7.5, 8.2, 6.9" 
+                  />
+
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Overview</label>
                     <textarea 
@@ -889,7 +1012,7 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
                   </div>
                 </div>
 
-                <div className="sm:col-span-2 flex justify-end gap-2">
+                <div className="lg:col-span-3 flex justify-end gap-2">
                    {editingId && (
                     <button onClick={cancelEdit} className="px-6 h-[54px] bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all">
                       Cancel
@@ -1238,11 +1361,35 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
         {activeTab === 'teams' && (
           <motion.div key="teams-tab" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
             <AdminCard title={editingId ? "Edit Team" : "Add New Team"} icon={<UsersIcon className="text-blue-600" />}>
+              <div className="mb-4 flex justify-end">
+                {copiedTeamData && (
+                  <button 
+                    onClick={() => {
+                      setTeamForm({
+                        ...teamForm,
+                        ...copiedTeamData,
+                        name: editingId ? teamForm.name : copiedTeamData.name // Keep name if editing
+                      });
+                      showFeedback('Team data pasted!');
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-900 rounded-xl font-bold hover:bg-gray-200 transition-all text-xs"
+                  >
+                    <PasteIcon size={14} />
+                    Paste Team Data
+                  </button>
+                )}
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="Team Name" value={teamForm.name} onChange={v => setTeamForm({ ...teamForm, name: v })} placeholder="e.g. Manchester United" />
-                <Select label="Assign to League" value={teamForm.leagueId} onChange={v => setTeamForm({ ...teamForm, leagueId: v })} options={leagues.map(l => ({ label: l.name, value: l.id }))} />
+                <Select label="Assign to League 1" value={teamForm.leagueId} onChange={v => setTeamForm({ ...teamForm, leagueId: v })} options={leagues.map(l => ({ label: l.name, value: l.id }))} />
+                <Select label="Assign to League 2 (Optional)" value={teamForm.leagueId2} onChange={v => setTeamForm({ ...teamForm, leagueId2: v })} options={[{ label: 'None', value: '' }, ...leagues.map(l => ({ label: l.name, value: l.id }))]} />
                 <Input label="Founded In" value={teamForm.foundedIn} onChange={v => setTeamForm({ ...teamForm, foundedIn: v })} placeholder="e.g. 1909" />
                 <Input label="Coach Name" value={teamForm.coachName} onChange={v => setTeamForm({ ...teamForm, coachName: v })} placeholder="e.g. Pep Guardiola" />
+                <Input label="Market Value" value={teamForm.marketValue} onChange={v => setTeamForm({ ...teamForm, marketValue: v })} placeholder="e.g. €1.2B" />
+                <div className="grid grid-cols-2 gap-4">
+                  <Input type="number" label="Foreign Players" value={teamForm.foreignPlayers} onChange={v => setTeamForm({ ...teamForm, foreignPlayers: parseInt(v) })} />
+                  <Input type="number" label="National Players" value={teamForm.nationalPlayers} onChange={v => setTeamForm({ ...teamForm, nationalPlayers: parseInt(v) })} />
+                </div>
                 
                 <ImageUpload 
                   label="Team Logo (File or URL)" 
@@ -1255,6 +1402,13 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
                   label="Coach Image (File or URL)" 
                   value={teamForm.coachImageUrl} 
                   onChange={v => setTeamForm({ ...teamForm, coachImageUrl: v })}
+                  onFileSelect={handleFileUpload}
+                />
+
+                <ImageUpload 
+                  label="Stadium Image (File or URL)" 
+                  value={teamForm.stadiumImageUrl} 
+                  onChange={v => setTeamForm({ ...teamForm, stadiumImageUrl: v })}
                   onFileSelect={handleFileUpload}
                 />
 
@@ -1272,8 +1426,23 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
               </div>
             </AdminCard>
 
+             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest">Global Teams</h3>
+                <div className="w-full sm:w-64">
+                   <Select 
+                     label="" 
+                     value={teamListLeagueFilter} 
+                     onChange={v => setTeamListLeagueFilter(v)} 
+                     options={[
+                       { label: 'All Leagues', value: '' },
+                       ...leagues.map(l => ({ label: l.name, value: l.id }))
+                     ]} 
+                   />
+                </div>
+             </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {teams.map(t => (
+              {teams.filter(t => !teamListLeagueFilter || t.leagueId === teamListLeagueFilter || t.leagueId2 === teamListLeagueFilter).map(t => (
                 <div key={t.id} className="p-4 bg-white rounded-3xl border border-gray-100 flex items-center justify-between group">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden">
@@ -1281,10 +1450,24 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
                     </div>
                     <div>
                       <p className="font-bold text-sm">{t.name}</p>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase">{leagues.find(l => l.id === t.leagueId)?.name}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">
+                        {leagues.find(l => l.id === t.leagueId)?.name}
+                        {t.leagueId2 && ` • ${leagues.find(l => l.id === t.leagueId2)?.name}`}
+                      </p>
                     </div>
                   </div>
                   <div className="flex gap-2">
+                    <button 
+                      onClick={() => {
+                        const { id, ...data } = t;
+                        setCopiedTeamData(data);
+                        showFeedback('Team data copied! Use Paste button in form.');
+                      }} 
+                      className="p-3 text-green-500 bg-green-50 rounded-2xl hover:bg-green-100 transition-colors"
+                      title="Copy Team Data"
+                    >
+                      <CopyIcon size={18} />
+                    </button>
                     <button 
                       onClick={() => startEditingTeam(t)} 
                       className="p-3 text-blue-500 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-colors"
@@ -1316,17 +1499,41 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
             <AdminCard title={editingId ? "Edit Game" : "Schedule New Game"} icon={<CalendarIcon className="text-blue-600" />}>
                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <Select 
+                    label="Assign to League 1" 
+                    value={gameForm.leagueId} 
+                    onChange={v => setGameForm({ ...gameForm, leagueId: v, homeTeamId: '', awayTeamId: '' })} 
+                    options={leagues.map(l => ({ label: l.name, value: l.id }))} 
+                  />
+                  <Select 
+                    label="Assign to League 2 (Optional)" 
+                    value={gameForm.leagueId2} 
+                    onChange={v => setGameForm({ ...gameForm, leagueId2: v })} 
+                    options={[{ label: 'None', value: '' }, ...leagues.map(l => ({ label: l.name, value: l.id }))]} 
+                  />
+                  <div className="hidden sm:block" />
+                  <Select 
                     label="Home Team" 
                     value={gameForm.homeTeamId} 
-                    onChange={v => setGameForm({ ...gameForm, homeTeamId: v, leagueId: teams.find(t => t.id === v)?.leagueId || '' })} 
-                    options={teams.map(t => ({ label: `${t.name} (${leagues.find(l => l.id === t.leagueId)?.name})`, value: t.id }))} 
+                    onChange={v => {
+                      const team = teams.find(t => t.id === v);
+                      setGameForm({ ...gameForm, homeTeamId: v, leagueId: team?.leagueId || gameForm.leagueId });
+                    }} 
+                    options={(gameForm.leagueId || gameForm.leagueId2 ? teams.filter(t => 
+                      t.leagueId === gameForm.leagueId || 
+                      t.leagueId2 === gameForm.leagueId || 
+                      (gameForm.leagueId2 && (t.leagueId === gameForm.leagueId2 || t.leagueId2 === gameForm.leagueId2))
+                    ) : teams).map(t => ({ label: `${t.name} (${leagues.find(l => l.id === t.leagueId)?.name})`, value: t.id }))} 
                   />
                   <div className="flex items-center justify-center pt-8 text-gray-300 font-black">VS</div>
                    <Select 
                     label="Away Team" 
                     value={gameForm.awayTeamId} 
                     onChange={v => setGameForm({ ...gameForm, awayTeamId: v })} 
-                    options={teams.map(t => ({ label: `${t.name} (${leagues.find(l => l.id === t.leagueId)?.name})`, value: t.id }))} 
+                    options={(gameForm.leagueId || gameForm.leagueId2 ? teams.filter(t => 
+                      t.leagueId === gameForm.leagueId || 
+                      t.leagueId2 === gameForm.leagueId || 
+                      (gameForm.leagueId2 && (t.leagueId === gameForm.leagueId2 || t.leagueId2 === gameForm.leagueId2))
+                    ) : teams).map(t => ({ label: `${t.name} (${leagues.find(l => l.id === t.leagueId)?.name})`, value: t.id }))} 
                   />
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Date & Time</label>
@@ -1383,6 +1590,12 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
                     onChange={v => setGameForm({ ...gameForm, venueId: v })}
                     options={venues.map(v => ({ label: `${v.name} (${v.city})`, value: v.id }))}
                   />
+                  <Input 
+                    label="Referee Name" 
+                    value={gameForm.refereeName} 
+                    onChange={v => setGameForm({ ...gameForm, refereeName: v })} 
+                    placeholder="e.g. Michael Oliver"
+                  />
                   {gameForm.status === 'live' && (
                     <Input 
                       label="Match Time (e.g. 45' or HT)" 
@@ -1391,6 +1604,70 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
                       placeholder="e.g. 12', 45+2, HT"
                     />
                   )}
+
+                  {/* Broadcast Channels Section */}
+                  <div className="sm:col-span-3 border-t border-gray-100 pt-6">
+                    <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-4">Broadcast Channels</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
+                      <Input 
+                        label="Channel Name" 
+                        value={broadcastChannelForm.name} 
+                        onChange={v => setBroadcastChannelForm({ ...broadcastChannelForm, name: v })} 
+                        placeholder="e.g. Sky Sports" 
+                      />
+                      <Input 
+                        label="Commentator" 
+                        value={broadcastChannelForm.commentator} 
+                        onChange={v => setBroadcastChannelForm({ ...broadcastChannelForm, commentator: v })} 
+                        placeholder="Optional" 
+                      />
+                      <div className="flex flex-col gap-2 justify-end pb-1">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input 
+                            type="checkbox" 
+                            checked={broadcastChannelForm.isImportant} 
+                            onChange={e => setBroadcastChannelForm({ ...broadcastChannelForm, isImportant: e.target.checked })}
+                            className="w-4 h-4 rounded-lg bg-gray-50 border-gray-200 text-blue-600 focus:ring-blue-600"
+                          />
+                          <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Important</span>
+                        </label>
+                      </div>
+                      <div className="flex items-end">
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            if (!broadcastChannelForm.name) return;
+                            setGameForm({
+                              ...gameForm,
+                              broadcastChannels: [...gameForm.broadcastChannels, { ...broadcastChannelForm }]
+                            });
+                            setBroadcastChannelForm({ name: '', commentator: '', isImportant: false });
+                          }}
+                          className="w-full h-[54px] bg-gray-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition-all"
+                        >
+                          <PlusIcon size={18} />
+                          Add Channel
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                       {gameForm.broadcastChannels.map((ch, idx) => (
+                         <div key={idx} className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-xl border border-gray-100">
+                           <div className="flex flex-col">
+                             <span className="text-xs font-bold">{ch.name}</span>
+                             {ch.commentator && <span className="text-[8px] text-gray-400 font-bold uppercase">{ch.commentator}</span>}
+                           </div>
+                           {ch.isImportant && <ZapIcon size={10} className="text-blue-600" />}
+                           <button 
+                             onClick={() => setGameForm({ ...gameForm, broadcastChannels: gameForm.broadcastChannels.filter((_, i) => i !== idx) })}
+                             className="ml-2 text-gray-400 hover:text-red-500"
+                           >
+                             <Trash2Icon size={14} />
+                           </button>
+                         </div>
+                       ))}
+                    </div>
+                  </div>
 
                   {/* Enhanced Game Editor: Events and Lineups */}
                   {editingId && (
@@ -1524,8 +1801,23 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
                </div>
             </AdminCard>
 
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+               <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest px-2">Recent Fixtures</h3>
+               <div className="w-full sm:w-64">
+                  <Select 
+                    label="" 
+                    value={gameListLeagueFilter} 
+                    onChange={v => setGameListLeagueFilter(v)} 
+                    options={[
+                      { label: 'All Leagues', value: '' },
+                      ...leagues.map(l => ({ label: l.name, value: l.id }))
+                    ]} 
+                  />
+               </div>
+            </div>
+
             <div className="space-y-4">
-              {games.map(g => (
+              {games.filter(g => !gameListLeagueFilter || g.leagueId === gameListLeagueFilter || g.leagueId2 === gameListLeagueFilter).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(g => (
                 <div key={g.id} className="p-6 bg-white rounded-[32px] border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center gap-6">
                    <div className="flex-1 flex justify-end gap-2 items-center font-bold">
                     {teams.find(t => t.id === g.homeTeamId)?.name}
