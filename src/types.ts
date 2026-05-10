@@ -36,6 +36,7 @@ export interface Team {
   coachName?: string;
   coachImageUrl?: string;
   foundedIn?: string;
+  city?: string;
   marketValue?: string;
   foreignPlayers?: number;
   nationalPlayers?: number;

@@ -636,7 +636,7 @@ export default function App() {
   const liveGames = useMemo(() => games.filter(g => g.status === 'live'), [games]);
 
   return (
-    <div className="min-h-screen bg-[#F8F9FE] dark:bg-gray-950 text-[#1A1A1A] dark:text-white font-sans selection:bg-blue-100 pb-24">
+    <div className="min-h-screen bg-mesh text-[#1A1A1A] dark:text-gray-100 font-sans selection:bg-blue-100 pb-24">
       <AnimatePresence>
         {isLoading && (
           <motion.div 
@@ -785,13 +785,10 @@ export default function App() {
                 className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-all"
                >
                  <XIcon size={16} className="text-gray-400" />
-               </button>
+                </button>
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
-
-      <AnimatePresence>
       </AnimatePresence>
 
       <main className="max-w-[1092px] mx-auto px-4 pt-6">
@@ -805,74 +802,59 @@ export default function App() {
               className="space-y-8"
             >
               {/* League Tabs */}
-              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
+              <div className="flex gap-4 overflow-x-auto pb-6 px-2 scrollbar-none -mx-2">
                 <button 
                   onClick={() => setSelectedLeagueId(null)}
                   className={cn(
-                    "px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap",
-                    !selectedLeagueId ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "bg-white text-gray-500 hover:bg-gray-50"
+                    "px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap btn-3d border-t-2 border-l-2",
+                    !selectedLeagueId 
+                      ? "bg-blue-600 text-white shadow-3d-md border-white/20" 
+                      : "bg-white dark:bg-gray-900 text-gray-500 border-gray-100 dark:border-gray-800 shadow-3d-sm hover:shadow-3d-md"
                   )}
                 >
                   {t('all_matches')}
                 </button>
                 {leagues.map((league, index) => (
-                  <button
+                  <button 
                     key={league.id}
                     onClick={() => setSelectedLeagueId(league.id)}
                     className={cn(
-                      "px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap",
+                      "px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 whitespace-nowrap btn-3d border-t-2 border-l-2",
                       selectedLeagueId === league.id 
-                        ? (index === 4 ? "bg-yellow-400 text-black shadow-lg shadow-yellow-100" : "bg-blue-600 text-white shadow-lg shadow-blue-200")
-                        : (index === 4 ? "bg-yellow-50 text-yellow-700 border border-yellow-200" : "bg-white text-gray-500 hover:bg-gray-50")
+                        ? (index === 4 ? "bg-yellow-400 text-black shadow-3d-md border-yellow-300/50" : "bg-blue-600 text-white shadow-3d-md border-white/20")
+                        : (index === 4 ? "bg-yellow-50 text-yellow-700 border-yellow-200 shadow-3d-sm" : "bg-white dark:bg-gray-900 text-gray-500 border-gray-100 dark:border-gray-800 shadow-3d-sm hover:shadow-3d-md")
                     )}
                   >
-                    {league.logo && <img src={league.logo} alt="" className="w-4 h-4 rounded-full" />}
+                    {league.logo && <img src={league.logo} alt="" className="w-5 h-5 rounded-lg shadow-3d-sm p-0.5 bg-white" />}
                     {league.name}
                   </button>
                 ))}
               </div>
 
               {/* Live Match Hero (if any) */}
-              {liveGames.length > 0 && (
-                <section>
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-bold flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                      {t('live_match')}
-                    </h2>
-                    <button 
-                      onClick={() => {
-                        setShowOnlyLive(!showOnlyLive);
-                        setSelectedLeagueId(null);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                      className={cn(
-                        "text-sm font-bold px-4 py-2 rounded-xl transition-all",
-                        showOnlyLive ? "bg-red-50 text-red-600 border border-red-100" : "text-blue-600 hover:bg-blue-50"
-                      )}
-                    >
-                      {showOnlyLive ? t('show_all') : t('view_all')}
-                    </button>
+              {liveGames.length > 0 && !selectedLeagueId && (
+                <section className="space-y-4">
+                  <div className="flex justify-between items-center px-2">
+                    <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Live Match</h2>
                   </div>
-                  <div className="grid gap-4">
+                  <div className="flex gap-6 overflow-x-auto pb-8 snap-x snap-mandatory scrollbar-none -mx-6 px-6">
                     {liveGames.map(game => (
-                      <GameCard 
-                        key={game.id} 
-                        game={game} 
-                        teams={teams} 
-                        leagues={leagues}
-                        onClick={() => {
-                          setSelectedGameId(game.id);
-                          navigateTo('game-details');
-                        }}
-                        onTeamClick={(id) => {
-                          setSelectedTeamId(id);
-                          navigateTo('team-details');
-                        }}
-                        isLive
-                        isFollowing={followedGames.some(f => f.gameId === game.id)}
-                        onToggleFollow={() => toggleMatchFollow(game.id)}
-                      />
+                      <div key={game.id} className="snap-center">
+                        <GameCard 
+                          game={game} 
+                          teams={teams || []} 
+                          leagues={leagues || []}
+                          onClick={() => {
+                            setSelectedGameId(game.id);
+                            navigateTo('game-details');
+                          }}
+                          onTeamClick={(id) => {
+                            setSelectedTeamId(id);
+                            navigateTo('team-details');
+                          }}
+                          isLive
+                        />
+                      </div>
                     ))}
                   </div>
                 </section>
@@ -881,13 +863,13 @@ export default function App() {
               {/* Scheduled/Finished Matches */}
               {user && (favorites.length > 0) && !selectedLeagueId && (
                 <section>
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-bold flex items-center gap-2">
-                       <HeartIcon size={18} className="text-pink-500 fill-pink-500" />
+                  <div className="flex justify-between items-center mb-4 px-2">
+                    <h2 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] flex items-center gap-3">
+                       <HeartIcon size={14} className="text-pink-500 fill-pink-500 shadow-sm" />
                        {t('my_favorites')}
                     </h2>
                   </div>
-                  <div className="grid gap-4">
+                  <div className="grid gap-5">
                     {games.filter(g => 
                       favorites.some(f => f.teamId === g.homeTeamId || f.teamId === g.awayTeamId)
                     ).slice(0, 3).map(game => (
@@ -906,6 +888,7 @@ export default function App() {
                         }}
                         isFollowing={followedGames.some(f => f.gameId === game.id)}
                         onToggleFollow={() => toggleMatchFollow(game.id)}
+                        isLive={game.status === 'live'}
                       />
                     ))}
                   </div>
@@ -913,15 +896,27 @@ export default function App() {
               )}
 
               <section>
-                <h2 className="text-lg font-bold mb-4">{selectedLeagueId ? (leagues.find(l => l.id === selectedLeagueId)?.name) : t('recent_upcoming')}</h2>
-                <div className="grid gap-4">
+                <div className="flex justify-between items-center mb-6 px-2">
+                  <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Matchs</h2>
+                  <button 
+                    onClick={() => {
+                      setShowOnlyLive(false);
+                      setSelectedLeagueId(null);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="text-xs font-black text-orange-500 hover:text-orange-600 uppercase tracking-widest transition-colors"
+                  >
+                    See all
+                  </button>
+                </div>
+                <div className="grid gap-6">
                   {filteredGames.length > 0 ? (
                     filteredGames.map(game => (
                       <GameCard 
                         key={game.id} 
                         game={game} 
-                        teams={teams}
-                        leagues={leagues}
+                        teams={teams || []}
+                        leagues={leagues || []}
                         onClick={() => {
                           setSelectedGameId(game.id);
                           navigateTo('game-details');
@@ -932,12 +927,18 @@ export default function App() {
                         }}
                         isFollowing={followedGames.some(f => f.gameId === game.id)}
                         onToggleFollow={() => toggleMatchFollow(game.id)}
+                        isLive={game.status === 'live'}
                       />
                     ))
                   ) : (
-                    <div className="p-12 text-center bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 text-gray-400">
-                      <CalendarIcon className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                      <p>{t('no_matches')}</p>
+                    <div className="card-3d p-16 text-center text-gray-400 flex flex-col items-center justify-center gap-4">
+                      <div className="w-20 h-20 bg-gray-50 dark:bg-gray-800 rounded-3xl flex items-center justify-center shadow-inner border border-white/50 dark:border-white/5">
+                        <CalendarIcon className="w-10 h-10 opacity-20" />
+                      </div>
+                      <div>
+                        <p className="font-black text-gray-900 dark:text-white uppercase tracking-widest">{t('no_matches')}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest mt-1 opacity-50">Try selecting another league</p>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -989,9 +990,7 @@ export default function App() {
                        setSelectedLeagueId(league.id);
                        navigateTo('league-details');
                      }}
-                      className={cn(
-                        "p-4 rounded-3xl border transition-all cursor-pointer flex items-center gap-4 hover:shadow-md bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800"
-                      )}
+                     className="card-3d p-4 cursor-pointer flex items-center gap-4 hover:shadow-3d-lg"
                    >
                       <div className="w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden bg-blue-50 dark:bg-blue-500/10">
                         {league.logo ? <img src={league.logo} alt="" className="w-full h-full object-cover" /> : <TrophyIcon className="text-blue-600" />}
@@ -1004,7 +1003,7 @@ export default function App() {
                              <>
                                 <span className="w-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-full" />
                                 <span className="text-[9px] font-black uppercase text-blue-500 tracking-wider">
-                                  {competitions.find(c => c.id === league.competitionId)?.name}
+                                  {competitions.find(c => c.id === league.competitionId)?.name || 'Tournament'}
                                 </span>
                              </>
                            )}
@@ -1017,7 +1016,7 @@ export default function App() {
              </motion.div>
           )}
 
-          {view === 'league-details' && selectedLeagueId && (
+          {view === 'league-details' && selectedLeagueId && leagues.find(l => l.id === selectedLeagueId) && (
             <LeagueDetails 
               league={leagues.find(l => l.id === selectedLeagueId)!}
               teams={teams}
@@ -1045,7 +1044,7 @@ export default function App() {
             />
           )}
 
-          {view === 'game-details' && selectedGameId && (
+          {view === 'game-details' && selectedGameId && games.find(g => g.id === selectedGameId) && (
             <GameDetails 
               game={games.find(g => g.id === selectedGameId)!} 
               teams={teams}
@@ -1094,7 +1093,7 @@ export default function App() {
               />
             </motion.div>
           )}
-          {view === 'team-details' && selectedTeamId && (
+          {view === 'team-details' && selectedTeamId && teams.find(teamItem => teamItem.id === selectedTeamId) && (
             <TeamDetails 
               team={teams.find(teamItem => teamItem.id === selectedTeamId)!}
               teams={teams}
@@ -1114,6 +1113,10 @@ export default function App() {
                 setSelectedGameId(id);
                 navigateTo('game-details');
               }}
+              onLeagueClick={(id) => {
+                setSelectedLeagueId(id);
+                navigateTo('league-details');
+              }}
               onPlayerClick={(id) => {
                 setSelectedPlayerId(id);
                 navigateTo('player-details');
@@ -1126,15 +1129,31 @@ export default function App() {
             />
           )}
 
-          {view === 'player-details' && selectedPlayerId && (
+          {view === 'player-details' && selectedPlayerId && players.find(p => p.id === selectedPlayerId) && (
             <PlayerDetails 
               player={players.find(p => p.id === selectedPlayerId)!}
-              team={teams.find(teamItem => teamItem.id === players.find(p => p.id === selectedPlayerId)?.teamId)}
+              team={selectedPlayerId ? teams.find(teamItem => teamItem.id === players.find(p => p.id === selectedPlayerId)?.teamId) : undefined}
+              games={games}
+              leagues={leagues}
+              players={players}
+              teams={teams}
               onBack={() => navigateTo(previousView)}
               isAdmin={isAdmin}
               onEdit={(id) => {
                 setAdminDefaultPlayerId(id);
                 navigateTo('admin');
+              }}
+              onPlayerClick={(id) => {
+                setSelectedPlayerId(id);
+                navigateTo('player-details');
+              }}
+              onTeamClick={(id) => {
+                setSelectedTeamId(id);
+                navigateTo('team-details');
+              }}
+              onGameClick={(id) => {
+                setSelectedGameId(id);
+                navigateTo('game-details');
               }}
             />
           )}
@@ -1323,7 +1342,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-900 rounded-[40px] p-8 border border-gray-100 dark:border-gray-800 shadow-sm space-y-6">
+              <div className="card-3d p-8 space-y-6">
                 <div className="space-y-4">
                   <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">{t('pref_notifications')}</h3>
                   
@@ -1371,6 +1390,16 @@ export default function App() {
                   
                   <div className="space-y-6">
                     <div className="flex justify-between items-center group">
+                      <div>
+                        <p className="font-black text-gray-900 dark:text-white">App Version</p>
+                        <p className="text-xs text-gray-500 font-medium">Current build version of the application</p>
+                      </div>
+                      <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-black border border-blue-100 dark:border-blue-800">
+                        v1.1.3
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center group pt-4 border-t border-gray-50 dark:border-gray-800">
                       <div>
                         <p className="font-black text-gray-900 dark:text-white">{t('pref_time')}</p>
                         <p className="text-xs text-gray-500 font-medium">{t('pref_time_desc')}</p>
@@ -1523,14 +1552,16 @@ export default function App() {
       </AnimatePresence>
 
       {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 px-6 py-4 z-40">
-        <div className="max-w-md mx-auto flex justify-between items-center">
-          <NavButton active={view === 'matches'} onClick={() => { navigateTo('matches'); setSelectedLeagueId(null); setSelectedPlayerId(null); setSelectedTeamId(null); }} icon={<ClockIcon />} label={prefLanguage === 'English' ? 'Home' : 'سەرەکی'} />
-          <NavButton active={view === 'leagues'} onClick={() => navigateTo('leagues')} icon={<ShieldIcon />} label={t('leagues')} />
-          <NavButton active={view === 'transfers'} onClick={() => navigateTo('transfers')} icon={<TransferIcon />} label={t('transfers')} />
-          <NavButton active={view === 'settings'} onClick={() => navigateTo('settings')} icon={<SettingsIcon />} label={t('settings')} />
-        </div>
-      </nav>
+      {view !== 'game-details' && view !== 'team-details' && view !== 'league-details' && view !== 'player-details' && (
+        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-md bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.3)] dark:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.8)] rounded-[32px] border-t-2 border-l-2 border-white/50 dark:border-white/10 px-4 py-2 z-40 ring-1 ring-black/5">
+          <div className="flex justify-between items-center px-2">
+            <NavButton active={view === 'matches'} onClick={() => { navigateTo('matches'); setSelectedLeagueId(null); setSelectedPlayerId(null); setSelectedTeamId(null); }} icon={<ClockIcon />} label={prefLanguage === 'English' ? 'Home' : 'سەرەکی'} />
+            <NavButton active={view === 'leagues'} onClick={() => navigateTo('leagues')} icon={<ShieldIcon />} label={prefLanguage === 'English' ? 'Leagues' : 'خولەکان'} />
+            <NavButton active={view === 'transfers'} onClick={() => navigateTo('transfers')} icon={<TransferIcon />} label={prefLanguage === 'English' ? 'Market' : 'بازاڕ'} />
+            <NavButton active={view === 'settings'} onClick={() => navigateTo('settings')} icon={<SettingsIcon />} label={prefLanguage === 'English' ? 'Settings' : 'ڕێکخستن'} />
+          </div>
+        </nav>
+      )}
     </div>
   );
 }
@@ -1540,17 +1571,24 @@ function NavButton({ active, onClick, icon, label }: { active: boolean; onClick:
     <button 
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center gap-1 transition-all",
-        active ? "text-blue-600" : "text-gray-400 hover:text-gray-600"
+        "flex flex-col items-center gap-1 transition-all text-center min-w-[60px] group",
+        active ? "scale-105" : "text-gray-400 hover:text-gray-500 scale-95"
       )}
     >
       <div className={cn(
-        "p-2 rounded-xl transition-all",
-        active && "bg-blue-50"
+        "w-11 h-11 rounded-[18px] flex items-center justify-center transition-all relative overflow-hidden",
+        active 
+          ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-[0_8px_20px_-4px_rgba(37,99,235,0.4)] ring-2 ring-blue-400/20" 
+          : "bg-gray-50 dark:bg-gray-800/50 text-gray-400 border border-gray-100 dark:border-gray-700/50 shadow-inner"
       )}>
-        {React.cloneElement(icon as React.ReactElement, { size: 24 })}
+        {/* 3D Gloss Effect */}
+        {active && <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent pointer-events-none" />}
+        {React.cloneElement(icon as React.ReactElement, { size: 20, strokeWidth: active ? 2.5 : 2 })}
       </div>
-      <span className="text-[10px] font-bold uppercase tracking-wider">{label}</span>
+      <span className={cn(
+        "text-[9px] font-black uppercase tracking-[0.15em] transition-all",
+        active ? "text-blue-600 dark:text-blue-400" : "opacity-40"
+      )}>{label}</span>
     </button>
   );
 }

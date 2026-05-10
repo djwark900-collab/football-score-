@@ -18,9 +18,11 @@ import {
   Shield as ShieldIcon,
   Lock as LockIcon,
   Zap as ZapIcon,
+  RotateCcw as RotateCcwIcon,
   ArrowLeftRight as TransferIcon,
   Copy as CopyIcon,
-  ClipboardPaste as PasteIcon
+  ClipboardPaste as PasteIcon,
+  Settings as SettingsIcon
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
@@ -44,9 +46,9 @@ interface AdminPanelProps {
   quotaExceeded?: boolean;
 }
 
-type Tab = 'competitions' | 'leagues' | 'teams' | 'games' | 'venues' | 'players' | 'admins' | 'transfers';
+type Tab = 'competitions' | 'leagues' | 'teams' | 'games' | 'venues' | 'players' | 'admins' | 'transfers' | 'settings';
 
-export function AdminPanel({ leagues, competitions, teams, games, players, venues, transfers, administrators, user, onLogin, defaultLeagueId, defaultTeamId, defaultPlayerId, quotaExceeded }: AdminPanelProps) {
+export function AdminPanel({ leagues = [], competitions = [], teams = [], games = [], players = [], venues = [], transfers = [], administrators = [], user, onLogin, defaultLeagueId, defaultTeamId, defaultPlayerId, quotaExceeded }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>(defaultPlayerId || defaultTeamId ? 'players' : (defaultLeagueId ? 'games' : 'leagues'));
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(defaultPlayerId || null);
@@ -697,7 +699,20 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
       imageUrl: '',
       overview: '',
       career: '',
-      transferHistory: '' 
+      transferHistory: '',
+      birthDate: '',
+      height: '',
+      weight: '',
+      nationality: '',
+      foot: 'Right',
+      statsRadar: {
+        attacking: 50,
+        creativity: 50,
+        defending: 50,
+        tactical: 50,
+        technical: 50
+      },
+      recentRatingsRaw: ''
     });
     setVenueForm({ name: '', city: '', capacity: 0 });
     setEditingId(null);
@@ -743,6 +758,26 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
     }
   };
 
+  const handleResetStats = async (gameId: string) => {
+    if (!window.confirm('Are you sure you want to clear all stats (events and lineups) for this match? This cannot be undone.')) return;
+    try {
+      setLoading(true);
+      await updateDoc(doc(db, 'games', gameId), {
+        events: [],
+        lineups: { home: [], away: [] },
+        homeScore: 0,
+        awayScore: 0,
+        status: 'scheduled'
+      });
+      setSuccessMessage('Match stats cleared successfully');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, callback: (base64: string) => void) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -759,9 +794,9 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="animate-in fade-in duration-500 min-h-screen">
       {!user ? (
-        <div className="p-12 text-center bg-white rounded-[40px] border border-gray-100 shadow-xl">
+        <div className="max-w-xl mx-auto mt-20 p-12 text-center bg-white rounded-[40px] border border-gray-100 shadow-xl">
           <GlobeIcon className="w-16 h-16 mx-auto mb-6 text-gray-200" />
           <h2 className="text-2xl font-black mb-2">Authentication Required</h2>
           <p className="text-gray-500 mb-8 max-w-sm mx-auto">You must be signed in with Google to perform management actions.</p>
@@ -773,7 +808,7 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
           </button>
         </div>
       ) : (user.email !== 'pitop6988@gmail.com' && !administrators.some(a => a.email.toLowerCase() === user.email?.toLowerCase())) ? (
-        <div className="p-12 text-center bg-white rounded-[40px] border border-gray-100 shadow-xl">
+        <div className="max-w-xl mx-auto mt-20 p-12 text-center bg-white rounded-[40px] border border-gray-100 shadow-xl">
           <LockIcon className="w-16 h-16 mx-auto mb-6 text-red-100" />
           <h2 className="text-2xl font-black mb-2">Access Restricted</h2>
           <p className="text-gray-500 mb-8 max-w-sm mx-auto">Your account ({user.email}) does not have permission to modify data.</p>
@@ -785,116 +820,125 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
           </button>
         </div>
       ) : (
-        <>
-          {quotaExceeded && (
-            <div className="mb-6 p-6 bg-orange-50 border border-orange-100 rounded-[32px] flex flex-col sm:flex-row items-center gap-6 animate-in slide-in-from-top-4 duration-500">
-              <div className="w-16 h-16 bg-white rounded-[24px] flex items-center justify-center text-3xl shadow-sm shrink-0">
-                ⚠️
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Sidebar */}
+          <aside className="w-full lg:w-64 shrink-0 flex flex-col gap-6">
+            <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-3 mb-8 px-2">
+                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-100">
+                  <ShieldIcon size={20} />
+                </div>
+                <div>
+                  <h2 className="font-black text-lg leading-tight">Admin</h2>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Dashboard v2</p>
+                </div>
               </div>
-              <div className="text-center sm:text-left">
-                <p className="text-lg font-black text-orange-900 tracking-tight">Connectivity Notice</p>
-                <p className="text-sm text-orange-700 font-medium leading-relaxed">
-                  The database connection is limited (it may be at capacity or your connection is unstable). 
-                  Data shown may be stale, and new changes might not reflect immediately.
-                </p>
+
+              <nav className="space-y-1">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-4 mb-2">Structure</p>
+                <SidebarButton active={activeTab === 'competitions'} onClick={() => { setActiveTab('competitions'); cancelEdit(); }} icon={<TrophyIcon size={18} />} label="Competitions" />
+                <SidebarButton active={activeTab === 'leagues'} onClick={() => { setActiveTab('leagues'); cancelEdit(); }} icon={<GlobeIcon size={18} />} label="Leagues" />
+                <SidebarButton active={activeTab === 'venues'} onClick={() => { setActiveTab('venues'); cancelEdit(); }} icon={<MapPinIcon size={18} />} label="Venues" />
+                
+                <div className="h-4" />
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-4 mb-2">Operations</p>
+                <SidebarButton active={activeTab === 'teams'} onClick={() => { setActiveTab('teams'); cancelEdit(); }} icon={<UsersIcon size={18} />} label="Teams" />
+                <SidebarButton active={activeTab === 'players'} onClick={() => { setActiveTab('players'); cancelEdit(); }} icon={<TargetIcon size={18} />} label="Players" />
+                <SidebarButton active={activeTab === 'games'} onClick={() => { setActiveTab('games'); cancelEdit(); }} icon={<CalendarIcon size={18} />} label="Matches" />
+                <SidebarButton active={activeTab === 'transfers'} onClick={() => { setActiveTab('transfers'); cancelEdit(); }} icon={<TransferIcon size={18} />} label="Transfers" />
+
+                <div className="h-4" />
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-4 mb-2">System</p>
+                <SidebarButton active={activeTab === 'admins'} onClick={() => { setActiveTab('admins'); cancelEdit(); }} icon={<ShieldIcon size={18} />} label="Administrators" />
+                <SidebarButton active={activeTab === 'settings'} onClick={() => { setActiveTab('settings'); cancelEdit(); }} icon={<SettingsIcon size={18} />} label="Settings" />
+              </nav>
+
+              <div className="pt-6 mt-6 border-t border-gray-50 flex items-center justify-between px-4">
+                <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Version</span>
+                <span className="text-[10px] font-black text-blue-500/50 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100/50">v1.1.3</span>
               </div>
             </div>
-          )}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h2 className="text-3xl font-black">Management</h2>
-        <div className="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm overflow-x-auto scrollbar-none w-full sm:w-auto">
-          <TabButton active={activeTab === 'competitions'} onClick={() => { setActiveTab('competitions'); cancelEdit(); }} icon={<TrophyIcon size={18} />} label="Competitions" />
-          <TabButton active={activeTab === 'leagues'} onClick={() => { setActiveTab('leagues'); cancelEdit(); }} icon={<GlobeIcon size={18} />} label="Leagues" />
-          <TabButton active={activeTab === 'teams'} onClick={() => { setActiveTab('teams'); cancelEdit(); }} icon={<UsersIcon size={18} />} label="Teams" />
-          <TabButton active={activeTab === 'games'} onClick={() => { setActiveTab('games'); cancelEdit(); }} icon={<CalendarIcon size={18} />} label="Games" />
-          <TabButton active={activeTab === 'players'} onClick={() => { setActiveTab('players'); cancelEdit(); }} icon={<TargetIcon size={18} />} label="Players" />
-          <TabButton active={activeTab === 'transfers'} onClick={() => { setActiveTab('transfers'); cancelEdit(); }} icon={<TransferIcon size={18} />} label="Transfers" />
-          <TabButton active={activeTab === 'venues'} onClick={() => { setActiveTab('venues'); cancelEdit(); }} icon={<MapPinIcon size={18} />} label="Venues" />
-          <TabButton active={activeTab === 'admins'} onClick={() => { setActiveTab('admins'); cancelEdit(); }} icon={<ShieldIcon size={18} />} label="Admins" />
-        </div>
-      </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <button 
-          onClick={() => { setActiveTab('competitions'); cancelEdit(); }}
-          className="p-6 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-3 text-center"
-        >
-          <div className="p-3 bg-blue-50 rounded-2xl">
-            <TrophyIcon className="text-blue-600" />
-          </div>
-          <div>
-            <p className="font-black text-sm">Competitions</p>
-            <p className="text-[10px] text-gray-400 font-bold uppercase">Main Categories</p>
-          </div>
-        </button>
-        <button 
-          onClick={() => { setActiveTab('leagues'); cancelEdit(); }}
-          className="p-6 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-3 text-center"
-        >
-          <div className="p-3 bg-blue-50 rounded-2xl">
-            <GlobeIcon className="text-blue-600" />
-          </div>
-          <div>
-            <p className="font-black text-sm">Leagues</p>
-            <p className="text-[10px] text-gray-400 font-bold uppercase">Manage Leagues</p>
-          </div>
-        </button>
-        <button 
-          onClick={() => { setActiveTab('games'); cancelEdit(); }}
-          className="p-6 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-3 text-center"
-        >
-          <div className="p-3 bg-green-50 rounded-2xl">
-            <PlusIcon className="text-green-600" />
-          </div>
-          <div>
-            <p className="font-black text-sm">Add Game</p>
-            <p className="text-[10px] text-gray-400 font-bold uppercase">Schedule Match</p>
-          </div>
-        </button>
-        <button 
-          onClick={() => { setActiveTab('teams'); cancelEdit(); }}
-          className="p-6 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-3 text-center"
-        >
-          <div className="p-3 bg-purple-50 rounded-2xl">
-            <PlusIcon className="text-purple-600" />
-          </div>
-          <div>
-            <p className="font-black text-sm">Add Team</p>
-            <p className="text-[10px] text-gray-400 font-bold uppercase">Register Club</p>
-          </div>
-        </button>
-        <button 
-          onClick={() => { setActiveTab('players'); cancelEdit(); }}
-          className="p-6 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-3 text-center"
-        >
-          <div className="p-3 bg-orange-50 rounded-2xl">
-            <PlusIcon className="text-orange-600" />
-          </div>
-          <div>
-            <p className="font-black text-sm">Add Player</p>
-            <p className="text-[10px] text-gray-400 font-bold uppercase">New Signing</p>
-          </div>
-        </button>
-      </div>
+            {quotaExceeded && (
+              <div className="p-6 bg-orange-50 border border-orange-100 rounded-[32px] flex flex-col gap-3">
+                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-xl shadow-sm">
+                  ⚠️
+                </div>
+                <div>
+                  <p className="text-sm font-black text-orange-900 tracking-tight leading-tight">Connectivity Notice</p>
+                  <p className="text-[10px] text-orange-700 font-bold leading-relaxed mt-1 uppercase tracking-wider">
+                    Database limited. Data may be stale.
+                  </p>
+                </div>
+              </div>
+            )}
+          </aside>
 
-      <AnimatePresence>
-        {successMessage && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed top-8 left-1/2 -translate-x-1/2 z-[100]"
-          >
-            <div className="bg-green-600 text-white px-8 py-4 rounded-[24px] shadow-2xl shadow-green-100 border border-green-500 flex items-center gap-3 font-black">
-              <ZapIcon size={20} className="animate-pulse" />
-              {successMessage}
+          {/* Main Content Area */}
+          <main className="flex-1 min-w-0 space-y-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <h2 className="text-3xl font-black tracking-tight capitalize">{activeTab}</h2>
+                <div className="h-6 w-px bg-gray-200 hidden sm:block" />
+                <div className="flex items-center gap-2 text-gray-400 font-bold text-sm">
+                  <GlobeIcon size={14} />
+                  <span>Central Panel</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <AnimatePresence mode="wait">
+                  {successMessage && (
+                    <motion.div 
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className="bg-green-600 text-white px-4 py-2 rounded-xl shadow-lg shadow-green-100 border border-green-500 flex items-center gap-2 font-black text-xs"
+                    >
+                      <ZapIcon size={14} className="animate-pulse" />
+                      {successMessage}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                <div className="p-2 bg-white rounded-xl border border-gray-100 shadow-sm text-gray-400 hover:text-gray-600 cursor-help transition-colors">
+                  <GlobeIcon size={18} />
+                </div>
+              </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      <AnimatePresence mode="wait">
-          {activeTab === 'admins' && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <QuickActionCard 
+                onClick={() => { setActiveTab('games'); cancelEdit(); }}
+                icon={<PlusIcon className="text-green-600" />}
+                label="Match"
+                sub="Schedule"
+                color="green"
+              />
+              <QuickActionCard 
+                onClick={() => { setActiveTab('teams'); cancelEdit(); }}
+                icon={<PlusIcon className="text-purple-600" />}
+                label="Team"
+                sub="Register"
+                color="purple"
+              />
+              <QuickActionCard 
+                onClick={() => { setActiveTab('players'); cancelEdit(); }}
+                icon={<PlusIcon className="text-orange-600" />}
+                label="Player"
+                sub="New Sign"
+                color="orange"
+              />
+              <QuickActionCard 
+                onClick={() => { setActiveTab('transfers'); cancelEdit(); }}
+                icon={<TransferIcon className="text-blue-600" />}
+                label="Transfer"
+                sub="Move"
+                color="blue"
+              />
+            </div>
+
+            <AnimatePresence mode="wait">
+              {activeTab === 'admins' && (
             <motion.div key="admins-tab" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
               <AdminCard title="Add Administrator" icon={<ShieldIcon className="text-blue-600" />}>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1575,13 +1619,17 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
                     onChange={v => setGameForm({ ...gameForm, round: v })}
                     options={[
                       { label: 'Group Stage', value: 'Group Stage' },
-                      { label: 'Knockout', value: 'Knockout' },
-                      { label: 'Playoff', value: 'Playoff' },
+                      { label: 'Round of 16', value: 'Round of 16' },
                       { label: 'Quarter-final', value: 'Quarter-final' },
-                      { label: 'semi finals', value: 'semi finals' },
+                      { label: 'Semi-final', value: 'Semi-final' },
                       { label: 'Final', value: 'Final' },
+                      { label: 'Playoff', value: 'Playoff' },
                       { label: 'Matchday 1', value: 'Matchday 1' },
-                      { label: 'Matchday 2', value: 'Matchday 2' }
+                      { label: 'Matchday 2', value: 'Matchday 2' },
+                      { label: 'Matchday 3', value: 'Matchday 3' },
+                      { label: 'Matchday 4', value: 'Matchday 4' },
+                      { label: 'Matchday 5', value: 'Matchday 5' },
+                      { label: 'Matchday 6', value: 'Matchday 6' }
                     ]}
                   />
                   <Select 
@@ -1816,26 +1864,29 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
                </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 pb-20">
               {games.filter(g => !gameListLeagueFilter || g.leagueId === gameListLeagueFilter || g.leagueId2 === gameListLeagueFilter).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(g => (
-                <div key={g.id} className="p-6 bg-white rounded-[32px] border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center gap-6">
-                   <div className="flex-1 flex justify-end gap-2 items-center font-bold">
-                    {teams.find(t => t.id === g.homeTeamId)?.name}
+                <div key={g.id} className="p-6 bg-white rounded-[32px] border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center gap-6 group hover:border-blue-100 transition-colors">
+                   <div className="flex-1 flex justify-end gap-3 items-center font-bold">
+                    <span className="text-sm">{teams.find(t => t.id === g.homeTeamId)?.name}</span>
                     <input 
                       type="number" 
                       value={g.homeScore} 
                       onChange={(e) => updateGameScore(g.id, parseInt(e.target.value), g.awayScore)}
-                      className="w-12 h-10 bg-gray-50 rounded-xl text-center font-black border-none"
+                      className="w-14 h-12 bg-gray-50 rounded-2xl text-center font-black border-none focus:ring-2 focus:ring-blue-600 transition-all text-xl"
                     />
                    </div>
                     <div className="flex flex-col items-center">
-                     <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest whitespace-nowrap">{g.status}</span>
-                     <span className="text-[9px] font-bold text-gray-400 tabular-nums">
+                     <span className={cn(
+                       "text-[10px] font-black uppercase tracking-widest whitespace-nowrap px-3 py-1 rounded-full mb-1",
+                       g.status === 'live' ? "bg-red-50 text-red-600 animate-pulse" : "bg-gray-100 text-gray-400"
+                     )}>{g.status}</span>
+                     <span className="text-[10px] font-bold text-gray-400 tabular-nums">
                        {new Date(g.date).toLocaleDateString([], { month: 'short', day: 'numeric' })} • {new Date(g.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                      </span>
                      <div className="w-px h-2 bg-gray-100 mt-1" />
                      {g.status === 'live' && g.currentTime && (
-                       <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full animate-pulse">{g.currentTime}</span>
+                       <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full mt-1">{g.currentTime}'</span>
                      )}
                      {g.events && g.events.length > 0 && (
                        <div className="flex items-center gap-1 text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full mt-1">
@@ -1843,28 +1894,34 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
                          <span className="text-[10px] font-black">{g.events.length}</span>
                        </div>
                      )}
-                     <div className="w-px h-2 bg-gray-100 mt-1" />
                     </div>
-                   <div className="flex-1 flex justify-start gap-2 items-center font-bold">
+                   <div className="flex-1 flex justify-start gap-3 items-center font-bold">
                     <input 
                       type="number" 
                       value={g.awayScore} 
                       onChange={(e) => updateGameScore(g.id, g.homeScore, parseInt(e.target.value))}
-                      className="w-12 h-10 bg-gray-50 rounded-xl text-center font-black border-none"
+                      className="w-14 h-12 bg-gray-50 rounded-2xl text-center font-black border-none focus:ring-2 focus:ring-blue-600 transition-all text-xl"
                     />
-                    {teams.find(t => t.id === g.awayTeamId)?.name}
+                    <span className="text-sm">{teams.find(t => t.id === g.awayTeamId)?.name}</span>
                    </div>
-                   <div className="flex gap-2">
+                   <div className="flex gap-2 shrink-0">
+                    <button 
+                      onClick={() => handleResetStats(g.id)} 
+                      className="p-3 text-orange-500 bg-orange-50 rounded-2xl hover:bg-orange-100 transition-all opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100"
+                      title="Delete Stats (Reset Game)"
+                    >
+                      <RotateCcwIcon size={20} />
+                    </button>
                     <button 
                       onClick={() => startEditingGame(g)} 
-                      className="p-3 text-blue-500 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-all"
+                      className="p-3 text-blue-500 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-all opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100"
                       title="Edit Game"
                     >
                       <SaveIcon size={20} />
                     </button>
                     <button 
                       onClick={() => handleDelete('games', g.id)} 
-                      className="p-3 text-red-500 bg-red-50 rounded-2xl hover:bg-red-100 transition-all"
+                      className="p-3 text-red-500 bg-red-50 rounded-2xl hover:bg-red-100 transition-all opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100"
                       title="Delete Game"
                     >
                       <Trash2Icon size={20} />
@@ -1875,20 +1932,78 @@ export function AdminPanel({ leagues, competitions, teams, games, players, venue
             </div>
           </motion.div>
         )}
+        {activeTab === 'settings' && (
+          <motion.div key="settings-tab" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+            <AdminCard title="Panel Settings" icon={<SettingsIcon className="text-gray-600" />}>
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest">System Information</h4>
+                    <div className="p-6 bg-gray-50 rounded-[32px] border border-gray-100 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm">
+                          <GlobeIcon className="text-blue-600" size={20} />
+                        </div>
+                        <div>
+                          <p className="font-black text-sm">App Core Version</p>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">Production Build</p>
+                        </div>
+                      </div>
+                      <span className="text-xs font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">v1.1.3</span>
+                    </div>
+
+                    <div className="p-6 bg-gray-50 rounded-[32px] border border-gray-100 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm">
+                          <ShieldIcon className="text-gray-500" size={20} />
+                        </div>
+                        <div>
+                          <p className="font-black text-sm">Management Panel</p>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">Secure Dashboard</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ENABLED</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Database Health</h4>
+                    <div className="p-6 bg-gray-50 rounded-[32px] border border-gray-100 space-y-4">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-500 font-bold">Firestore Connection</span>
+                        <span className="text-green-500 font-black flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                          ONLINE
+                        </span>
+                      </div>
+                      <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="w-full h-full bg-blue-600" />
+                      </div>
+                      <p className="text-[10px] text-gray-400 font-bold leading-relaxed">
+                        Authentication and real-time synchronization services are functioning normally.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </AdminCard>
+          </motion.div>
+        )}
       </AnimatePresence>
-      </>
-      )}
+     </main>
     </div>
-  );
+   )}
+  </div>
+ );
 }
 
-function TabButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+function SidebarButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
   return (
     <button 
       onClick={onClick}
       className={cn(
-        "flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all",
-        active ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "text-gray-400 hover:text-gray-600"
+        "w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm transition-all btn-3d",
+        active ? "bg-blue-600 text-white shadow-3d-md translate-x-1" : "text-gray-400 hover:text-gray-600 hover:bg-gray-50 border border-transparent hover:border-gray-100"
       )}
     >
       {icon}
@@ -1897,11 +2012,35 @@ function TabButton({ active, onClick, icon, label }: { active: boolean; onClick:
   );
 }
 
+function QuickActionCard({ onClick, icon, label, sub, color }: { onClick: () => void; icon: React.ReactNode; label: string; sub: string; color: string }) {
+  const colorMap: Record<string, string> = {
+    blue: 'bg-blue-50 text-blue-600',
+    green: 'bg-green-50 text-green-600',
+    purple: 'bg-purple-50 text-purple-600',
+    orange: 'bg-orange-50 text-orange-600'
+  };
+
+  return (
+    <button 
+      onClick={onClick}
+      className="p-6 card-3d border-t border-l flex flex-col items-center gap-3 text-center group btn-3d"
+    >
+      <div className={cn("p-3 rounded-2xl transition-transform group-hover:scale-110", colorMap[color])}>
+        {icon}
+      </div>
+      <div>
+        <p className="font-black text-sm">{label}</p>
+        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{sub}</p>
+      </div>
+    </button>
+  );
+}
+
 function AdminCard({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm overflow-hidden relative">
+    <div className="card-3d p-8 overflow-hidden relative border-t-2 border-l-2">
       <div className="flex items-center gap-3 mb-6">
-        <div className="p-3 bg-blue-50 rounded-2xl">{icon}</div>
+        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl shadow-3d-sm">{icon}</div>
         <h3 className="text-xl font-black">{title}</h3>
       </div>
       {children}

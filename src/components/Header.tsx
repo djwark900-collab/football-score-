@@ -59,10 +59,13 @@ export function Header({
     <header className="sticky top-0 z-50 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 h-16 flex items-center px-6 transition-colors duration-300">
       <div className="max-w-4xl mx-auto w-full flex justify-between items-center relative">
         <div className={cn("flex items-center gap-3 cursor-pointer transition-opacity", isSearchOpen ? "opacity-0 pointer-events-none" : "opacity-100")} onClick={() => setView('matches')}>
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
-            <TrophyIcon className="text-white w-6 h-6" />
+          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-3d-sm ring-2 ring-blue-500/20 group hover:shadow-3d-md transition-all">
+            <TrophyIcon className="text-white w-6 h-6 group-hover:scale-110 transition-transform" />
           </div>
-          <h1 className="text-xl font-black tracking-tight text-blue-900 dark:text-white">LiveScore<span className="text-blue-500">Pro</span></h1>
+          <div>
+            <h1 className="text-xl font-black tracking-tight text-blue-900 dark:text-white leading-none">LiveScore<span className="text-blue-500">Pro</span></h1>
+            <p className="text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.3em] mt-1 ml-0.5">Premium Sports</p>
+          </div>
         </div>
 
         <div className={cn(
@@ -77,7 +80,7 @@ export function Header({
               placeholder={t('search_placeholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-12 pl-12 pr-4 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl focus:ring-2 focus:ring-blue-600 font-medium text-sm transition-all shadow-sm dark:text-white dark:placeholder-gray-500"
+              className="w-full h-12 pl-12 pr-4 bg-white dark:bg-gray-900 border-t border-l border-white/50 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-blue-600 font-medium text-sm transition-all shadow-3d-sm dark:text-white dark:placeholder-gray-500"
             />
             
             <AnimatePresence>
@@ -86,10 +89,10 @@ export function Header({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 5 }}
-                  className="absolute top-14 left-0 right-0 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-2xl overflow-hidden z-50"
+                  className="absolute top-14 left-0 right-0 card-3d shadow-3d-xl overflow-hidden z-50 p-2"
                 >
                   {filteredResults.length > 0 ? (
-                    <div className="p-2 space-y-1">
+                    <div className="space-y-1">
                       {filteredResults.map((result, idx) => (
                         <button
                           key={`${result.type}-${result.data.id}`}
@@ -100,9 +103,9 @@ export function Header({
                             setIsSearchOpen(false);
                             setSearchQuery('');
                           }}
-                          className="w-full flex items-center gap-3 p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-2xl transition-colors group text-left"
+                          className="w-full flex items-center gap-3 p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-2xl transition-all group text-left"
                         >
-                          <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-400 group-hover:bg-white dark:group-hover:bg-gray-800 group-hover:text-blue-600 transition-colors overflow-hidden">
+                          <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-400 group-hover:bg-white dark:group-hover:bg-gray-700 group-hover:text-blue-600 transition-all overflow-hidden shadow-3d-sm">
                             {result.type === 'league' && (
                               (result.data as League).logo ? (
                                 <img src={(result.data as League).logo} alt="" className="w-full h-full object-contain p-1" />
@@ -161,22 +164,22 @@ export function Header({
           <button 
             onClick={onAdminClick}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-xl transition-all font-bold text-sm",
+              "flex items-center gap-2 px-4 py-2 rounded-xl transition-all font-black text-xs uppercase tracking-widest btn-3d border",
               isAdmin 
-                ? "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" 
-                : "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                ? "bg-green-500 text-white border-green-400 shadow-3d-md" 
+                : "bg-white dark:bg-gray-800 text-gray-500 border-gray-100 dark:border-gray-700 shadow-3d-sm hover:shadow-3d-md"
             )}
           >
-            {isAdmin ? <PlusIcon size={18} /> : <LockIcon size={18} />}
+            {isAdmin ? <PlusIcon size={16} /> : <LockIcon size={16} />}
             <span className="hidden sm:inline">{isAdmin ? t('admin_panel') : t('admin')}</span>
           </button>
 
           <button 
             onClick={user ? undefined : onLogin}
-            className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden border border-gray-100 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500 transition-all"
+            className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 flex items-center justify-center overflow-hidden border-t border-l border-white/50 dark:border-white/10 shadow-3d-sm hover:shadow-3d-md transition-all btn-3d"
           >
             {user?.photoURL ? (
-              <img src={user.photoURL} alt="" />
+              <img src={user.photoURL} alt="" className="w-full h-full object-cover" />
             ) : (
               <UserIcon className="text-gray-400" size={20} />
             )}

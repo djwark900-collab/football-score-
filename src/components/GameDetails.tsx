@@ -18,7 +18,8 @@ import {
   RefreshCw as RefreshCwIcon,
   Star as StarIcon,
   Camera as CameraIcon,
-  Mic2 as MicIcon
+  Mic2 as MicIcon,
+  Lock as LockIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -43,10 +44,25 @@ interface GameDetailsProps {
   onToggleFollow?: () => void;
 }
 
-type Tab = 'stats' | 'events' | 'lineups' | 'standings' | 'h2h';
+type Tab = 'details' | 'lineups' | 'stats' | 'standings';
 
-export function GameDetails({ game, teams, games, leagues, players, venues, onBack, onTeamClick, onLeagueClick, onGameClick, onPlayerClick, isAdmin, isFollowing, onToggleFollow }: GameDetailsProps) {
-  const [activeTab, setActiveTab] = useState<Tab>('stats');
+export function GameDetails({ 
+  game, 
+  teams = [], 
+  games = [], 
+  leagues = [], 
+  players = [], 
+  venues = [], 
+  onBack, 
+  onTeamClick, 
+  onLeagueClick, 
+  onGameClick, 
+  onPlayerClick, 
+  isAdmin, 
+  isFollowing, 
+  onToggleFollow 
+}: GameDetailsProps) {
+  const [activeTab, setActiveTab] = useState<Tab>('details');
   const [lineupView, setLineupView] = useState<'list' | 'field'>('field');
   const homeTeam = teams.find(t => t.id === game.homeTeamId);
   const awayTeam = teams.find(t => t.id === game.awayTeamId);
@@ -192,157 +208,158 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20 relative"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      className="fixed inset-0 z-50 bg-white dark:bg-gray-950 overflow-y-auto scrollbar-none"
     >
-      {/* Red Header Background */}
-      <div className="bg-red-600 dark:bg-red-900 h-48 rounded-b-[40px] absolute top-0 left-0 right-0 z-0" />
-
-      {/* Detail Header */}
-      <div className="flex justify-between items-center px-4 py-2 relative z-30">
-        <button onClick={onBack} className="p-3 bg-white/10 backdrop-blur-md rounded-full text-white hover:bg-white/20 transition-colors">
-          <ChevronLeftIcon size={20} />
-        </button>
-        <div className="flex flex-col items-center">
-          <div className="flex items-center gap-1.5">
-            {league?.logo && (
-              <div className="w-4 h-4 rounded-full overflow-hidden bg-white/20 p-0.5">
-                <img src={league.logo} alt="" className="w-full h-full object-contain" />
-              </div>
-            )}
-            <h2 className="text-[10px] font-black text-white/70 tracking-widest uppercase">{league?.name || 'Game Center'}</h2>
-          </div>
-          <span className="text-[9px] font-bold text-white uppercase tracking-widest mt-0.5">
-            {game.round ? `${game.round} - ` : ''}
-            {new Date(game.date).toLocaleDateString([], { day: '2-digit', month: '2-digit' })} • {new Date(game.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </span>
+      {/* Immersive Header - Now Compact */}
+      <div className="relative bg-gray-900 overflow-hidden pb-8">
+        {/* Dynamic Background Blur */}
+        <div className="absolute inset-0 z-0">
+          {league?.logo && (
+            <img 
+              src={league.logo} 
+              className="w-full h-full object-cover opacity-10 blur-3xl scale-150 grayscale"
+              alt=""
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-gray-950" />
         </div>
-        <button 
-          onClick={onToggleFollow}
-          className="p-3 bg-white/10 backdrop-blur-md rounded-full text-white hover:bg-white/20 transition-colors"
-        >
-          <BellIcon size={20} className={isFollowing ? "fill-white" : ""} />
-        </button>
-      </div>
 
-      {/* Main Scoreboard */}
-      <div className="px-4 -mt-1 relative z-20">
-        <div className="bg-white dark:bg-gray-900 rounded-[32px] p-6 shadow-xl dark:shadow-black/20 overflow-hidden relative transition-all duration-300">
-          <AnimatePresence>
-            {pulse && (
+        {/* Top Controls */}
+        <div className="relative z-30 flex justify-between items-center px-6 py-6">
+          <button 
+            onClick={onBack} 
+            className="w-10 h-10 flex items-center justify-center bg-white/10 backdrop-blur-xl rounded-xl border border-white/10 hover:bg-white/20 transition-all active:scale-95"
+          >
+            <ChevronLeftIcon size={20} className="text-white" />
+          </button>
+          <div className="flex flex-col items-center">
+            <span className="text-[9px] font-black text-white/50 uppercase tracking-[0.3em] mb-1">
+              {league?.name || 'Match Details'}
+            </span>
+            <div className="w-8 h-0.5 bg-blue-500 rounded-full" />
+          </div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={onToggleFollow}
+              className={cn(
+                "w-10 h-10 flex items-center justify-center rounded-xl border transition-all active:scale-95",
+                isFollowing 
+                  ? "bg-blue-600 border-blue-500 text-white" 
+                  : "bg-white/10 backdrop-blur-xl border-white/10 text-white"
+              )}
+            >
+              <BellIcon size={18} className={isFollowing ? "fill-white" : ""} />
+            </button>
+            <button className="w-10 h-10 flex items-center justify-center bg-white/10 backdrop-blur-xl rounded-xl border border-white/10 text-white active:scale-95">
+              <Share2Icon size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Scoreboard Content - Compact */}
+        <div className="relative z-20 flex flex-col items-center justify-center px-6 pt-4">
+          <div className="flex items-center justify-between w-full max-w-lg gap-6">
+            {/* Home Team */}
+            <div className="flex flex-col items-center gap-3 flex-1">
               <motion.div 
-                initial={{ y: -100, opacity: 0, scale: 0.5 }}
-                animate={{ y: 0, opacity: 1, scale: 1 }}
-                exit={{ y: 50, opacity: 0, scale: 1.5 }}
-                className="absolute inset-x-0 top-4 flex justify-center z-20 pointer-events-none"
+                whileHover={{ scale: 1.05 }}
+                className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-3xl shadow-xl flex items-center justify-center p-3 border-2 border-white/10 cursor-pointer"
+                onClick={() => homeTeam && onTeamClick(homeTeam.id)}
               >
-                <div className="bg-blue-600 text-white font-black px-6 py-2 rounded-full text-base uppercase tracking-widest shadow-2xl border-2 border-white">
-                  GOAL!
-                </div>
+                {homeTeam?.logo ? (
+                  <img src={homeTeam.logo} alt="" className="w-full h-full object-contain" />
+                ) : (
+                  <ShieldIcon size={32} className="text-gray-200" />
+                )}
               </motion.div>
-            )}
-          </AnimatePresence>
+              <h2 className="text-sm font-black text-white text-center leading-tight tracking-tight h-10 line-clamp-2">
+                {homeTeam?.name}
+              </h2>
+            </div>
 
-          <div className="flex justify-between items-center relative z-10">
-             <div className="flex flex-col items-center gap-3 flex-1">
-                <div 
-                  className="w-14 h-14 bg-gray-50 dark:bg-gray-800 rounded-2xl flex items-center justify-center p-3 border border-gray-100 dark:border-gray-800 cursor-pointer hover:scale-105 transition-transform"
-                  onClick={() => homeTeam && onTeamClick(homeTeam.id)}
-                >
-                  {homeTeam?.logo ? <img src={homeTeam.logo} className="w-full h-full object-contain" /> : <ShieldIcon size={28} className="text-gray-200" />}
+            {/* Score / Time */}
+            <div className="flex flex-col items-center gap-3">
+              {game.status === 'live' && (
+                <div className="bg-rose-600 px-3 py-0.5 rounded-full animate-pulse shadow-lg shadow-rose-900/40">
+                  <span className="text-[9px] font-black text-white tabular-nums tracking-widest uppercase">
+                    {game.currentTime || '00:00'}
+                  </span>
                 </div>
-                <h3 className="font-black text-center text-[10px] leading-tight dark:text-white uppercase tracking-tight max-w-[80px]">{homeTeam?.name}</h3>
-             </div>
+              )}
+              
+              <div className="flex items-center gap-3">
+                <span className="text-4xl sm:text-5xl font-black text-white tabular-nums tracking-tighter drop-shadow-xl">
+                  {game.status === 'scheduled' ? '-' : game.homeScore}
+                </span>
+                <span className="text-2xl font-black text-white/20">:</span>
+                <span className="text-4xl sm:text-5xl font-black text-white tabular-nums tracking-tighter drop-shadow-xl">
+                  {game.status === 'scheduled' ? '-' : game.awayScore}
+                </span>
+              </div>
 
-             <div className="flex flex-col items-center justify-center shrink-0 w-32">
-                {game.status === 'scheduled' ? (
-                  <>
-                    <span className="text-2xl font-black text-gray-900 dark:text-white tabular-nums tracking-tighter">
+              {game.status === 'scheduled' && (
+                <div className="flex flex-col items-center">
+                  <div className="bg-blue-600/20 backdrop-blur-md px-4 py-1 rounded-xl border border-blue-500/30">
+                    <span className="text-sm font-black text-blue-400 tabular-nums">
                       {new Date(game.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                     </span>
-                    {timeLeft && (
-                      <div className="mt-2 flex items-center justify-center gap-1">
-                        {typeof timeLeft === 'string' ? (
-                          <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full uppercase tracking-widest">{timeLeft}</span>
-                        ) : (
-                          <>
-                            {parseInt(timeLeft.d) > 0 && (
-                              <>
-                                <div className="flex flex-col items-center">
-                                  <div className="bg-gray-50 dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">
-                                    <span className="text-xs font-black text-gray-900 dark:text-white tabular-nums">{timeLeft.d}</span>
-                                  </div>
-                                  <span className="text-[7px] font-bold text-gray-400 uppercase mt-0.5">Day</span>
-                                </div>
-                                <span className="text-gray-300 font-bold mb-4">:</span>
-                              </>
-                            )}
-                            <div className="flex flex-col items-center">
-                              <div className="bg-gray-50 dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">
-                                <span className="text-xs font-black text-gray-900 dark:text-white tabular-nums">{timeLeft.h}</span>
-                              </div>
-                              <span className="text-[7px] font-bold text-gray-400 uppercase mt-0.5">Hrs</span>
-                            </div>
-                            <span className="text-gray-300 font-bold mb-4">:</span>
-                            <div className="flex flex-col items-center">
-                              <div className="bg-gray-50 dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">
-                                <span className="text-xs font-black text-gray-900 dark:text-white tabular-nums">{timeLeft.m}</span>
-                              </div>
-                              <span className="text-[7px] font-bold text-gray-400 uppercase mt-0.5">Min</span>
-                            </div>
-                            <span className="text-gray-300 font-bold mb-4">:</span>
-                            <div className="flex flex-col items-center">
-                              <div className="bg-gray-50 dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">
-                                <span className="text-xs font-black text-gray-900 dark:text-white tabular-nums">{timeLeft.s}</span>
-                              </div>
-                              <span className="text-[7px] font-bold text-gray-400 uppercase mt-0.5">Sec</span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="flex items-center gap-4">
-                    <motion.span 
-                      animate={pulse === 'home' ? { scale: [1, 1.3, 1] } : {}}
-                      className={cn(
-                        "text-4xl font-black tabular-nums transition-colors",
-                        game.status === 'live' 
-                          ? (game.homeScore >= game.awayScore ? "text-green-500" : "text-red-500") 
-                          : "dark:text-white"
-                      )}
-                    >
-                      {game.homeScore}
-                    </motion.span>
-                    <span className="text-xl font-black opacity-30 dark:text-white">:</span>
-                    <motion.span 
-                      animate={pulse === 'away' ? { scale: [1, 1.3, 1] } : {}}
-                      className={cn(
-                        "text-4xl font-black tabular-nums transition-colors",
-                        game.status === 'live' 
-                          ? (game.awayScore >= game.homeScore ? "text-green-500" : "text-red-500") 
-                          : "dark:text-white"
-                      )}
-                    >
-                      {game.awayScore}
-                    </motion.span>
                   </div>
-                )}
-             </div>
-
-             <div className="flex flex-col items-center gap-3 flex-1">
-                <div 
-                  className="w-14 h-14 bg-gray-50 dark:bg-gray-800 rounded-2xl flex items-center justify-center p-3 border border-gray-100 dark:border-gray-800 cursor-pointer hover:scale-105 transition-transform"
-                  onClick={() => awayTeam && onTeamClick(awayTeam.id)}
-                >
-                  {awayTeam?.logo ? <img src={awayTeam.logo} className="w-full h-full object-contain" /> : <ShieldIcon size={28} className="text-gray-200" />}
+                  <span className="text-[8px] font-black text-white/40 uppercase tracking-widest mt-1.5">Kick Off</span>
                 </div>
-                <h3 className="font-black text-center text-[10px] leading-tight dark:text-white uppercase tracking-tight max-w-[80px]">{awayTeam?.name}</h3>
-             </div>
+              )}
+
+              {game.status === 'finished' && (
+                <span className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em] bg-white/5 px-3 py-0.5 rounded-full border border-white/5">
+                  Full Time
+                </span>
+              )}
+            </div>
+
+            {/* Away Team */}
+            <div className="flex flex-col items-center gap-3 flex-1">
+              <motion.div 
+                whileHover={{ scale: 1.05 }}
+                className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-3xl shadow-xl flex items-center justify-center p-3 border-2 border-white/10 cursor-pointer"
+                onClick={() => awayTeam && onTeamClick(awayTeam.id)}
+              >
+                {awayTeam?.logo ? (
+                  <img src={awayTeam.logo} alt="" className="w-full h-full object-contain" />
+                ) : (
+                  <ShieldIcon size={32} className="text-gray-200" />
+                )}
+              </motion.div>
+              <h2 className="text-sm font-black text-white text-center leading-tight tracking-tight h-10 line-clamp-2">
+                {awayTeam?.name}
+              </h2>
+            </div>
           </div>
+        </div>
+      </div>
+
+      {/* Tabs Menu Overlay */}
+      <div className="sticky top-0 z-40 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 flex justify-center px-4 overflow-x-auto scrollbar-none">
+        <div className="flex w-full max-w-2xl px-2">
+          {(['details', 'lineups', 'stats', 'standings'] as Tab[]).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                "flex-1 py-5 px-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all relative shrink-0",
+                activeTab === tab ? "text-blue-600" : "text-gray-400 dark:text-gray-600 hover:text-gray-900 dark:hover:text-white"
+              )}
+            >
+              {tab}
+              {activeTab === tab && (
+                <motion.div 
+                  layoutId="activeTabUnderline"
+                  className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t-full"
+                />
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -461,277 +478,170 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="px-6 mt-8 flex gap-3 overflow-x-auto scrollbar-none py-2 sticky top-0 z-30 bg-gray-50/80 dark:bg-gray-950/80 backdrop-blur-md">
-        <button
-          onClick={() => setActiveTab('stats')}
-          className={cn(
-            "px-8 py-3 rounded-2xl font-black text-sm transition-all border shrink-0",
-            ['stats', 'events', 'lineups'].includes(activeTab)
-              ? "bg-green-600 text-white border-green-600 shadow-lg shadow-green-100 dark:shadow-green-900/20" 
-              : "bg-white dark:bg-gray-900 text-gray-400 dark:text-gray-500 border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
-          )}
-        >
-          Match
-        </button>
-        <button
-          onClick={() => setActiveTab('standings')}
-          className={cn(
-            "px-8 py-3 rounded-2xl font-black text-sm transition-all border shrink-0",
-            activeTab === 'standings' 
-              ? "bg-green-600 text-white border-green-600 shadow-lg shadow-green-100 dark:shadow-green-900/20" 
-              : "bg-white dark:bg-gray-900 text-gray-400 dark:text-gray-500 border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
-          )}
-        >
-          Tables
-        </button>
-        <button
-          onClick={() => setActiveTab('h2h')}
-          className={cn(
-            "px-8 py-3 rounded-2xl font-black text-sm transition-all border shrink-0",
-            activeTab === 'h2h' 
-              ? "bg-green-600 text-white border-green-600 shadow-lg shadow-green-100 dark:shadow-green-900/20" 
-              : "bg-white dark:bg-gray-900 text-gray-400 dark:text-gray-500 border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
-          )}
-        >
-          H2H
-        </button>
-      </div>
-
-      <div className="p-6">
-        {['stats', 'events', 'lineups'].includes(activeTab) && (
-          <div className="flex justify-center mb-10">
-            <div className="bg-white dark:bg-gray-900 p-1.5 rounded-full border border-gray-100 dark:border-gray-800 flex gap-1 shadow-sm">
-              <button 
-                onClick={() => setActiveTab('stats')}
-                className={cn(
-                  "px-8 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all",
-                  activeTab === 'stats' ? "bg-gray-100 dark:bg-gray-800 text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500 hover:text-gray-600"
-                )}
-              >
-                Stats
-              </button>
-              <button 
-                onClick={() => setActiveTab('events')}
-                className={cn(
-                  "px-8 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all",
-                  activeTab === 'events' ? "bg-gray-100 dark:bg-gray-800 text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500 hover:text-gray-600"
-                )}
-              >
-                Events
-              </button>
-              <button 
-                onClick={() => setActiveTab('lineups')}
-                className={cn(
-                  "px-8 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all",
-                  activeTab === 'lineups' ? "bg-gray-100 dark:bg-gray-800 text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500 hover:text-gray-600"
-                )}
-              >
-                Lineups
-              </button>
-            </div>
-          </div>
-        )}
+      <div className="p-4 max-w-4xl mx-auto space-y-6">
         <AnimatePresence mode="wait">
-          {activeTab === 'events' && (
+          {activeTab === 'details' && (
             <motion.div
-              key="events"
+              key="details"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="space-y-8"
+              className="space-y-6"
             >
-              {isAdmin && (
-                <div className="space-y-4">
-                  {/* Status Control */}
-                  <div className="p-6 bg-gray-900 dark:bg-black rounded-[32px] border border-gray-800 dark:border-gray-900 shadow-2xl flex items-center justify-between gap-4 transition-all duration-300">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-600 rounded-xl">
-                        <ZapIcon size={16} className="text-white" />
+              {/* Match Events Card */}
+              <div className="bg-white dark:bg-gray-900 rounded-[32px] overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800">
+                <div className="px-6 py-4 border-b border-gray-50 dark:border-gray-800/50">
+                  <h4 className="text-[13px] font-bold text-gray-900 dark:text-white">Match Events</h4>
+                </div>
+                
+                <div className="flex border-b border-gray-50 dark:border-gray-800/50">
+                  <button className="flex-1 py-3 text-[11px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Top</button>
+                  <button className="flex-1 py-3 text-[11px] font-black uppercase tracking-widest text-blue-600 border-b-2 border-blue-600">All</button>
+                </div>
+
+                <div className="p-6 relative">
+                  <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-100 dark:bg-gray-800 -translate-x-1/2" />
+                  
+                  <div className="space-y-8 relative z-10">
+                    {sortedEvents.length > 0 ? (
+                      sortedEvents.map((event, idx) => {
+                        const isHome = event.teamId === game.homeTeamId;
+                        const eventPlayer = players.find(p => p.id === event.playerId);
+                        const pIn = event.playerInId ? players.find(p => p.id === event.playerInId) : null;
+                        const pOut = event.playerOutId ? players.find(p => p.id === event.playerOutId) : null;
+
+                        return (
+                          <div key={event.id || idx} className={cn(
+                            "flex items-center gap-4",
+                            isHome ? "flex-row" : "flex-row-reverse"
+                          )}>
+                            <div className={cn("flex-1", isHome ? "text-right" : "text-left")}>
+                              <div className="flex flex-col">
+                                {event.type === 'sub' ? (
+                                  <>
+                                    <div className="flex items-center gap-1 text-[13px] font-bold text-green-600" style={{ justifyContent: isHome ? 'flex-end' : 'flex-start' }}>
+                                      {pIn?.name} <TrendingUpIcon size={12} className="rotate-90" />
+                                    </div>
+                                    <div className="flex items-center gap-1 text-[11px] font-medium text-rose-500" style={{ justifyContent: isHome ? 'flex-end' : 'flex-start' }}>
+                                      {pOut?.name} <TrendingUpIcon size={12} className="-rotate-90" />
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="flex items-center gap-2" style={{ justifyContent: isHome ? 'flex-end' : 'flex-start' }}>
+                                    <span className="text-[13px] font-bold text-gray-900 dark:text-white">{eventPlayer?.name}</span>
+                                    <div className={cn(
+                                      "w-4 h-4 flex items-center justify-center",
+                                      event.type === 'yellow' && "bg-yellow-400 rounded-sm",
+                                      event.type === 'red' && "bg-rose-600 rounded-sm",
+                                      event.type === 'goal' && "text-blue-500"
+                                    )}>
+                                      {event.type === 'goal' && <ActivityIcon size={14} />}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="w-10 flex flex-col items-center shrink-0">
+                               <div className="bg-white dark:bg-gray-900 px-2 py-1 rounded-lg border border-gray-100 dark:border-gray-800 text-[11px] font-black tabular-nums shadow-sm">
+                                {event.minute}'
+                               </div>
+                            </div>
+
+                            <div className="flex-1" />
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="py-20 text-center text-gray-400 italic">
+                        No events recorded yet
                       </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase text-blue-400 tracking-widest">Global Status</p>
-                        <p className="text-xs font-bold text-white capitalize">{game.status}</p>
+                    )}
+                  </div>
+                  
+                  {/* Final Whistle Icon At Bottom */}
+                  <div className="mt-8 flex justify-center relative z-20">
+                     <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 flex items-center justify-center shadow-md">
+                        <ClockIcon size={14} className="text-gray-400" />
+                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* To Score at Any Time Poll - UI Soml Refinement */}
+              <div className="bg-white dark:bg-gray-900 rounded-[32px] overflow-hidden shadow-3d-sm border border-gray-100 dark:border-gray-800 p-6 space-y-6">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-[14px] font-black uppercase tracking-[0.2em] text-gray-900 dark:text-white">To Score at Any Time</h4>
+                  <div className="flex gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-200" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-200" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-6">
+                  {/* Yes Option */}
+                  <div className="flex-1 space-y-4">
+                    <div className="flex items-end justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-[11px] font-black text-blue-600 uppercase tracking-widest mb-1">Yes</span>
+                        <div className="flex items-center gap-2">
+                           <div className="w-10 h-10 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden border border-gray-200 dark:border-gray-700">
+                              {players[0]?.imageUrl ? <img src={players[0].imageUrl} className="w-full h-full object-cover" /> : <UsersIcon size={16} className="text-gray-400" />}
+                           </div>
+                           <div className="min-w-0">
+                              <p className="text-[13px] font-black text-gray-900 dark:text-white truncate">{players[0]?.name || 'Player Name'}</p>
+                              <div className="flex items-center gap-1">
+                                <span className="text-[9px] font-black bg-blue-50 text-blue-600 px-1 rounded uppercase tracking-tighter">1.60</span>
+                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Odds</span>
+                              </div>
+                           </div>
+                        </div>
                       </div>
+                      <span className="text-3xl font-black text-gray-900 dark:text-white tabular-nums tracking-tighter">88<span className="text-sm opacity-30">%</span></span>
                     </div>
-                    <div className="flex bg-white/5 dark:bg-white/10 p-1 rounded-2xl border border-white/10 dark:border-white/20">
-                      {(['scheduled', 'live', 'finished'] as const).map(s => (
-                        <button
-                          key={s}
-                          onClick={() => updateGame({ status: s })}
-                          className={cn(
-                            "px-3 py-2 rounded-xl text-[10px] font-black uppercase transition-all",
-                            game.status === s ? "bg-blue-600 text-white shadow-lg" : "text-gray-500 hover:text-white"
-                          )}
-                        >
-                          {s}
-                        </button>
-                      ))}
+                    <div className="relative h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: '88%' }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                        className="absolute inset-y-0 left-0 bg-blue-600 rounded-full"
+                      />
                     </div>
                   </div>
 
-                  <div className="p-6 bg-blue-50 dark:bg-blue-900/20 rounded-[32px] border border-blue-100 dark:border-blue-800 space-y-4 transition-all duration-300">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-900 dark:text-blue-200 transition-colors">Live Events Control</h4>
-                      <div className="flex gap-2">
-                        <select 
-                          className="bg-white dark:bg-gray-800 dark:text-white border border-blue-100 dark:border-blue-800 rounded-lg text-[9px] font-bold px-2 py-1 outline-none max-w-[100px] transition-colors"
-                          value={selectedEventPlayer || ''}
-                          onChange={(e) => setSelectedEventPlayer(e.target.value)}
-                        >
-                          <option value="">Main Player</option>
-                          <optgroup className="dark:bg-gray-900" label={homeTeam?.name || 'Home'}>
-                            {players.filter(p => p.teamId === game.homeTeamId).map(p => (
-                              <option key={p.id} value={p.id}>{p.name}</option>
-                            ))}
-                          </optgroup>
-                          <optgroup className="dark:bg-gray-900" label={awayTeam?.name || 'Away'}>
-                            {players.filter(p => p.teamId === game.awayTeamId).map(p => (
-                              <option key={p.id} value={p.id}>{p.name}</option>
-                            ))}
-                          </optgroup>
-                        </select>
-                        <select 
-                          className="bg-white dark:bg-gray-800 dark:text-white border border-blue-100 dark:border-blue-800 rounded-lg text-[9px] font-bold px-2 py-1 outline-none max-w-[100px] transition-colors"
-                          value={selectedPlayerOut || ''}
-                          onChange={(e) => setSelectedPlayerOut(e.target.value)}
-                        >
-                          <option value="">Sub Out (Optional)</option>
-                          <optgroup className="dark:bg-gray-900" label={homeTeam?.name || 'Home'}>
-                            {players.filter(p => p.teamId === game.homeTeamId).map(p => (
-                              <option key={p.id} value={p.id}>{p.name}</option>
-                            ))}
-                          </optgroup>
-                          <optgroup className="dark:bg-gray-900" label={awayTeam?.name || 'Away'}>
-                            {players.filter(p => p.teamId === game.awayTeamId).map(p => (
-                              <option key={p.id} value={p.id}>{p.name}</option>
-                            ))}
-                          </optgroup>
-                        </select>
+                  <div className="w-px h-16 bg-gray-100 dark:bg-gray-800 shrink-0" />
+
+                  {/* No Option */}
+                  <div className="flex-1 space-y-4">
+                    <div className="flex items-end justify-between flex-row-reverse">
+                      <div className="flex flex-col items-end">
+                        <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1">No</span>
+                        <div className="flex items-center gap-2 flex-row-reverse">
+                           <div className="w-10 h-10 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden border border-gray-200 dark:border-gray-700">
+                              {players[1]?.imageUrl ? <img src={players[1].imageUrl} className="w-full h-full object-cover" /> : <UsersIcon size={16} className="text-gray-400" />}
+                           </div>
+                           <div className="min-w-0 text-right">
+                              <p className="text-[13px] font-black text-gray-900 dark:text-white truncate">{players[1]?.name || 'Player Name'}</p>
+                              <div className="flex items-center gap-1 justify-end">
+                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Odds</span>
+                                <span className="text-[9px] font-black bg-gray-100 text-gray-600 px-1 rounded uppercase tracking-tighter">5.40</span>
+                              </div>
+                           </div>
+                        </div>
                       </div>
+                      <span className="text-3xl font-black text-gray-400 tabular-nums tracking-tighter">12<span className="text-sm opacity-30">%</span></span>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      <button 
-                        onClick={() => {
-                          const minute = parseInt(game.currentTime || '0');
-                          const teamId = selectedEventPlayer ? players.find(p => p.id === selectedEventPlayer)?.teamId || game.homeTeamId : game.homeTeamId;
-                          const playerId = selectedEventPlayer || players.find(p => p.teamId === teamId)?.id || 'unknown';
-                          const newEvent: MatchEvent = { id: Math.random().toString(36).substr(2,9), type: 'goal', minute, teamId, playerId };
-                          updateGame({ 
-                            [teamId === game.homeTeamId ? 'homeScore' : 'awayScore']: (teamId === game.homeTeamId ? game.homeScore : game.awayScore) + 1,
-                            events: [...(game.events || []), newEvent]
-                          });
-                        }}
-                        className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-blue-100 dark:border-blue-800 flex flex-col items-center justify-center gap-2 hover:shadow-md transition-all group"
-                      >
-                        <ActivityIcon size={16} className="text-blue-600 dark:text-blue-400" />
-                        <span className="text-[10px] font-black uppercase text-blue-900 dark:text-blue-200">Goal</span>
-                      </button>
-                      <button 
-                        onClick={() => {
-                          const minute = parseInt(game.currentTime || '0');
-                          const teamId = selectedEventPlayer ? players.find(p => p.id === selectedEventPlayer)?.teamId || game.homeTeamId : game.homeTeamId;
-                          const playerId = selectedEventPlayer || players.find(p => p.teamId === teamId)?.id || 'unknown';
-                          const newEvent: MatchEvent = { id: Math.random().toString(36).substr(2,9), type: 'yellow', minute, teamId, playerId };
-                          updateGame({ 
-                            events: [...(game.events || []), newEvent]
-                          });
-                        }}
-                        className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-blue-100 dark:border-blue-800 flex flex-col items-center justify-center gap-2 hover:shadow-md transition-all"
-                      >
-                        <div className="w-3 h-4 bg-yellow-400 rounded-sm" />
-                        <span className="text-[10px] font-black uppercase text-blue-900 dark:text-blue-200">Yellow</span>
-                      </button>
-                      <button 
-                        onClick={() => {
-                          const minute = parseInt(game.currentTime || '0');
-                          const teamId = selectedEventPlayer ? players.find(p => p.id === selectedEventPlayer)?.teamId || game.homeTeamId : game.homeTeamId;
-                          const playerId = selectedEventPlayer || players.find(p => p.teamId === teamId)?.id || 'unknown';
-                          const newEvent: MatchEvent = { id: Math.random().toString(36).substr(2,9), type: 'red', minute, teamId, playerId };
-                          updateGame({ 
-                            events: [...(game.events || []), newEvent]
-                          });
-                        }}
-                        className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-blue-100 dark:border-blue-800 flex flex-col items-center justify-center gap-2 hover:shadow-md transition-all"
-                      >
-                        <div className="w-3 h-4 bg-red-600 rounded-sm" />
-                        <span className="text-[10px] font-black uppercase text-blue-900 dark:text-blue-200">Red Card</span>
-                      </button>
-                      <button 
-                        onClick={() => {
-                          const minute = parseInt(game.currentTime || '0');
-                          const teamId = selectedEventPlayer ? players.find(p => p.id === selectedEventPlayer)?.teamId || game.homeTeamId : game.homeTeamId;
-                          const playerInId = selectedEventPlayer || players.find(p => p.teamId === teamId)?.id || 'unknown';
-                          const playerOutId = selectedPlayerOut || 'unknown';
-                          const newEvent: MatchEvent = { 
-                            id: Math.random().toString(36).substr(2,9), 
-                            type: 'sub', 
-                            minute, 
-                            teamId, 
-                            playerId: playerInId,
-                            playerInId,
-                            playerOutId
-                          };
-                          updateGame({ 
-                            events: [...(game.events || []), newEvent]
-                          });
-                        }}
-                        className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-blue-100 dark:border-blue-800 flex flex-col items-center justify-center gap-2 hover:shadow-md transition-all"
-                      >
-                        <RefreshCwIcon size={16} className="text-blue-600 dark:text-blue-400" />
-                        <span className="text-[10px] font-black uppercase text-blue-900 dark:text-blue-200">Sub</span>
-                      </button>
+                    <div className="relative h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: '12%' }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                        className="absolute inset-y-0 right-0 bg-gray-400 rounded-full"
+                      />
                     </div>
                   </div>
                 </div>
-              )}
-
-              <div className="flex items-center justify-between px-2">
-                <h4 className="text-sm font-black uppercase tracking-widest text-gray-400">Match Events</h4>
-                <ClockIcon size={14} className="text-gray-300" />
-              </div>
-              
-              <div className="relative space-y-4 before:absolute before:left-1/2 before:top-0 before:bottom-0 before:w-px before:bg-gray-100 dark:before:bg-gray-800 before:-translate-x-1/2 transition-colors">
-                {sortedEvents.length > 0 ? (
-                  sortedEvents.map((event, idx) => {
-                    const isHome = event.teamId === game.homeTeamId;
-                    const eventPlayer = players.find(p => p.id === event.playerId);
-                    const assistant = event.assistantId ? players.find(p => p.id === event.assistantId) : null;
-                    const pIn = event.playerInId ? players.find(p => p.id === event.playerInId) : null;
-                    const pOut = event.playerOutId ? players.find(p => p.id === event.playerOutId) : null;
-
-                    return (
-                      <div key={event.id || idx} className={cn(
-                        "flex items-center gap-4 relative z-10 select-none cursor-pointer group/event",
-                        isHome ? "flex-row" : "flex-row-reverse"
-                      )} onClick={() => eventPlayer && onPlayerClick?.(eventPlayer.id)}>
-                        <div className={cn("flex-1", isHome ? "text-right" : "text-left")}>
-                          <p className="font-bold text-sm text-gray-900 dark:text-white group-hover/event:text-blue-600 dark:group-hover/event:text-blue-400 transition-colors uppercase tracking-tight">{eventPlayer?.name || pIn?.name || 'Unknown'}</p>
-                          {event.type === 'goal' && assistant && (
-                            <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium transition-colors">assist by {assistant.name}</p>
-                          )}
-                          {event.type === 'sub' && pOut && (
-                            <p className="text-[10px] text-red-400 dark:text-red-500 font-medium tracking-tight transition-colors">out: {pOut.name}</p>
-                          )}
-                        </div>
-                        
-                        <div className="w-10 h-10 rounded-full bg-white dark:bg-gray-900 border-2 border-gray-50 dark:border-gray-800 flex items-center justify-center shadow-lg transition-colors">
-                          <EventIcon type={event.type} />
-                        </div>
-
-                        <div className={cn("flex-1 flex items-center gap-2", isHome ? "flex-row" : "flex-row-reverse")}>
-                           <span className="font-black tabular-nums text-blue-600 dark:text-blue-400 text-sm transition-colors">{event.minute}'</span>
-                           <div className="flex-1" />
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="py-20 text-center text-gray-400 dark:text-gray-600 relative z-10 bg-white dark:bg-gray-900 transition-colors">
-                    <ZapIcon className="w-12 h-12 mx-auto mb-4 opacity-10" />
-                    <p className="font-bold">No major events recorded yet.</p>
-                  </div>
-                )}
               </div>
             </motion.div>
           )}
@@ -894,6 +804,82 @@ export function GameDetails({ game, teams, games, leagues, players, venues, onBa
                 games={leagueGames}
                 onTeamClick={onTeamClick}
               />
+            </motion.div>
+          )}
+
+
+          {isAdmin && activeTab === 'details' && (
+            <motion.div 
+               initial={{ opacity: 0, scale: 0.95 }}
+               animate={{ opacity: 1, scale: 1 }}
+               className="bg-[#0A0A0A] p-6 rounded-[32px] border border-white/5 space-y-6 shadow-2xl"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <LockIcon className="text-blue-500" size={16} />
+                  <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-white">Live Admin Controls</h4>
+                </div>
+                {loading && <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                   <p className="text-[10px] font-bold text-white/40 uppercase mb-3">Score & Status</p>
+                   <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => updateGame({ homeScore: Math.max(0, game.homeScore - 1) })} className="p-2 bg-white/5 rounded-lg text-white hover:bg-white/10">-</button>
+                        <span className="font-bold text-white">{game.homeScore}</span>
+                        <button onClick={() => updateGame({ homeScore: game.homeScore + 1 })} className="p-2 bg-white/5 rounded-lg text-white hover:bg-white/10">+</button>
+                      </div>
+                      <span className="text-white/20">VS</span>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => updateGame({ awayScore: Math.max(0, game.awayScore - 1) })} className="p-2 bg-white/5 rounded-lg text-white hover:bg-white/10">-</button>
+                        <span className="font-bold text-white">{game.awayScore}</span>
+                        <button onClick={() => updateGame({ awayScore: game.awayScore + 1 })} className="p-2 bg-white/5 rounded-lg text-white hover:bg-white/10">+</button>
+                      </div>
+                   </div>
+                   <div className="flex bg-black p-1 rounded-xl border border-white/5">
+                      {(['scheduled', 'live', 'finished'] as const).map(s => (
+                        <button 
+                          key={s} 
+                          onClick={() => updateGame({ status: s })} 
+                          className={cn("flex-1 py-1.5 text-[9px] font-black uppercase rounded-lg transition-all", game.status === s ? "bg-blue-600 text-white" : "text-white/30 hover:text-white/50")}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                   </div>
+                </div>
+
+                <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                   <p className="text-[10px] font-bold text-white/40 uppercase mb-3">Event Engine</p>
+                   <div className="grid grid-cols-2 gap-2">
+                      <select 
+                        className="bg-black text-white border border-white/10 rounded-lg p-2 text-[10px] outline-none"
+                        value={selectedEventPlayer || ''}
+                        onChange={(e) => setSelectedEventPlayer(e.target.value)}
+                      >
+                        <option value="">Player</option>
+                        {players.filter(p => p.teamId === game.homeTeamId || p.teamId === game.awayTeamId).map(p => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                      <button 
+                        onClick={() => {
+                          const teamId = players.find(p => p.id === selectedEventPlayer)?.teamId || game.homeTeamId;
+                          const newEvent: MatchEvent = { id: Math.random().toString(36).substr(2,9), type: 'goal', minute: parseInt(game.currentTime || '0'), teamId, playerId: selectedEventPlayer || 'unknown' };
+                          updateGame({ 
+                            [teamId === game.homeTeamId ? 'homeScore' : 'awayScore']: (teamId === game.homeTeamId ? game.homeScore : game.awayScore) + 1,
+                            events: [...(game.events || []), newEvent]
+                          });
+                        }}
+                        className="bg-blue-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-blue-700 active:scale-95 transition-all"
+                      >
+                        Add Goal
+                      </button>
+                   </div>
+                </div>
+              </div>
             </motion.div>
           )}
 
