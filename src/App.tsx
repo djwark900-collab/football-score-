@@ -40,7 +40,15 @@ import {
   limit,
   orderBy
 } from 'firebase/firestore';
-import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
+import { 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  onAuthStateChanged, 
+  User,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile
+} from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from './firebase';
 import { cn } from './lib/utils';
 import { League, Game, Team, Player, Venue, Administrator, Transfer, AppNotification, Competition } from './types';
@@ -55,6 +63,7 @@ import { LeagueDetails } from './components/LeagueDetails';
 import { PlayerDetails } from './components/PlayerDetails';
 import { TeamDetails } from './components/TeamDetails';
 import { FantasyManager } from './components/FantasyManager';
+import { SignInModal } from './components/SignInModal';
 
 type View = 'matches' | 'leagues' | 'standings' | 'admin' | 'settings' | 'game-details' | 'league-details' | 'team-details' | 'player-details' | 'transfers' | 'fantasy';
 
@@ -79,6 +88,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [showSignInModal, setShowSignInModal] = useState(false);
   
   // Data State
   const [leagues, setLeagues] = useState<League[]>([]);
@@ -602,21 +612,12 @@ export default function App() {
     }
   }, [games, teams, players]);
 
-  const handleLogin = async () => {
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-    } catch (error: any) {
-      if (error.code === 'auth/popup-closed-by-user') {
-        console.log('Login cancelled by user');
-      } else if (error.code === 'auth/popup-blocked') {
-        alert('Please allow popups for this site to sign in.');
-      } else if (error.code === 'auth/cancelled-popup-request') {
-        // Silently ignore or log - logic already handles this
-      } else {
-        console.error('Login error:', error);
-      }
-    }
+  const handleLogin = () => {
+    setShowSignInModal(true);
+  };
+
+  const onSignInSuccess = () => {
+    setShowSignInModal(false);
   };
 
   const handleAdminAuth = () => {
@@ -1526,6 +1527,12 @@ export default function App() {
 
       {/* Admin Login Modal */}
       <AnimatePresence>
+        {showSignInModal && (
+          <SignInModal 
+            onClose={() => setShowSignInModal(false)}
+            onSuccess={onSignInSuccess}
+          />
+        )}
         {showAdminLogin && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 dark:bg-black/80 backdrop-blur-sm">
             <motion.div
