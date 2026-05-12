@@ -22,6 +22,7 @@ import {
   ArrowLeftRight as TransferIcon,
   Copy as CopyIcon,
   ClipboardPaste as PasteIcon,
+  Search as SearchIcon,
   Settings as SettingsIcon
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../firebase';
@@ -80,7 +81,9 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
             tactical: 50,
             technical: 50
           },
-          recentRatingsRaw: p.recentRatings?.join(', ') || ''
+          recentRatingsRaw: p.recentRatings?.join(', ') || '',
+          price: p.price || 4.5,
+          fantasyPoints: p.fantasyPoints || 0
         });
       }
     }
@@ -193,8 +196,11 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
       tactical: 50,
       technical: 50
     },
-    recentRatingsRaw: ''
+    recentRatingsRaw: '',
+    price: 4.5,
+    fantasyPoints: 0
   });
+  const [playerSearch, setPlayerSearch] = useState('');
   const [venueForm, setVenueForm] = useState({ name: '', city: '', capacity: 0 });
   const [adminForm, setAdminForm] = useState({ email: '', role: 'editor' as 'editor' | 'super' });
   const [transferForm, setTransferForm] = useState({
@@ -472,7 +478,9 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
         nationality: playerForm.nationality,
         foot: playerForm.foot,
         statsRadar: playerForm.statsRadar,
-        recentRatings
+        recentRatings,
+        price: playerForm.price ?? 4.5,
+        fantasyPoints: playerForm.fantasyPoints ?? 0
       };
 
       if (editingId) {
@@ -486,7 +494,9 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
         name: '', teamId: '', position: '', number: 0, imageUrl: '', overview: '', career: '', transferHistory: '',
         birthDate: '', height: '', weight: '', nationality: '', foot: 'Right',
         statsRadar: { attacking: 50, creativity: 50, defending: 50, tactical: 50, technical: 50 },
-        recentRatingsRaw: ''
+        recentRatingsRaw: '',
+        price: 4.5,
+        fantasyPoints: 0
       });
       setEditingId(null);
     } catch (e) {
@@ -519,7 +529,9 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
         tactical: 50,
         technical: 50
       },
-      recentRatingsRaw: p.recentRatings?.join(', ') || ''
+      recentRatingsRaw: p.recentRatings?.join(', ') || '',
+      price: p.price || 4.5,
+      fantasyPoints: p.fantasyPoints || 0
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -712,7 +724,9 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
         tactical: 50,
         technical: 50
       },
-      recentRatingsRaw: ''
+      recentRatingsRaw: '',
+      price: 4.5,
+      fantasyPoints: 0
     });
     setVenueForm({ name: '', city: '', capacity: 0 });
     setEditingId(null);
@@ -992,34 +1006,74 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
         {activeTab === 'players' && (
           <motion.div key="players-tab" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
             <AdminCard title={editingId ? "Edit Player" : "Add New Player"} icon={<TargetIcon className="text-blue-600" />}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <Input label="Player Name" value={playerForm.name} onChange={v => setPlayerForm({ ...playerForm, name: v })} placeholder="e.g. Cristiano Ronaldo" />
-                <Select label="Assign to Team" value={playerForm.teamId} onChange={v => setPlayerForm({ ...playerForm, teamId: v })} options={teams.map(t => ({ label: `${t.name} (${leagues.find(l => l.id === t.leagueId)?.name})`, value: t.id }))} />
-                <Input label="Position" value={playerForm.position} onChange={v => setPlayerForm({ ...playerForm, position: v })} placeholder="e.g. Forward" />
-                <Input type="number" label="Shirt Number" value={playerForm.number} onChange={v => setPlayerForm({ ...playerForm, number: parseInt(v) })} />
-                <Input type="date" label="Birth Date" value={playerForm.birthDate} onChange={v => setPlayerForm({ ...playerForm, birthDate: v })} />
-                <Input label="Height" value={playerForm.height} onChange={v => setPlayerForm({ ...playerForm, height: v })} placeholder="e.g. 189cm" />
-                <Input label="Weight" value={playerForm.weight} onChange={v => setPlayerForm({ ...playerForm, weight: v })} placeholder="e.g. 78kg" />
-                <Input label="Nationality" value={playerForm.nationality} onChange={v => setPlayerForm({ ...playerForm, nationality: v })} placeholder="e.g. Poland" />
-                <Select label="Preferred Foot" value={playerForm.foot} onChange={v => setPlayerForm({ ...playerForm, foot: v as any })} options={[{label: 'Right', value: 'Right'}, {label: 'Left', value: 'Left'}, {label: 'Both', value: 'Both'}]} />
-                
-                <ImageUpload 
-                  label="Player Image (File or URL)" 
-                  value={playerForm.imageUrl} 
-                  onChange={v => setPlayerForm({ ...playerForm, imageUrl: v })}
-                  onFileSelect={handleFileUpload}
-                />
-
-                <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 bg-gray-50/50 p-6 rounded-3xl border border-gray-100">
-                  <h5 className="md:col-span-5 text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Performance Radar Stats (0-100)</h5>
-                  <Input type="number" label="Attacking" value={playerForm.statsRadar.attacking} onChange={v => setPlayerForm({ ...playerForm, statsRadar: { ...playerForm.statsRadar, attacking: parseInt(v) } })} />
-                  <Input type="number" label="Creativity" value={playerForm.statsRadar.creativity} onChange={v => setPlayerForm({ ...playerForm, statsRadar: { ...playerForm.statsRadar, creativity: parseInt(v) } })} />
-                  <Input type="number" label="Defending" value={playerForm.statsRadar.defending} onChange={v => setPlayerForm({ ...playerForm, statsRadar: { ...playerForm.statsRadar, defending: parseInt(v) } })} />
-                  <Input type="number" label="Tactical" value={playerForm.statsRadar.tactical} onChange={v => setPlayerForm({ ...playerForm, statsRadar: { ...playerForm.statsRadar, tactical: parseInt(v) } })} />
-                  <Input type="number" label="Technical" value={playerForm.statsRadar.technical} onChange={v => setPlayerForm({ ...playerForm, statsRadar: { ...playerForm.statsRadar, technical: parseInt(v) } })} />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {/* Column 1: Identity & Media */}
+                <div className="space-y-6">
+                  <div className="pb-2 border-b border-gray-100 mb-2">
+                    <h4 className="text-[10px] font-black uppercase text-blue-600 tracking-widest flex items-center gap-2">
+                      <UsersIcon size={14} /> Basic Identity
+                    </h4>
+                  </div>
+                  <Input label="Full Player Name" value={playerForm.name} onChange={v => setPlayerForm({ ...playerForm, name: v })} placeholder="e.g. Cristiano Ronaldo" />
+                  <ImageUpload 
+                    label="Player Image (File or URL)" 
+                    value={playerForm.imageUrl} 
+                    onChange={v => setPlayerForm({ ...playerForm, imageUrl: v })}
+                    onFileSelect={handleFileUpload}
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input type="date" label="Birth Date" value={playerForm.birthDate} onChange={v => setPlayerForm({ ...playerForm, birthDate: v })} />
+                    <Input label="Nationality" value={playerForm.nationality} onChange={v => setPlayerForm({ ...playerForm, nationality: v })} placeholder="e.g. Poland" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input label="Height" value={playerForm.height} onChange={v => setPlayerForm({ ...playerForm, height: v })} placeholder="e.g. 189cm" />
+                    <Input label="Weight" value={playerForm.weight} onChange={v => setPlayerForm({ ...playerForm, weight: v })} placeholder="e.g. 78kg" />
+                  </div>
                 </div>
 
-                <div className="lg:col-span-3 space-y-4">
+                {/* Column 2: Tactical & Team */}
+                <div className="space-y-6">
+                  <div className="pb-2 border-b border-gray-100 mb-2">
+                    <h4 className="text-[10px] font-black uppercase text-blue-600 tracking-widest flex items-center gap-2">
+                      <TargetIcon size={14} /> Tactical Profile
+                    </h4>
+                  </div>
+                  <Select label="Assign to Team" value={playerForm.teamId} onChange={v => setPlayerForm({ ...playerForm, teamId: v })} options={teams.map(t => ({ label: `${t.name} (${leagues.find(l => l.id === t.leagueId)?.name})`, value: t.id }))} />
+                  <Input label="Position" value={playerForm.position} onChange={v => setPlayerForm({ ...playerForm, position: v })} placeholder="e.g. Forward" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input type="number" label="Shirt Number" value={playerForm.number || 0} onChange={v => setPlayerForm({ ...playerForm, number: parseInt(v) || 0 })} />
+                    <Select label="Preferred Foot" value={playerForm.foot} onChange={v => setPlayerForm({ ...playerForm, foot: v as any })} options={[{label: 'Right', value: 'Right'}, {label: 'Left', value: 'Left'}, {label: 'Both', value: 'Both'}]} />
+                  </div>
+
+                  <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100 space-y-4">
+                    <h5 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2 flex items-center gap-2">
+                       <ZapIcon size={12} className="text-yellow-500" /> Performance Radar (0-100)
+                    </h5>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input type="number" label="Attacking" value={playerForm.statsRadar.attacking || 0} onChange={v => setPlayerForm({ ...playerForm, statsRadar: { ...playerForm.statsRadar, attacking: parseInt(v) || 0 } })} />
+                      <Input type="number" label="Creativity" value={playerForm.statsRadar.creativity || 0} onChange={v => setPlayerForm({ ...playerForm, statsRadar: { ...playerForm.statsRadar, creativity: parseInt(v) || 0 } })} />
+                      <Input type="number" label="Defending" value={playerForm.statsRadar.defending || 0} onChange={v => setPlayerForm({ ...playerForm, statsRadar: { ...playerForm.statsRadar, defending: parseInt(v) || 0 } })} />
+                      <Input type="number" label="Tactical" value={playerForm.statsRadar.tactical || 0} onChange={v => setPlayerForm({ ...playerForm, statsRadar: { ...playerForm.statsRadar, tactical: parseInt(v) || 0 } })} />
+                      <div className="col-span-2">
+                        <Input type="number" label="Technical" value={playerForm.statsRadar.technical || 0} onChange={v => setPlayerForm({ ...playerForm, statsRadar: { ...playerForm.statsRadar, technical: parseInt(v) || 0 } })} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Column 3: Narratives & Fantasy */}
+                <div className="space-y-6">
+                  <div className="pb-2 border-b border-gray-100 mb-2">
+                    <h4 className="text-[10px] font-black uppercase text-blue-600 tracking-widest flex items-center gap-2">
+                      <TrophyIcon size={14} /> Fantasy & Narrative
+                    </h4>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input type="number" label="Price (£m)" value={playerForm.price} onChange={v => setPlayerForm({ ...playerForm, price: parseFloat(v) || 4.5 })} />
+                    <Input type="number" label="Total Points" value={playerForm.fantasyPoints} onChange={v => setPlayerForm({ ...playerForm, fantasyPoints: parseInt(v) || 0 })} />
+                  </div>
+                  
                   <Input 
                     label="Recent Ratings (comma separated)" 
                     value={playerForm.recentRatingsRaw} 
@@ -1027,36 +1081,38 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                     placeholder="e.g. 7.5, 8.2, 6.9" 
                   />
 
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Overview</label>
-                    <textarea 
-                      value={playerForm.overview}
-                      onChange={e => setPlayerForm({ ...playerForm, overview: e.target.value })}
-                      placeholder="Player performance summary, key traits..."
-                      className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 transition-all font-medium min-h-[100px]"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Career History</label>
-                    <textarea 
-                      value={playerForm.career}
-                      onChange={e => setPlayerForm({ ...playerForm, career: e.target.value })}
-                      placeholder="Previous clubs, major achievements..."
-                      className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 transition-all font-medium min-h-[100px]"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Transfer History</label>
-                    <textarea 
-                      value={playerForm.transferHistory}
-                      onChange={e => setPlayerForm({ ...playerForm, transferHistory: e.target.value })}
-                      placeholder="e.g. 2023: Team A -> Team B ($50M)..."
-                      className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 transition-all font-medium min-h-[100px]"
-                    />
+                  <div className="space-y-4 pt-2">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Overview</label>
+                      <textarea 
+                        value={playerForm.overview}
+                        onChange={e => setPlayerForm({ ...playerForm, overview: e.target.value })}
+                        placeholder="Short summary..."
+                        className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 transition-all font-medium min-h-[60px] text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Career History</label>
+                      <textarea 
+                        value={playerForm.career}
+                        onChange={e => setPlayerForm({ ...playerForm, career: e.target.value })}
+                        placeholder="Previous clubs..."
+                        className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 transition-all font-medium min-h-[60px] text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Transfer History</label>
+                      <textarea 
+                        value={playerForm.transferHistory}
+                        onChange={e => setPlayerForm({ ...playerForm, transferHistory: e.target.value })}
+                        placeholder="Previous transfers..."
+                        className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 transition-all font-medium min-h-[60px] text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="lg:col-span-3 flex justify-end gap-2">
+                <div className="lg:col-span-3 flex justify-end gap-2 pt-4 border-t border-gray-50">
                    {editingId && (
                     <button onClick={cancelEdit} className="px-6 h-[54px] bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all">
                       Cancel
@@ -1070,9 +1126,46 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
               </div>
             </AdminCard>
 
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-3">
+                <h3 className="text-sm font-black uppercase text-gray-400 tracking-widest">Existing Players ({players.length})</h3>
+                <button 
+                  onClick={() => {
+                    setEditingId(null);
+                    setPlayerForm({ 
+                      name: '', teamId: '', position: '', number: 0, imageUrl: '', overview: '', career: '', transferHistory: '',
+                      birthDate: '', height: '', weight: '', nationality: '', foot: 'Right',
+                      statsRadar: { attacking: 50, creativity: 50, defending: 50, tactical: 50, technical: 50 },
+                      recentRatingsRaw: '',
+                      price: 4.5,
+                      fantasyPoints: 0
+                    });
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+                >
+                  <PlusIcon size={12} /> Add New
+                </button>
+              </div>
+              <div className="relative flex-1 max-w-xs">
+                <SearchIcon size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input 
+                  type="text"
+                  placeholder="Search player name..."
+                  className="w-full pl-10 pr-4 py-3 bg-white rounded-2xl border border-gray-100 text-sm focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+                  value={playerSearch}
+                  onChange={(e) => setPlayerSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {players.map(p => (
-                <div key={p.id} className="p-4 bg-white rounded-3xl border border-gray-100 flex items-center justify-between group">
+              {players.filter(p => !playerSearch || p.name.toLowerCase().includes(playerSearch.toLowerCase())).map(p => (
+                <div 
+                  key={p.id} 
+                  onClick={() => startEditingPlayer(p)}
+                  className="p-4 bg-white rounded-3xl border border-gray-100 flex items-center justify-between group cursor-pointer hover:border-blue-200 hover:shadow-xl transition-all"
+                >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center font-black text-gray-300 overflow-hidden">
                       {p.imageUrl ? (
@@ -1090,14 +1183,14 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                   </div>
                   <div className="flex gap-2 shrink-0">
                     <button 
-                      onClick={() => startEditingPlayer(p)} 
+                      onClick={(e) => { e.stopPropagation(); startEditingPlayer(p); }} 
                       className="p-3 text-blue-500 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-all"
                       title="Edit Player"
                     >
-                      <SaveIcon size={18} />
+                      <EditIcon size={18} />
                     </button>
                     <button 
-                      onClick={() => handleDelete('players', p.id)} 
+                      onClick={(e) => { e.stopPropagation(); handleDelete('players', p.id); }} 
                       className="p-3 text-red-500 bg-red-50 rounded-2xl hover:bg-red-100 transition-all"
                       title="Delete Player"
                     >
@@ -1155,7 +1248,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                     </div>
                     <div className="flex gap-2">
                        <button onClick={() => startEditingTransfer(transferItem)} className="p-3 text-blue-500 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-all">
-                        <SaveIcon size={18} />
+                        <EditIcon size={18} />
                       </button>
                       <button onClick={() => handleDelete('transfers', transferItem.id)} className="p-3 text-red-500 bg-red-50 rounded-2xl hover:bg-red-100 transition-all">
                         <Trash2Icon size={18} />
@@ -1174,7 +1267,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Input label="Venue Name" value={venueForm.name} onChange={v => setVenueForm({ ...venueForm, name: v })} placeholder="e.g. Old Trafford" />
                 <Input label="City" value={venueForm.city} onChange={v => setVenueForm({ ...venueForm, city: v })} placeholder="e.g. Manchester" />
-                <Input type="number" label="Capacity" value={venueForm.capacity} onChange={v => setVenueForm({ ...venueForm, capacity: parseInt(v) })} />
+                <Input type="number" label="Capacity" value={venueForm.capacity || 0} onChange={v => setVenueForm({ ...venueForm, capacity: parseInt(v) || 0 })} />
                 <div className="sm:col-span-3 flex justify-end gap-2">
                   {editingId && (
                     <button onClick={cancelEdit} className="px-6 h-[54px] bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all">
@@ -1207,7 +1300,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                       className="p-3 text-blue-500 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-all"
                       title="Edit Venue"
                     >
-                      <SaveIcon size={18} />
+                      <EditIcon size={18} />
                     </button>
                     <button 
                       onClick={() => handleDelete('venues', v.id)} 
@@ -1271,7 +1364,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => startEditingCompetition(c)} className="p-3 text-blue-500 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-colors">
-                      <SaveIcon size={18} />
+                      <EditIcon size={18} />
                     </button>
                     <button onClick={() => handleDelete('competitions', c.id)} className="p-3 text-red-500 bg-red-50 rounded-2xl hover:bg-red-100 transition-colors">
                       <Trash2Icon size={18} />
@@ -1386,7 +1479,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                       className="p-3 text-blue-500 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-colors"
                       title="Edit League"
                     >
-                      <SaveIcon size={18} />
+                      <EditIcon size={18} />
                     </button>
                     <button 
                       onClick={() => handleDelete('leagues', l.id)} 
@@ -1431,8 +1524,8 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                 <Input label="Coach Name" value={teamForm.coachName} onChange={v => setTeamForm({ ...teamForm, coachName: v })} placeholder="e.g. Pep Guardiola" />
                 <Input label="Market Value" value={teamForm.marketValue} onChange={v => setTeamForm({ ...teamForm, marketValue: v })} placeholder="e.g. €1.2B" />
                 <div className="grid grid-cols-2 gap-4">
-                  <Input type="number" label="Foreign Players" value={teamForm.foreignPlayers} onChange={v => setTeamForm({ ...teamForm, foreignPlayers: parseInt(v) })} />
-                  <Input type="number" label="National Players" value={teamForm.nationalPlayers} onChange={v => setTeamForm({ ...teamForm, nationalPlayers: parseInt(v) })} />
+                  <Input type="number" label="Foreign Players" value={teamForm.foreignPlayers || 0} onChange={v => setTeamForm({ ...teamForm, foreignPlayers: parseInt(v) || 0 })} />
+                  <Input type="number" label="National Players" value={teamForm.nationalPlayers || 0} onChange={v => setTeamForm({ ...teamForm, nationalPlayers: parseInt(v) || 0 })} />
                 </div>
                 
                 <ImageUpload 
@@ -1517,7 +1610,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                       className="p-3 text-blue-500 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-colors"
                       title="Edit Team"
                     >
-                      <SaveIcon size={18} />
+                      <EditIcon size={18} />
                     </button>
                     <button 
                       onClick={() => handleDelete('teams', t.id)} 
@@ -1732,7 +1825,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                           <div className="p-6 bg-gray-50 rounded-[32px] space-y-4">
                              <div className="grid grid-cols-2 gap-4">
                                <Select label="Type" value={eventForm.type} onChange={v => setEventForm({ ...eventForm, type: v as any })} options={[{label: 'Goal', value: 'goal'}, {label: 'Penalty', value: 'penalty'}, {label: 'Yellow Card', value: 'yellow'}, {label: 'Red Card', value: 'red'}, {label: 'Substitution', value: 'sub'}]} />
-                               <Input type="number" label="Minute" value={eventForm.minute} onChange={v => setEventForm({ ...eventForm, minute: parseInt(v) })} />
+                               <Input type="number" label="Minute" value={eventForm.minute || 0} onChange={v => setEventForm({ ...eventForm, minute: parseInt(v) || 0 })} />
                              </div>
                              <Select label="Team" value={eventForm.teamId} onChange={v => setEventForm({ ...eventForm, teamId: v })} options={[{label: teams.find(t => t.id === gameForm.homeTeamId)?.name || 'Home', value: gameForm.homeTeamId}, {label: teams.find(t => t.id === gameForm.awayTeamId)?.name || 'Away', value: gameForm.awayTeamId}]} />
                              
@@ -1871,8 +1964,8 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                     <span className="text-sm">{teams.find(t => t.id === g.homeTeamId)?.name}</span>
                     <input 
                       type="number" 
-                      value={g.homeScore} 
-                      onChange={(e) => updateGameScore(g.id, parseInt(e.target.value), g.awayScore)}
+                      value={g.homeScore ?? 0} 
+                      onChange={(e) => updateGameScore(g.id, parseInt(e.target.value) || 0, g.awayScore)}
                       className="w-14 h-12 bg-gray-50 rounded-2xl text-center font-black border-none focus:ring-2 focus:ring-blue-600 transition-all text-xl"
                     />
                    </div>
@@ -1898,8 +1991,8 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                    <div className="flex-1 flex justify-start gap-3 items-center font-bold">
                     <input 
                       type="number" 
-                      value={g.awayScore} 
-                      onChange={(e) => updateGameScore(g.id, g.homeScore, parseInt(e.target.value))}
+                      value={g.awayScore ?? 0} 
+                      onChange={(e) => updateGameScore(g.id, g.homeScore, parseInt(e.target.value) || 0)}
                       className="w-14 h-12 bg-gray-50 rounded-2xl text-center font-black border-none focus:ring-2 focus:ring-blue-600 transition-all text-xl"
                     />
                     <span className="text-sm">{teams.find(t => t.id === g.awayTeamId)?.name}</span>
@@ -2049,12 +2142,13 @@ function AdminCard({ title, icon, children }: { title: string; icon: React.React
 }
 
 function Input({ label, value, onChange, placeholder, type = 'text' }: { label: string; value: any; onChange: (v: string) => void; placeholder?: string; type?: string }) {
+  const displayValue = (value === null || value === undefined || (typeof value === 'number' && isNaN(value))) ? '' : value;
   return (
     <div className="space-y-2">
       <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">{label}</label>
       <input 
         type={type}
-        value={value}
+        value={displayValue}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 transition-all font-medium"
@@ -2063,12 +2157,13 @@ function Input({ label, value, onChange, placeholder, type = 'text' }: { label: 
   );
 }
 
-function Select({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: { label: string; value: string }[] }) {
+function Select({ label, value, onChange, options }: { label: string; value: any; onChange: (v: string) => void; options: { label: string; value: string }[] }) {
+  const displayValue = (value === null || value === undefined || (typeof value === 'number' && isNaN(value))) ? '' : value;
   return (
     <div className="space-y-2">
       <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">{label}</label>
       <select 
-        value={value}
+        value={displayValue}
         onChange={e => onChange(e.target.value)}
         className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 transition-all font-medium appearance-none"
       >

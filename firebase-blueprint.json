@@ -153,6 +153,30 @@
         "type": { "type": "string", "enum": ["permanent", "loan", "free"] }
       },
       "required": ["playerId", "fromTeamId", "toTeamId", "date", "type"]
+    },
+    "FantasyTeam": {
+      "title": "Fantasy Team",
+      "description": "A user's fantasy soccer team",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "budget": { "type": "number" },
+        "totalPoints": { "type": "number" },
+        "playerIds": { "type": "array", "items": { "type": "string" } },
+        "benchPlayerIds": { "type": "array", "items": { "type": "string" } },
+        "captainId": { "type": "string" },
+        "viceCaptainId": { "type": "string" },
+        "chips": {
+          "type": "object",
+          "properties": {
+            "benchBoostUsed": { "type": "boolean" },
+            "freeHitUsed": { "type": "boolean" },
+            "tripleCaptainUsed": { "type": "boolean" }
+          }
+        }
+      },
+      "required": ["userId", "name", "playerIds"]
     }
   },
   "firestore": {
@@ -165,6 +189,7 @@
     "/games/{gameId}": { "schema": "Game", "description": "All matches" },
     "/admins/{adminId}": { "schema": "Administrator", "description": "Authorized administrators" },
     "/users/{userId}/favorites/{favoriteId}": { "schema": "Favorite", "description": "User's favorite teams" },
-    "/transfers/{transferId}": { "schema": "Transfer", "description": "Player transfers" }
+    "/transfers/{transferId}": { "schema": "Transfer", "description": "Player transfers" },
+    "/fantasyTeams/{userId}": { "schema": "FantasyTeam", "description": "User's fantasy team" }
   }
 }

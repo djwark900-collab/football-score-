@@ -67,6 +67,8 @@ export interface Player {
     technical: number;
   };
   recentRatings?: number[];
+  price?: number;
+  fantasyPoints?: number;
 }
 
 export interface Venue {
@@ -149,4 +151,37 @@ export interface Transfer {
   date: string;
   fee?: string;
   type: 'permanent' | 'loan' | 'free';
+}
+
+export interface FantasyPlayer extends Player {
+  price: number;
+  fantasyPoints?: number;
+}
+
+export interface FantasyTeam {
+  id: string;
+  userId: string;
+  name: string;
+  budget: number;
+  totalPoints: number;
+  playerIds: string[]; // 15 players usually (2 GK, 5 DF, 5 MF, 3 FW)
+  benchPlayerIds?: string[];
+  formation?: string;
+  captainId?: string;
+  viceCaptainId?: string;
+  chips?: {
+    benchBoostUsed: boolean;
+    freeHitUsed: boolean;
+    tripleCaptainUsed: boolean;
+  };
+  weekPoints?: Record<number, number>; // week number -> points
+}
+
+export interface FantasyLeague {
+  id: string;
+  name: string;
+  ownerId: string;
+  isPublic: boolean;
+  code?: string;
+  memberIds: string[];
 }

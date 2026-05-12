@@ -120,6 +120,19 @@ service cloud.firestore {
              (!('fee' in data) || data.fee is string);
     }
 
+    function isValidFantasyTeam(data) {
+      return data.keys().hasAll(['userId', 'name', 'playerIds']) &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 50 &&
+             data.playerIds is list &&
+             (!('benchPlayerIds' in data) || data.benchPlayerIds is list) &&
+             (!('captainId' in data) || data.captainId is string) &&
+             (!('viceCaptainId' in data) || data.viceCaptainId is string) &&
+             (!('budget' in data) || data.budget is number) &&
+             (!('totalPoints' in data) || data.totalPoints is number) &&
+             (!('chips' in data) || data.chips is map);
+    }
+
     // Collection Rules
     match /test/connection {
       allow read: if true;
@@ -140,6 +153,11 @@ service cloud.firestore {
     match /transfers/{transferId} {
       allow read: if true;
       allow write: if isAdmin() && isValidTransfer(incoming());
+    }
+
+    match /fantasyTeams/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow write: if isSignedIn() && request.auth.uid == userId && isValidFantasyTeam(incoming());
     }
 
     match /leagues/{leagueId} {

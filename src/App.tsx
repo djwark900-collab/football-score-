@@ -13,6 +13,7 @@ import {
   Search as SearchIcon, 
   Plus as PlusIcon, 
   Lock as LockIcon,
+  Crown as CrownIcon,
   ChevronRight as ChevronRightIcon,
   TrendingUp as TrendingUpIcon,
   Clock as ClockIcon,
@@ -52,10 +53,10 @@ import { Header } from './components/Header';
 import { Standings } from './components/Standings';
 import { LeagueDetails } from './components/LeagueDetails';
 import { PlayerDetails } from './components/PlayerDetails';
-
 import { TeamDetails } from './components/TeamDetails';
+import { FantasyManager } from './components/FantasyManager';
 
-type View = 'matches' | 'leagues' | 'standings' | 'admin' | 'settings' | 'game-details' | 'league-details' | 'team-details' | 'player-details' | 'transfers';
+type View = 'matches' | 'leagues' | 'standings' | 'admin' | 'settings' | 'game-details' | 'league-details' | 'team-details' | 'player-details' | 'transfers' | 'fantasy';
 
 export default function App() {
   const [view, setView] = useState<View>('matches');
@@ -162,6 +163,7 @@ export default function App() {
       English: {
         matches: 'Matches',
         leagues: 'Leagues',
+        fantasy: 'Fantasy',
         transfers: 'Transfers',
         settings: 'Settings',
         standings: 'Standings',
@@ -201,6 +203,7 @@ export default function App() {
       Kurdish: {
         matches: 'یارییەکان',
         leagues: 'خولەکان',
+        fantasy: 'فانتازیا',
         transfers: 'گواستنەوەکان',
         settings: 'ڕێکخستن',
         standings: 'ڕیزبەندی',
@@ -1305,6 +1308,20 @@ export default function App() {
             </motion.div>
           )}
 
+          {view === 'fantasy' && (
+            <FantasyManager 
+              user={user}
+              players={players}
+              teams={teams}
+              onBack={() => navigateTo('matches')}
+              onLogin={handleLogin}
+              onPlayerClick={(id) => {
+                setSelectedPlayerId(id);
+                navigateTo('player-details');
+              }}
+            />
+          )}
+
           {view === 'admin' && isAdmin && (
             <AdminPanel 
               leagues={leagues}
@@ -1552,11 +1569,12 @@ export default function App() {
       </AnimatePresence>
 
       {/* Bottom Nav */}
-      {view !== 'game-details' && view !== 'team-details' && view !== 'league-details' && view !== 'player-details' && (
+      {view !== 'game-details' && view !== 'team-details' && view !== 'league-details' && view !== 'player-details' && view !== 'fantasy' && (
         <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-md bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.3)] dark:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.8)] rounded-[32px] border-t-2 border-l-2 border-white/50 dark:border-white/10 px-4 py-2 z-40 ring-1 ring-black/5">
-          <div className="flex justify-between items-center px-2">
+          <div className="flex justify-between items-center px-1">
             <NavButton active={view === 'matches'} onClick={() => { navigateTo('matches'); setSelectedLeagueId(null); setSelectedPlayerId(null); setSelectedTeamId(null); }} icon={<ClockIcon />} label={prefLanguage === 'English' ? 'Home' : 'سەرەکی'} />
             <NavButton active={view === 'leagues'} onClick={() => navigateTo('leagues')} icon={<ShieldIcon />} label={prefLanguage === 'English' ? 'Leagues' : 'خولەکان'} />
+            <NavButton active={view === 'fantasy'} onClick={() => navigateTo('fantasy')} icon={<CrownIcon />} label={t('fantasy')} />
             <NavButton active={view === 'transfers'} onClick={() => navigateTo('transfers')} icon={<TransferIcon />} label={prefLanguage === 'English' ? 'Market' : 'بازاڕ'} />
             <NavButton active={view === 'settings'} onClick={() => navigateTo('settings')} icon={<SettingsIcon />} label={prefLanguage === 'English' ? 'Settings' : 'ڕێکخستن'} />
           </div>
