@@ -23,7 +23,8 @@ import {
   Copy as CopyIcon,
   ClipboardPaste as PasteIcon,
   Search as SearchIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Star as StarIcon
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
@@ -198,7 +199,10 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
     },
     recentRatingsRaw: '',
     price: 4.5,
-    fantasyPoints: 0
+    fantasyPoints: 0,
+    goals: 0,
+    assists: 0,
+    cleanSheets: 0
   });
   const [playerSearch, setPlayerSearch] = useState('');
   const [venueForm, setVenueForm] = useState({ name: '', city: '', capacity: 0 });
@@ -453,6 +457,40 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
     });
   };
 
+  const awardPoints = (type: 'goal' | 'assist' | 'cleanSheet') => {
+    let points = 0;
+    const pos = playerForm.position?.toLowerCase() || '';
+    
+    if (type === 'goal') {
+      if (pos.includes('fwd') || pos.includes('forward')) points = 4;
+      else if (pos.includes('mid')) points = 5;
+      else if (pos.includes('def') || pos.includes('gk')) points = 6;
+      else points = 4;
+      
+      setPlayerForm(prev => ({
+        ...prev,
+        goals: (prev.goals || 0) + 1,
+        fantasyPoints: (prev.fantasyPoints || 0) + points
+      }));
+    } else if (type === 'assist') {
+      points = 3;
+      setPlayerForm(prev => ({
+        ...prev,
+        assists: (prev.assists || 0) + 1,
+        fantasyPoints: (prev.fantasyPoints || 0) + points
+      }));
+    } else if (type === 'cleanSheet') {
+       if (pos.includes('mid')) points = 1;
+       else if (pos.includes('def') || pos.includes('gk')) points = 4;
+       
+       setPlayerForm(prev => ({
+         ...prev,
+         cleanSheets: (prev.cleanSheets || 0) + 1,
+         fantasyPoints: (prev.fantasyPoints || 0) + points
+       }));
+    }
+  };
+
   const handleAddPlayer = async () => {
     if (!playerForm.name || !playerForm.teamId) return;
     setLoading(true);
@@ -480,7 +518,10 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
         statsRadar: playerForm.statsRadar,
         recentRatings,
         price: playerForm.price ?? 4.5,
-        fantasyPoints: playerForm.fantasyPoints ?? 0
+        fantasyPoints: playerForm.fantasyPoints ?? 0,
+        goals: playerForm.goals ?? 0,
+        assists: playerForm.assists ?? 0,
+        cleanSheets: playerForm.cleanSheets ?? 0
       };
 
       if (editingId) {
@@ -496,7 +537,10 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
         statsRadar: { attacking: 50, creativity: 50, defending: 50, tactical: 50, technical: 50 },
         recentRatingsRaw: '',
         price: 4.5,
-        fantasyPoints: 0
+        fantasyPoints: 0,
+        goals: 0,
+        assists: 0,
+        cleanSheets: 0
       });
       setEditingId(null);
     } catch (e) {
@@ -531,7 +575,10 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
       },
       recentRatingsRaw: p.recentRatings?.join(', ') || '',
       price: p.price || 4.5,
-      fantasyPoints: p.fantasyPoints || 0
+      fantasyPoints: p.fantasyPoints || 0,
+      goals: p.goals || 0,
+      assists: p.assists || 0,
+      cleanSheets: p.cleanSheets || 0
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -869,7 +916,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
 
               <div className="pt-6 mt-6 border-t border-gray-50 flex items-center justify-between px-4">
                 <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Version</span>
-                <span className="text-[10px] font-black text-blue-500/50 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100/50">v1.1.3</span>
+                <span className="text-[10px] font-black text-blue-500/50 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100/50">v1.1.4</span>
               </div>
             </div>
 
@@ -1080,6 +1127,38 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                     onChange={v => setPlayerForm({ ...playerForm, recentRatingsRaw: v })} 
                     placeholder="e.g. 7.5, 8.2, 6.9" 
                   />
+
+                  <div className="bg-gray-50/10 dark:bg-white/5 p-6 rounded-[32px] border border-gray-100 dark:border-white/5 space-y-4">
+                    <h5 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2 flex items-center gap-2">
+                       <StarIcon size={12} className="text-yellow-500" /> Match Stats (Awards Points)
+                    </h5>
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-end gap-2">
+                        <div className="flex-1">
+                          <Input type="number" label="Goals" value={playerForm.goals || 0} onChange={v => setPlayerForm({ ...playerForm, goals: parseInt(v) || 0 })} />
+                        </div>
+                        <button onClick={() => awardPoints('goal')} className="mb-0.5 w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all shadow-md">
+                          <PlusIcon size={18} />
+                        </button>
+                      </div>
+                      <div className="flex items-end gap-2">
+                        <div className="flex-1">
+                          <Input type="number" label="Assists" value={playerForm.assists || 0} onChange={v => setPlayerForm({ ...playerForm, assists: parseInt(v) || 0 })} />
+                        </div>
+                        <button onClick={() => awardPoints('assist')} className="mb-0.5 w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all shadow-md">
+                          <PlusIcon size={18} />
+                        </button>
+                      </div>
+                      <div className="flex items-end gap-2">
+                         <div className="flex-1">
+                          <Input type="number" label="Clean Sheets" value={playerForm.cleanSheets || 0} onChange={v => setPlayerForm({ ...playerForm, cleanSheets: parseInt(v) || 0 })} />
+                        </div>
+                        <button onClick={() => awardPoints('cleanSheet')} className="mb-0.5 w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all shadow-md">
+                          <PlusIcon size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
 
                   <div className="space-y-4 pt-2">
                     <div className="space-y-2">
@@ -2042,7 +2121,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">Production Build</p>
                         </div>
                       </div>
-                      <span className="text-xs font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">v1.1.3</span>
+                      <span className="text-xs font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">v1.1.4</span>
                     </div>
 
                     <div className="p-6 bg-gray-50 rounded-[32px] border border-gray-100 flex items-center justify-between">

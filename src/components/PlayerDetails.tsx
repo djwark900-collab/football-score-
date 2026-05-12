@@ -41,7 +41,7 @@ interface PlayerDetailsProps {
   onGameClick?: (gameId: string) => void;
 }
 
-type Tab = 'PROFILE' | 'STATS';
+type Tab = 'PROFILE' | 'STATS' | 'FANTASY';
 
 export function PlayerDetails({ 
   player, 
@@ -183,14 +183,14 @@ export function PlayerDetails({
           </div>
         </div>
 
-        {/* PROFILE / STATS Tabs */}
-        <div className="flex px-2 mt-4 border-t border-white/5">
-          {(['PROFILE', 'STATS'] as Tab[]).map((tab) => (
+        {/* PROFILE / STATS / FANTASY Tabs */}
+        <div className="flex px-2 mt-4 border-t border-white/5 overflow-x-auto scrollbar-none">
+          {(['PROFILE', 'STATS', 'FANTASY'] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "flex-1 py-4 text-[13px] font-black tracking-[0.2em] relative transition-colors",
+                "flex-1 min-w-[100px] py-4 text-[11px] font-black tracking-[0.2em] relative transition-colors",
                 activeTab === tab ? "text-white" : "text-white/30"
               )}
             >
@@ -321,6 +321,41 @@ export function PlayerDetails({
                 </div>
               )}
 
+              {/* Narratives Section */}
+              {(player.overview || player.career || player.transferHistory) && (
+                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-50 dark:border-gray-800/50">
+                    <h4 className="text-[12px] font-bold text-gray-400 uppercase tracking-tight">Biography & Career</h4>
+                  </div>
+                  <div className="p-6 space-y-6">
+                    {player.overview && (
+                      <div className="space-y-2">
+                        <h5 className="text-[11px] font-black uppercase text-blue-600 tracking-widest">Overview</h5>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed font-medium">
+                          {player.overview}
+                        </p>
+                      </div>
+                    )}
+                    {player.career && (
+                      <div className="space-y-2">
+                        <h5 className="text-[11px] font-black uppercase text-blue-600 tracking-widest">Career History</h5>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed font-medium whitespace-pre-line">
+                          {player.career}
+                        </p>
+                      </div>
+                    )}
+                    {player.transferHistory && (
+                      <div className="space-y-2">
+                        <h5 className="text-[11px] font-black uppercase text-blue-600 tracking-widest">Transfer History</h5>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed font-medium whitespace-pre-line">
+                          {player.transferHistory}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Stats Card */}
               <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-50 dark:border-gray-800/50">
@@ -365,6 +400,59 @@ export function PlayerDetails({
                       </div>
                    </div>
                 </div>
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'FANTASY' && (
+            <motion.div
+              key="fantasy-content"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              <div className="bg-white dark:bg-gray-900 rounded-[32px] p-8 shadow-3d-lg border border-gray-100 dark:border-white/5 text-center">
+                 <div className="flex flex-col items-center">
+                    <div className="w-16 h-16 bg-blue-600/10 rounded-3xl flex items-center justify-center text-blue-600 mb-4">
+                       <TrophyIcon size={32} />
+                    </div>
+                    <span className="text-sm font-black text-gray-400 uppercase tracking-widest">Total Fantasy Points</span>
+                    <h2 className="text-6xl font-black text-gray-900 dark:text-white italic tracking-tighter mt-2">{player.fantasyPoints || 0}</h2>
+                    <div className="mt-6 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
+                       <span className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Market Value: £{player.price?.toFixed(1) || '4.5'}m</span>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                 <div className="bg-white dark:bg-gray-900 p-6 rounded-[28px] border border-gray-100 dark:border-white/5 flex flex-col items-center text-center">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Goals</p>
+                    <p className="text-2xl font-black text-gray-900 dark:text-white">{player.goals || 0}</p>
+                 </div>
+                 <div className="bg-white dark:bg-gray-900 p-6 rounded-[28px] border border-gray-100 dark:border-white/5 flex flex-col items-center text-center">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Assists</p>
+                    <p className="text-2xl font-black text-gray-900 dark:text-white">{player.assists || 0}</p>
+                 </div>
+                 <div className="bg-white dark:bg-gray-900 p-6 rounded-[28px] border border-gray-100 dark:border-white/5 flex flex-col items-center text-center">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Clean Sheets</p>
+                    <p className="text-2xl font-black text-gray-900 dark:text-white">{player.cleanSheets || 0}</p>
+                 </div>
+                 <div className="bg-white dark:bg-gray-900 p-6 rounded-[28px] border border-gray-100 dark:border-white/5 flex flex-col items-center text-center">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Form</p>
+                    <p className="text-2xl font-black text-blue-600">6.2</p>
+                 </div>
+              </div>
+
+              <div className="bg-[#37003c] p-6 rounded-[32px] text-white overflow-hidden relative">
+                 <div className="absolute top-0 right-0 p-4 opacity-10">
+                    <ZapIcon size={80} />
+                 </div>
+                 <h4 className="text-sm font-black uppercase tracking-widest mb-4">Fantasy Insight</h4>
+                 <p className="text-sm text-white/70 leading-relaxed font-medium">
+                    {player.name} is currently in excellent form, contributing to {((player.goals || 0) + (player.assists || 0))} goals this season. 
+                    With a price of £{player.price?.toFixed(1) || '4.5'}m, they offer significant value for managers.
+                 </p>
               </div>
             </motion.div>
           )}

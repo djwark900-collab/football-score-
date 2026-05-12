@@ -1413,7 +1413,7 @@ export default function App() {
                         <p className="text-xs text-gray-500 font-medium">Current build version of the application</p>
                       </div>
                       <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-black border border-blue-100 dark:border-blue-800">
-                        v1.1.3
+                        v1.1.4
                       </div>
                     </div>
 

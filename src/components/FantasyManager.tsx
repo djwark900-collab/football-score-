@@ -15,7 +15,10 @@ import {
   Share2 as Share2Icon,
   Save as SaveIcon,
   LayoutGrid as LayoutGridIcon,
-  List as ListIcon
+  List as ListIcon,
+  Zap as ZapIcon,
+  TrendingUp as TrendingUpIcon,
+  BarChart2 as BarChart2Icon
 } from 'lucide-react';
 import { Player, Team, FantasyTeam, FantasyLeague, FantasyPlayer } from '../types';
 import { cn } from '../lib/utils';
@@ -32,7 +35,7 @@ interface FantasyManagerProps {
 }
 
 export function FantasyManager({ user, players, teams, onBack, onLogin, onPlayerClick }: FantasyManagerProps) {
-  const [activeTab, setActiveTab] = useState<'my_team' | 'leagues' | 'players'>('my_team');
+  const [activeTab, setActiveTab] = useState<'points' | 'my_team' | 'players' | 'leagues'>('my_team');
   const [viewMode, setViewMode] = useState<'squad' | 'list'>('squad');
   const [selectedPosition, setSelectedPosition] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -218,87 +221,113 @@ export function FantasyManager({ user, players, teams, onBack, onLogin, onPlayer
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Immersive Header */}
-      <div className="bg-[#0288d1] relative overflow-hidden pt-6 pb-20 px-6">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 to-transparent pointer-events-none" />
+      <div className="bg-[#0288d1] relative overflow-hidden pt-6 pb-24 px-6">
+        <div className="absolute inset-0 skew-y-[-4deg] origin-top-left bg-gradient-to-br from-blue-400/20 to-transparent pointer-events-none" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-32 -mt-32" />
+        
         <div className="relative z-10 flex justify-between items-center max-w-4xl mx-auto">
           <button 
             onClick={onBack} 
-            className="w-10 h-10 flex items-center justify-center bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 text-white hover:bg-white/20 transition-all"
+            className="w-10 h-10 flex items-center justify-center bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 text-white hover:bg-white/20 transition-all font-black"
           >
             <ArrowLeftIcon size={20} />
           </button>
           <div className="flex flex-col items-center">
-            <h1 className="text-xl font-black text-white tracking-tighter uppercase">Pick Team</h1>
+            <h1 className="text-xl font-black text-white tracking-tighter uppercase italic flex items-center gap-2">
+              <StarIcon size={18} fill="currentColor" className="text-yellow-400" />
+              Fantasy League
+            </h1>
           </div>
-          <button className="w-10 h-10 flex items-center justify-center bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 text-white hover:bg-white/20 transition-all">
-            <Share2Icon size={18} />
-          </button>
+          <div className="flex gap-2">
+            <button className="w-10 h-10 flex items-center justify-center bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 text-white hover:bg-white/20 transition-all">
+              <Share2Icon size={18} />
+            </button>
+            <button className="w-10 h-10 flex items-center justify-center bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 text-white hover:bg-white/20 transition-all">
+              <SettingsIcon size={18} />
+            </button>
+          </div>
         </div>
 
-        {/* Deadline Info */}
-        <div className="relative z-20 mt-6 text-center">
-           <p className="text-white font-bold text-lg tracking-tight">Gameweek 1 Deadline: 16 Aug 2025, 18:30</p>
+        {/* Gameweek Status */}
+        <div className="relative z-20 mt-8 text-center bg-white/5 backdrop-blur-md rounded-[32px] p-6 max-w-lg mx-auto border border-white/10 shadow-2xl">
+           <div className="flex items-center justify-center gap-2 mb-1">
+             <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+             <p className="text-white font-black uppercase text-[10px] tracking-[0.2em] opacity-80">Live Gameweek 1</p>
+           </div>
+           <h2 className="text-4xl font-black text-white italic tracking-tighter">Deadline: 16 Aug</h2>
+           <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mt-2">{selectedPlayerIds.length}/11 Players Selected</p>
         </div>
 
         {/* View Toggle */}
-        <div className="relative z-30 mt-8 max-w-md mx-auto bg-white/10 backdrop-blur-lg rounded-[20px] p-1.5 flex gap-1 border border-white/10">
+        <div className="relative z-30 mt-8 max-w-md mx-auto bg-[#37003c] rounded-[24px] p-1 flex gap-1 shadow-2xl">
           <button 
             onClick={() => setViewMode('squad')}
             className={cn(
-              "flex-1 py-3 rounded-[15px] font-black uppercase text-[11px] tracking-widest transition-all",
-              viewMode === 'squad' ? "bg-white text-[#0288d1] shadow-xl" : "text-white/60 hover:text-white"
+              "flex-1 py-3 rounded-[20px] font-black uppercase text-[10px] tracking-[0.25em] transition-all",
+              viewMode === 'squad' ? "bg-white text-[#37003c] shadow-lg" : "text-white/60 hover:text-white"
             )}
           >
-            Squad
+            Pitch
           </button>
           <button 
             onClick={() => setViewMode('list')}
             className={cn(
-              "flex-1 py-3 rounded-[15px] font-black uppercase text-[11px] tracking-widest transition-all",
-              viewMode === 'list' ? "bg-white text-[#0288d1] shadow-xl" : "text-white/60 hover:text-white"
+              "flex-1 py-3 rounded-[20px] font-black uppercase text-[10px] tracking-[0.25em] transition-all",
+              viewMode === 'list' ? "bg-white text-[#37003c] shadow-lg" : "text-white/60 hover:text-white"
             )}
           >
-            List
+            Table
           </button>
         </div>
+      </div>
 
-        {/* User Stats Bar */}
-        <div className="relative z-20 mt-10 grid grid-cols-2 gap-4 max-w-4xl mx-auto">
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 p-4 flex justify-between items-center">
-            <p className="text-[10px] font-black text-white/50 uppercase tracking-widest">Free Transfers</p>
-            <p className="text-xl font-black text-white">1</p>
+      {/* Stats Bar */}
+      <div className="relative z-40 -mt-10 px-4 max-w-4xl mx-auto w-full">
+        <div className="bg-white dark:bg-gray-900 rounded-[32px] p-6 shadow-3d-lg border border-gray-100 dark:border-white/5 grid grid-cols-2 sm:grid-cols-4 gap-4 divide-x divide-gray-50 dark:divide-white/5">
+          <div className="flex flex-col items-center justify-center text-center px-2">
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Budget</span>
+            <p className="text-xl font-black text-gray-900 dark:text-white tabular-nums">£{remBudget.toFixed(1)}m</p>
           </div>
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 p-4 flex justify-between items-center">
-            <p className="text-[10px] font-black text-white/50 uppercase tracking-widest">Remaining Budget</p>
-            <p className="text-xl font-black text-white">£{remBudget.toFixed(1)}M</p>
+          <div className="flex flex-col items-center justify-center text-center px-2">
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Free Xfers</span>
+            <p className="text-xl font-black text-gray-900 dark:text-white">1</p>
+          </div>
+          <div className="flex flex-col items-center justify-center text-center px-2">
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Squad Value</span>
+            <p className="text-xl font-black text-gray-900 dark:text-white tabular-nums">£{(100.0 - remBudget).toFixed(1)}m</p>
+          </div>
+          <div className="flex flex-col items-center justify-center text-center px-2">
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Pts</span>
+            <p className="text-xl font-black text-blue-600 italic">854</p>
           </div>
         </div>
       </div>
 
       {/* Main Tabs */}
-      <div className="sticky top-0 z-40 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/5">
+      <div className="sticky top-0 z-50 mt-6 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/5">
         <div className="flex max-w-4xl mx-auto overflow-x-auto scrollbar-none">
           {[
-            { id: 'my_team', label: 'My Team', icon: CrownIcon },
-            { id: 'players', label: 'Transfer Market', icon: DollarSignIcon },
+            { id: 'points', label: 'Points', icon: BarChart2Icon },
+            { id: 'my_team', label: 'My Squad', icon: CrownIcon },
+            { id: 'players', label: 'Transfers', icon: DollarSignIcon },
             { id: 'leagues', label: 'Leagues', icon: TrophyIcon }
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={cn(
-                "flex-1 py-5 px-4 flex items-center justify-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] transition-all relative shrink-0",
+                "flex-1 py-5 px-6 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] transition-all relative shrink-0",
                 activeTab === tab.id 
                   ? "text-blue-600 dark:text-blue-400" 
                   : "text-gray-400 dark:text-gray-600 hover:text-gray-900 dark:hover:text-white"
               )}
             >
-              <tab.icon size={14} />
+              <tab.icon size={13} className={activeTab === tab.id ? "animate-pulse" : ""} />
               {tab.label}
               {activeTab === tab.id && (
                 <motion.div 
                   layoutId="activeTabGlow"
-                  className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 dark:bg-blue-500 rounded-t-full shadow-[0_-4px_12px_rgba(59,130,246,0.4)]"
+                  className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 dark:bg-blue-500 rounded-t-full shadow-[0_-4px_16px_rgba(59,130,246,0.5)]"
                 />
               )}
             </button>
@@ -307,8 +336,64 @@ export function FantasyManager({ user, players, teams, onBack, onLogin, onPlayer
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 p-4 sm:p-8 max-w-4xl mx-auto w-full">
+      <div className="flex-1 p-4 sm:p-8 max-w-4xl mx-auto w-full pb-32">
         <AnimatePresence mode="wait">
+          {activeTab === 'points' && (
+            <motion.div
+              key="points"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              className="space-y-6"
+            >
+              <div className="bg-white dark:bg-gray-900 p-8 rounded-[40px] shadow-3d-lg border border-gray-100 dark:border-white/5 text-center space-y-4">
+                <div className="flex items-center justify-center gap-3">
+                   <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+                   <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest">Live Points</h3>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-7xl font-black text-gray-900 dark:text-white italic tracking-tighter">42</span>
+                  <span className="text-xs font-black text-gray-400 uppercase tracking-widest mt-2">Points this Gameweek</span>
+                </div>
+                <div className="flex gap-4 pt-6 border-t border-gray-50 dark:border-white/5">
+                   <div className="flex-1">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Average</p>
+                      <p className="text-lg font-black text-gray-900 dark:text-white">35</p>
+                   </div>
+                   <div className="flex-1 border-x border-gray-50 dark:border-white/5">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Highest</p>
+                      <p className="text-lg font-black text-gray-900 dark:text-white">82</p>
+                   </div>
+                   <div className="flex-1">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Rank</p>
+                      <p className="text-lg font-black text-blue-600">12,402</p>
+                   </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                 <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Live Scorers</h4>
+                 {fantasyPlayers.filter(p => (p.fantasyPoints || 0) > 0).slice(0, 5).map(p => (
+                   <div key={p.id} className="bg-white dark:bg-gray-900 p-4 rounded-[24px] border border-gray-100 dark:border-white/5 flex items-center justify-between">
+                     <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gray-50 dark:bg-gray-800 rounded-xl overflow-hidden flex items-center justify-center">
+                          {p.imageUrl ? <img src={p.imageUrl} className="w-full h-full object-cover" /> : <UsersIcon className="text-gray-200" size={16} />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-900 dark:text-white">{p.name}</p>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                            {p.goals ? `${p.goals} Goals ` : ''}{p.assists ? `${p.assists} Assists ` : ''}{p.cleanSheets ? ' + Clean Sheet' : ''}
+                            {!(p.goals || p.assists || p.cleanSheets) && 'Appearance Points'}
+                          </p>
+                        </div>
+                     </div>
+                     <p className="text-lg font-black text-blue-600">+{p.fantasyPoints} Pts</p>
+                   </div>
+                 ))}
+              </div>
+            </motion.div>
+          )}
+
           {activeTab === 'my_team' && (
             <motion.div
               key="my_team"
@@ -356,22 +441,25 @@ export function FantasyManager({ user, players, teams, onBack, onLogin, onPlayer
               </div>
 
               {/* Pitch Layout */}
-              <div className="relative aspect-[3/4.2] bg-[#37a64f] rounded-[40px] shadow-2xl overflow-hidden border-8 border-[#2d8f41]">
-                <div className="absolute inset-0 opacity-40 bg-[url('https://www.transparenttextures.com/patterns/grass.png')]" />
+              <div className="relative aspect-[3/4.2] bg-[#37a64f] rounded-[40px] shadow-2xl overflow-hidden border-8 border-white/5">
+                <div className="absolute inset-0 bg-gradient-to-b from-[#40b85a] to-[#2d8f41]" />
+                <div className="absolute inset-0 opacity-20 mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/grass.png')]" />
                 
-                {/* Stadium Indicator */}
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 bg-black/40 backdrop-blur-md rounded-full border border-white/20">
-                  <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-                  <span className="text-[8px] font-black text-white uppercase tracking-[0.2em]">Live: Fantasy Studio</span>
-                </div>
+                {/* Immersive Stadium Background */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.1)_0%,_transparent_70%)]" />
 
                 {/* Custom Pitch Markings */}
-                <div className="absolute inset-0 pointer-events-none opacity-40">
-                   <div className="absolute inset-x-8 top-0 h-[15%] border-b border-l border-r border-white" />
-                   <div className="absolute inset-x-16 top-0 h-[8%] border-b border-l border-r border-white" />
-                   <div className="absolute bottom-0 inset-x-8 h-[15%] border-t border-l border-r border-white" />
-                   <div className="absolute top-1/2 left-0 right-0 h-px bg-white" />
-                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 border border-white rounded-full" />
+                <div className="absolute inset-0 pointer-events-none">
+                   {/* Center Circle */}
+                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border border-white/40 rounded-full" />
+                   <div className="absolute top-1/2 left-0 right-0 h-px bg-white/40" />
+                   
+                   {/* Penalty Areas */}
+                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-[18%] border-b border-l border-r border-white/40" />
+                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/4 h-[8%] border-b border-l border-r border-white/40" />
+                   
+                   <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-[18%] border-t border-l border-r border-white/40" />
+                   <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/4 h-[8%] border-t border-l border-r border-white/40" />
                 </div>
 
                 {/* Player Grid */}
@@ -385,6 +473,7 @@ export function FantasyManager({ user, players, teams, onBack, onLogin, onPlayer
                       onRemove={removePlayerFromSquad}
                       onClick={() => selectedPlayerIds[0] && handlePlayerSlotClick(selectedPlayerIds[0])}
                       isSelected={swappingId === selectedPlayerIds[0]}
+                      activeTab={activeTab}
                     />
                   </div>
                   
@@ -420,6 +509,7 @@ export function FantasyManager({ user, players, teams, onBack, onLogin, onPlayer
                               onRemove={removePlayerFromSquad}
                               onClick={() => pSlot.id && handlePlayerSlotClick(pSlot.id)}
                               isSelected={swappingId === pSlot.id}
+                              activeTab={activeTab}
                             />
                           ))}
                         </div>
@@ -429,10 +519,10 @@ export function FantasyManager({ user, players, teams, onBack, onLogin, onPlayer
 
                   {/* Bench Area */}
                   <div className="mt-4 pt-4 border-t border-white/20 bg-black/20 -mx-4 px-4 flex justify-around items-end gap-1">
-                     <FantasyPlayerSlot position="GKP" player={fantasyPlayers.find(p => p.id === benchPlayerIds[0])} teams={teams} isBench onRemove={removePlayerFromSquad} onClick={() => benchPlayerIds[0] && handlePlayerSlotClick(benchPlayerIds[0])} isSelected={swappingId === benchPlayerIds[0]} />
-                     <FantasyPlayerSlot position="SUB" player={fantasyPlayers.find(p => p.id === benchPlayerIds[1])} teams={teams} isBench onRemove={removePlayerFromSquad} onClick={() => benchPlayerIds[1] && handlePlayerSlotClick(benchPlayerIds[1])} isSelected={swappingId === benchPlayerIds[1]} />
-                     <FantasyPlayerSlot position="SUB" player={fantasyPlayers.find(p => p.id === benchPlayerIds[2])} teams={teams} isBench onRemove={removePlayerFromSquad} onClick={() => benchPlayerIds[2] && handlePlayerSlotClick(benchPlayerIds[2])} isSelected={swappingId === benchPlayerIds[2]} />
-                     <FantasyPlayerSlot position="SUB" player={fantasyPlayers.find(p => p.id === benchPlayerIds[3])} teams={teams} isBench onRemove={removePlayerFromSquad} onClick={() => benchPlayerIds[3] && handlePlayerSlotClick(benchPlayerIds[3])} isSelected={swappingId === benchPlayerIds[3]} />
+                     <FantasyPlayerSlot position="GKP" player={fantasyPlayers.find(p => p.id === benchPlayerIds[0])} teams={teams} isBench onRemove={removePlayerFromSquad} onClick={() => benchPlayerIds[0] && handlePlayerSlotClick(benchPlayerIds[0])} isSelected={swappingId === benchPlayerIds[0]} activeTab={activeTab} />
+                     <FantasyPlayerSlot position="SUB" player={fantasyPlayers.find(p => p.id === benchPlayerIds[1])} teams={teams} isBench onRemove={removePlayerFromSquad} onClick={() => benchPlayerIds[1] && handlePlayerSlotClick(benchPlayerIds[1])} isSelected={swappingId === benchPlayerIds[1]} activeTab={activeTab} />
+                     <FantasyPlayerSlot position="SUB" player={fantasyPlayers.find(p => p.id === benchPlayerIds[2])} teams={teams} isBench onRemove={removePlayerFromSquad} onClick={() => benchPlayerIds[2] && handlePlayerSlotClick(benchPlayerIds[2])} isSelected={swappingId === benchPlayerIds[2]} activeTab={activeTab} />
+                     <FantasyPlayerSlot position="SUB" player={fantasyPlayers.find(p => p.id === benchPlayerIds[3])} teams={teams} isBench onRemove={removePlayerFromSquad} onClick={() => benchPlayerIds[3] && handlePlayerSlotClick(benchPlayerIds[3])} isSelected={swappingId === benchPlayerIds[3]} activeTab={activeTab} />
                   </div>
                 </div>
               </div>
@@ -508,10 +598,27 @@ export function FantasyManager({ user, players, teams, onBack, onLogin, onPlayer
                         {player.imageUrl ? <img src={player.imageUrl} className="w-full h-full object-cover" /> : <UsersIcon className="text-gray-200" />}
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-black text-gray-900 dark:text-white uppercase tracking-tight text-sm leading-tight">{player.name}</h4>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
-                          {team?.name || 'Unknown Team'} • {player.position}
-                        </p>
+                        <h4 className="font-black text-gray-900 dark:text-white uppercase tracking-tight text-sm leading-tight flex items-center gap-2">
+                          {player.name}
+                          {player.fantasyPoints && player.fantasyPoints > 10 && (
+                            <ZapIcon size={12} className="text-yellow-500 fill-yellow-500" />
+                          )}
+                        </h4>
+                        <div className="flex items-center gap-2 mt-0.5">
+                           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                             {team?.name || 'Unknown Team'} • {player.position}
+                           </p>
+                           {(player.goals || player.assists) && (
+                             <>
+                               <div className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-700" />
+                               <p className="text-[10px] text-orange-500 font-black uppercase tracking-widest">
+                                 {player.goals || 0}G {player.assists || 0}A
+                               </p>
+                             </>
+                           )}
+                           <div className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-700" />
+                           <p className="text-[10px] text-blue-500 font-black uppercase tracking-widest">Form: 6.2</p>
+                        </div>
                       </div>
                       <div className="text-right flex items-center gap-4">
                         <div className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-full border border-blue-100 dark:border-blue-800">
@@ -636,6 +743,7 @@ interface FantasyPlayerSlotProps {
   onRemove?: (playerId: string) => void;
   onClick?: () => void;
   isSelected?: boolean;
+  activeTab?: string;
 }
 
 const FantasyPlayerSlot: React.FC<FantasyPlayerSlotProps> = ({ 
@@ -647,7 +755,8 @@ const FantasyPlayerSlot: React.FC<FantasyPlayerSlotProps> = ({
   isBench,
   onRemove,
   onClick,
-  isSelected
+  isSelected,
+  activeTab
 }) => {
   const team = player ? teams.find(t => t.id === player.teamId) : null;
   const fixture = "BOU (H)"; // Mocked fixture
@@ -720,15 +829,25 @@ const FantasyPlayerSlot: React.FC<FantasyPlayerSlotProps> = ({
       </div>
       
       {player && (
-        <div className="flex flex-col items-center w-full">
+        <div className="flex flex-col items-center w-full relative z-10">
+          {/* Points Bubble if in points mode */}
+          {activeTab === 'points' && (
+             <motion.div 
+               initial={{ scale: 0, opacity: 0 }}
+               animate={{ scale: 1, opacity: 1 }}
+               className="absolute -top-14 bg-white dark:bg-gray-800 text-[#37003c] dark:text-blue-400 px-3 py-1 rounded-xl text-[10px] font-black border border-white/20 shadow-2xl z-30"
+             >
+                {Math.floor(Math.random() * 12)} Pts
+             </motion.div>
+          )}
           {/* Name Box */}
-          <div className="bg-[#37003c] text-white w-full py-0.5 px-1 rounded-sm text-center shadow-md">
+          <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white w-full py-1 px-1 rounded-lg text-center shadow-lg border border-gray-100 dark:border-white/10">
             <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-tight truncate block">
               {player.name.split(' ').pop()}
             </span>
           </div>
           {/* Fixture Box */}
-          <div className="bg-[#0288d1] text-white w-full py-0.5 px-1 rounded-sm text-center shadow-sm mt-0.5">
+          <div className="bg-[#37003c] text-white/80 w-full py-0.5 px-1 rounded-sm text-center shadow-md mt-0.5 border border-white/5">
             <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-tighter block">
               {fixture}
             </span>

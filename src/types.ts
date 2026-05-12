@@ -69,6 +69,9 @@ export interface Player {
   recentRatings?: number[];
   price?: number;
   fantasyPoints?: number;
+  goals?: number;
+  assists?: number;
+  cleanSheets?: number;
 }
 
 export interface Venue {
