@@ -128,6 +128,7 @@ export interface Game {
     commentator?: string;
     isImportant?: boolean;
   }[];
+  posterUrl?: string;
 }
 
 export interface AppNotification {

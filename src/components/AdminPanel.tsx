@@ -15,6 +15,7 @@ import {
   Globe as GlobeIcon,
   MapPin as MapPinIcon,
   Image as LucideImage,
+  ImageIcon,
   Shield as ShieldIcon,
   Lock as LockIcon,
   Zap as ZapIcon,
@@ -24,12 +25,15 @@ import {
   ClipboardPaste as PasteIcon,
   Search as SearchIcon,
   Settings as SettingsIcon,
-  Star as StarIcon
+  Star as StarIcon,
+  Loader2 as Loader2Icon,
+  Sparkles as SparklesIcon
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { Competition, League, Team, Game, Venue, Player, MatchEvent, Administrator, Transfer } from '../types';
 import { cn } from '../lib/utils';
+import { GoogleGenAI } from "@google/genai";
 
 interface AdminPanelProps {
   leagues: League[];
@@ -56,6 +60,11 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
   const [editingId, setEditingId] = useState<string | null>(defaultPlayerId || null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [copiedTeamData, setCopiedTeamData] = useState<any>(null);
+  
+  // Poster Generation States
+  const [showPosterModal, setShowPosterModal] = useState<Game | null>(null);
+  const [generatingPoster, setGeneratingPoster] = useState(false);
+  const [generatedPosterUrl, setGeneratedPosterUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (defaultPlayerId) {
@@ -834,6 +843,69 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `games/${gameId}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGeneratePoster = async (game: Game) => {
+    setGeneratingPoster(true);
+    setGeneratedPosterUrl(null);
+    setShowPosterModal(game);
+
+    try {
+      const homeTeam = teams.find(t => t.id === game.homeTeamId);
+      const awayTeam = teams.find(t => t.id === game.awayTeamId);
+      const venue = venues.find(v => v.id === game.venueId);
+      const league = leagues.find(l => l.id === game.leagueId);
+
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const prompt = `A cinematic, high-energy football (soccer) match day poster for ${homeTeam?.name} vs ${awayTeam?.name}. 
+      Competition: ${league?.name}. 
+      Venue: ${venue?.name || 'Grand Stadium'}. 
+      Date: ${new Date(game.date).toLocaleDateString()}. 
+      Style: Modern sports graphic design, vibrant colors, stadium lighting, architectural and dynamic composition. 
+      Include logos of the teams if possible (abstractly represented). 
+      Dramatic atmosphere, hyper-realistic details. No text preferred, focus on imagery.`;
+
+      const result = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: [{ text: prompt }],
+        config: {
+          imageConfig: {
+            aspectRatio: "3:4"
+          }
+        }
+      });
+
+      const part = result.candidates[0].content.parts.find(p => p.inlineData);
+      if (part?.inlineData) {
+        const url = `data:image/png;base64,${part.inlineData.data}`;
+        setGeneratedPosterUrl(url);
+      } else {
+        throw new Error('Failed to generate image data');
+      }
+    } catch (error) {
+      console.error('Poster generation error:', error);
+      setSuccessMessage('Failed to generate poster. Please try again.');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } finally {
+      setGeneratingPoster(false);
+    }
+  };
+
+  const saveGeneratedPoster = async () => {
+    if (!showPosterModal || !generatedPosterUrl) return;
+    setLoading(true);
+    try {
+      await updateDoc(doc(db, 'games', showPosterModal.id), {
+        posterUrl: generatedPosterUrl
+      });
+      setSuccessMessage('Match poster saved successfully');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      setShowPosterModal(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `games/${showPosterModal.id}`);
     } finally {
       setLoading(false);
     }
@@ -2085,6 +2157,13 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                       <RotateCcwIcon size={20} />
                     </button>
                     <button 
+                      onClick={() => handleGeneratePoster(g)} 
+                      className="p-3 text-purple-500 bg-purple-50 rounded-2xl hover:bg-purple-100 transition-all opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100"
+                      title="Create Match Poster"
+                    >
+                      <ImageIcon size={20} />
+                    </button>
+                    <button 
                       onClick={() => startEditingGame(g)} 
                       className="p-3 text-blue-500 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-all opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100"
                       title="Edit Game"
@@ -2159,6 +2238,85 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                 </div>
               </div>
             </AdminCard>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Poster Modal */}
+      <AnimatePresence>
+        {showPosterModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+            onClick={() => !generatingPoster && setShowPosterModal(null)}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-[40px] w-full max-w-lg overflow-hidden shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="p-8 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-2xl font-black text-gray-900">Match Poster</h3>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">AI Generated Visual</p>
+                  </div>
+                  <button onClick={() => setShowPosterModal(null)} className="p-3 text-gray-400 hover:text-gray-900 hover:bg-gray-50 rounded-2xl transition-all">
+                    <XIcon size={24} />
+                  </button>
+                </div>
+
+                <div className="aspect-[3/4] rounded-[32px] bg-gray-50 border-2 border-dashed border-gray-100 flex items-center justify-center overflow-hidden relative">
+                  {generatingPoster ? (
+                    <div className="flex flex-col items-center gap-4 text-center p-8">
+                      <div className="relative">
+                        <div className="w-16 h-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
+                        <SparklesIcon className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-600 animate-pulse" size={24} />
+                      </div>
+                      <div>
+                        <p className="font-black text-gray-900">Generating Masterpiece...</p>
+                        <p className="text-xs text-gray-500 mt-1">Our AI is drafting a high-quality match poster for {teams.find(t => t.id === showPosterModal.homeTeamId)?.name} vs {teams.find(t => t.id === showPosterModal.awayTeamId)?.name}</p>
+                      </div>
+                    </div>
+                  ) : generatedPosterUrl ? (
+                    <img 
+                      src={generatedPosterUrl} 
+                      alt="Match Poster" 
+                      className="w-full h-full object-cover animate-in fade-in zoom-in duration-700" 
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="text-center p-8">
+                      <ImageIcon size={48} className="text-gray-200 mx-auto mb-4" />
+                      <p className="text-gray-400 font-bold">Failed to generate preview</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => handleGeneratePoster(showPosterModal)} 
+                    disabled={generatingPoster}
+                    className="flex-1 h-14 bg-gray-100 text-gray-600 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-gray-200 transition-all disabled:opacity-50"
+                  >
+                    <RotateCcwIcon size={20} />
+                    Regenerate
+                  </button>
+                  <button 
+                    onClick={saveGeneratedPoster}
+                    disabled={generatingPoster || !generatedPosterUrl || loading}
+                    className="flex-[2] h-14 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all disabled:opacity-50"
+                  >
+                    {loading ? <Loader2Icon className="animate-spin" size={20} /> : <SaveIcon size={20} />}
+                    Save to Match
+                  </button>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

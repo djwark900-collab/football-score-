@@ -128,24 +128,24 @@ function PodiumItem({ user, rank, color }: { user?: LeaderboardUser; rank: numbe
    const getStyles = () => {
       switch (color) {
          case 'gold': return { 
-            card: "bg-gradient-to-b from-yellow-50 to-white dark:from-yellow-900/20 dark:to-gray-950 border-yellow-200 dark:border-yellow-900/50 h-64",
+            card: "bg-gradient-to-b from-yellow-100 to-white dark:from-yellow-900/40 dark:to-gray-950 border-yellow-400 dark:border-yellow-900/50 h-64 shadow-yellow-200/50",
             icon: "text-yellow-600 shadow-yellow-100 dark:shadow-yellow-900/20",
-            avatar: "border-yellow-400 shadow-yellow-200/50",
+            avatar: "border-yellow-500 shadow-yellow-300/50",
             badge: "bg-yellow-500",
             y: -20
          };
          case 'silver': return { 
-            card: "bg-gradient-to-b from-slate-50 to-white dark:from-slate-900/20 dark:to-gray-950 border-slate-200 dark:border-slate-800/50 h-52 mt-12",
+            card: "bg-gradient-to-b from-slate-200 to-white dark:from-slate-800/40 dark:to-gray-950 border-slate-400 dark:border-slate-700/50 h-52 mt-12 shadow-slate-200/50",
             icon: "text-slate-500 shadow-slate-100 dark:shadow-slate-900/20",
-            avatar: "border-slate-300 shadow-slate-200/50",
+            avatar: "border-slate-400 shadow-slate-300/50",
             badge: "bg-slate-400",
             y: 0
          };
          case 'bronze': return { 
-            card: "bg-gradient-to-b from-orange-50 to-white dark:from-orange-900/20 dark:to-gray-950 border-orange-200 dark:border-orange-900/50 h-40 mt-24",
+            card: "bg-gradient-to-b from-orange-200 to-white dark:from-orange-900/40 dark:to-gray-950 border-orange-400 dark:border-orange-900/50 h-40 mt-24 shadow-orange-200/50",
             icon: "text-orange-600 shadow-orange-100 dark:shadow-orange-900/20",
-            avatar: "border-orange-400 shadow-orange-200/50",
-            badge: "bg-orange-500",
+            avatar: "border-orange-500 shadow-orange-300/50",
+            badge: "bg-orange-600",
             y: 0
          };
       }

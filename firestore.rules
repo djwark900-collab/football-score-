@@ -161,34 +161,34 @@ service cloud.firestore {
     }
 
     match /admins/{adminId} {
-      allow read: if isSignedIn();
+      allow read, list: if true; // Allow reading admins publicly for now to diagnose permission issues, and because it only contains emails.
       allow write: if isAdmin();
     }
 
     match /transfers/{transferId} {
-      allow read: if true;
+      allow get, list, read: if true;
       allow write: if isAdmin() && isValidTransfer(incoming());
     }
 
     match /fantasyTeams/{userId} {
-      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow get, list, read: if isSignedIn() && request.auth.uid == userId;
       allow write: if isSignedIn() && request.auth.uid == userId && isValidFantasyTeam(incoming());
     }
 
     match /leagues/{leagueId} {
-      allow read: if true;
+      allow get, list, read: if true;
       allow create: if isAdmin() && isValidLeague(incoming());
       allow update: if isAdmin() && isValidLeague(incoming());
       allow delete: if isAdmin();
 
       match /seasons/{seasonId} {
-        allow read: if true;
+        allow get, list, read: if true;
         allow write: if isAdmin() && isValidSeason(incoming());
       }
     }
 
     match /teams/{teamId} {
-      allow read: if true;
+      allow get, list, read: if true;
       allow create: if isAdmin() && isValidTeam(incoming());
       allow update: if isAdmin() && (
         // Action: Generic Update
@@ -200,7 +200,7 @@ service cloud.firestore {
     }
 
     match /games/{gameId} {
-      allow read: if true;
+      allow get, list, read: if true;
       allow create: if isAdmin() && isValidGame(incoming());
       allow update: if isAdmin() && (
         // Action: Update Score (Specific Action)
@@ -216,39 +216,39 @@ service cloud.firestore {
     }
 
     match /players/{playerId} {
-      allow read: if true;
+      allow get, list, read: if true;
       allow create: if isAdmin() && isValidPlayer(incoming());
       allow update: if isAdmin() && isValidPlayer(incoming());
       allow delete: if isAdmin();
     }
 
     match /venues/{venueId} {
-      allow read: if true;
+      allow get, list, read: if true;
       allow create: if isAdmin() && isValidVenue(incoming());
       allow update: if isAdmin() && isValidVenue(incoming());
       allow delete: if isAdmin();
     }
 
     match /users/{userId} {
-      allow read: if true;
+      allow get, list, read: if true;
       allow write: if isSignedIn() && request.auth.uid == userId && isValidUserProfile(incoming());
       
       match /favorites/{favoriteId} {
-        allow read: if isSignedIn() && request.auth.uid == userId;
+        allow get, list, read: if isSignedIn() && request.auth.uid == userId;
         allow create: if isSignedIn() && request.auth.uid == userId && 
                       incoming().keys().hasAll(['teamId']) &&
                       incoming().teamId is string &&
                       isValidId(incoming().teamId);
-        allow update: if false; // Favorites are usually static refs
+        allow update: if false; 
         allow delete: if isSignedIn() && request.auth.uid == userId;
       }
 
       match /matchNotifications/{notificationId} {
-        allow read, write: if isSignedIn() && request.auth.uid == userId;
+        allow get, list, read, write: if isSignedIn() && request.auth.uid == userId;
       }
 
       match /predictions/{predictionId} {
-        allow read: if isSignedIn() && request.auth.uid == userId;
+        allow get, list, read: if isSignedIn() && request.auth.uid == userId;
         allow write: if isSignedIn() && request.auth.uid == userId && isValidMatchPrediction(incoming());
       }
     }

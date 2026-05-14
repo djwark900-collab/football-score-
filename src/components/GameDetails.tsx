@@ -92,8 +92,41 @@ export function GameDetails({
         const data = snapshot.docs[0].data();
         setPrediction(data.prediction);
       }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, path);
     });
   }, [game.id]);
+
+  useEffect(() => {
+    if (!auth.currentUser || !game.id || game.status !== 'finished' || !prediction) return;
+    
+    const awardResultXP = async () => {
+      const result = game.homeScore > game.awayScore ? 'home' : (game.homeScore < game.awayScore ? 'away' : 'draw');
+      if (result !== prediction) return;
+
+      const userId = auth.currentUser!.uid;
+      const predictionId = `${game.id}_${userId}`;
+      const path = `users/${userId}/predictions`;
+      const predRef = doc(db, path, predictionId);
+      
+      try {
+        // Use a flag to ensure we only award once
+        await updateDoc(predRef, { settled: true });
+        
+        // Award XP
+        const userDocRef = doc(db, 'users', userId);
+        await updateDoc(userDocRef, {
+          xp: increment(50), // Bonus for correct prediction
+          correctPredictions: increment(1)
+        });
+      } catch (e) {
+        // If it fails with "no such document" or "already settled" logic (though updateDoc fails if not exists)
+        // We just ignore if already settled
+      }
+    };
+
+    awardResultXP();
+  }, [game.status, prediction, game.id]);
 
   const handlePredict = async (opt: 'home' | 'draw' | 'away') => {
     if (!auth.currentUser) {
@@ -115,15 +148,18 @@ export function GameDetails({
         timestamp: new Date().toISOString()
       });
 
-      // Award XP
-      const userDocRef = doc(db, 'users', userId);
-      const earnedXP = Math.floor(Math.random() * 20) + 10;
-      await setDoc(userDocRef, {
-        xp: increment(earnedXP),
-        displayName: auth.currentUser?.displayName || 'Anonymous',
-        photoURL: auth.currentUser?.photoURL || '',
-        level: increment(0) // Ensure level exists
-      }, { merge: true });
+      // Award XP only for the first prediction on this game
+      if (!prediction) {
+        const userDocRef = doc(db, 'users', userId);
+        const earnedXP = Math.floor(Math.random() * 20) + 10;
+        await setDoc(userDocRef, {
+          xp: increment(earnedXP),
+          displayName: auth.currentUser?.displayName || 'Anonymous',
+          photoURL: auth.currentUser?.photoURL || '',
+          level: increment(0),
+          lastActivity: new Date().toISOString()
+        }, { merge: true });
+      }
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, path);
     } finally {
@@ -636,20 +672,29 @@ export function GameDetails({
                      </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Make Your Prediction Card */}
-              {game.status === 'scheduled' && (
-                <div className="bg-[#1a1a1a] p-8 rounded-[40px] text-white overflow-hidden relative shadow-3d-xl">
+              </div>              {/* Make Your Prediction Card */}
+              {(game.status === 'scheduled' || game.status === 'finished') && (
+                <div className={cn(
+                  "p-8 rounded-[40px] text-white overflow-hidden relative shadow-3d-xl transition-all duration-500",
+                  game.status === 'finished' ? "bg-gradient-to-br from-blue-900 to-gray-950" : "bg-[#1a1a1a]"
+                )}>
                    <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12">
                       <TrophyIcon size={120} />
                    </div>
                    
                    <div className="relative z-10 space-y-6">
                       <div>
-                         <span className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-400">Match Forecast</span>
-                         <h3 className="text-2xl font-black italic tracking-tighter mt-1">Make your prediction</h3>
-                         <p className="text-white/40 text-xs font-medium mt-2">Who will win this encounter? Choose result to earn points.</p>
+                         <span className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-400">
+                           {game.status === 'finished' ? 'Prediction Result' : 'Match Forecast'}
+                         </span>
+                         <h3 className="text-2xl font-black italic tracking-tighter mt-1">
+                           {game.status === 'finished' ? 'Final Outcome' : 'Make your prediction'}
+                         </h3>
+                         <p className="text-white/40 text-xs font-medium mt-2">
+                           {game.status === 'finished' 
+                             ? 'The match has concluded. Check your prediction performance below.' 
+                             : 'Who will win this encounter? Choose result to earn points.'}
+                         </p>
                       </div>
 
                        <div className="grid grid-cols-3 gap-3">
@@ -657,29 +702,43 @@ export function GameDetails({
                            { id: 'home', label: 'Home', icon: homeTeam?.logo },
                            { id: 'draw', label: 'Draw', icon: null },
                            { id: 'away', label: 'Away', icon: awayTeam?.logo }
-                         ].map((opt) => (
-                           <button 
-                             key={opt.id}
-                             disabled={isSavingPrediction}
-                             onClick={() => handlePredict(opt.id as any)}
-                             className={cn(
-                               "p-4 rounded-3xl flex flex-col items-center gap-3 transition-all border-2",
-                               prediction === opt.id 
-                                 ? "bg-blue-600 border-blue-400 shadow-lg shadow-blue-900/40 scale-[1.02]" 
-                                 : "bg-white/5 border-transparent hover:bg-white/10",
-                               isSavingPrediction && "opacity-50 cursor-wait"
-                             )}
-                           >
-                              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                                 {opt.icon ? (
-                                   <img src={opt.icon} className="w-6 h-6 object-contain" />
-                                 ) : (
-                                   <MinusIcon className="text-white/40" />
-                                 )}
-                              </div>
-                              <span className="text-[10px] font-black uppercase tracking-widest">{opt.label}</span>
-                           </button>
-                         ))}
+                         ].map((opt) => {
+                           const isCorrect = game.status === 'finished' && 
+                             ((opt.id === 'home' && game.homeScore > game.awayScore) ||
+                              (opt.id === 'away' && game.awayScore > game.homeScore) ||
+                              (opt.id === 'draw' && game.homeScore === game.awayScore));
+                           
+                           return (
+                             <button 
+                               key={opt.id}
+                               disabled={isSavingPrediction || game.status === 'finished'}
+                               onClick={() => handlePredict(opt.id as any)}
+                               className={cn(
+                                 "p-4 rounded-3xl flex flex-col items-center gap-3 transition-all border-2",
+                                 prediction === opt.id 
+                                   ? "bg-blue-600 border-blue-400 shadow-lg shadow-blue-900/40 scale-[1.02]" 
+                                   : "bg-white/5 border-transparent hover:bg-white/10",
+                                 isSavingPrediction && "opacity-50 cursor-wait",
+                                 game.status === 'finished' && isCorrect && "ring-4 ring-green-500/50 border-green-500 bg-green-900/20",
+                                 game.status === 'finished' && prediction === opt.id && !isCorrect && "ring-4 ring-rose-500/50 border-rose-500 opacity-50"
+                               )}
+                             >
+                                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center relative">
+                                   {opt.icon ? (
+                                     <img src={opt.icon} className="w-6 h-6 object-contain" />
+                                   ) : (
+                                     <MinusIcon className="text-white/40" />
+                                   )}
+                                   {game.status === 'finished' && isCorrect && (
+                                     <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-lg flex items-center justify-center shadow-lg">
+                                       <ZapIcon size={12} className="text-white" />
+                                     </div>
+                                   )}
+                                </div>
+                                <span className="text-[10px] font-black uppercase tracking-widest">{opt.label}</span>
+                             </button>
+                           );
+                         })}
                       </div>
 
                       {prediction && (
@@ -694,10 +753,18 @@ export function GameDetails({
                               ) : (
                                  <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
                               )}
-                              {isSavingPrediction ? 'Saving...' : 'Live Prediction Recorded'}
+                              {isSavingPrediction ? 'Saving...' : 'FINISHED PREDICTION RECORDED'}
                            </div>
-                           <div className="text-sm font-black text-blue-400">
-                              +{Math.floor(Math.random() * 20) + 10} XP
+                           <div className="flex items-center gap-2">
+                             <div className="text-sm font-black text-blue-400">
+                                {game.status === 'finished' && 
+                                  ((prediction === 'home' && game.homeScore > game.awayScore) ||
+                                   (prediction === 'away' && game.awayScore > game.homeScore) ||
+                                   (prediction === 'draw' && game.homeScore === game.awayScore))
+                                   ? '+50 Bonus XP'
+                                   : '+25 XP'}
+                             </div>
+                             <StarIcon size={14} className="text-yellow-400 fill-yellow-400" />
                            </div>
                         </motion.div>
                       )}

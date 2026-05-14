@@ -32,6 +32,7 @@ import {
   onSnapshot, 
   addDoc, 
   updateDoc, 
+  setDoc,
   doc, 
   query, 
   where,
@@ -314,7 +315,7 @@ export default function App() {
     const q = collection(db, path);
     return onSnapshot(q, (snapshot) => {
       setFollowedGames(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as { id: string; gameId: string })));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, path));
+    }, (error) => handleError(error, OperationType.LIST, path));
   }, [user]);
 
   const toggleMatchFollow = async (gameId: string) => {
@@ -334,7 +335,7 @@ export default function App() {
         await addDoc(collection(db, path), { gameId });
       }
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, path);
+      handleError(error, OperationType.WRITE, path);
     }
   };
 
@@ -348,7 +349,7 @@ export default function App() {
     const q = collection(db, path);
     return onSnapshot(q, (snapshot) => {
       setFavorites(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as { id: string; teamId: string })));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, path));
+    }, (error) => handleError(error, OperationType.LIST, path));
   }, [user]);
 
   const toggleFavorite = async (teamId: string) => {
@@ -368,7 +369,7 @@ export default function App() {
         await addDoc(collection(db, path), { teamId });
       }
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, path);
+      handleError(error, OperationType.WRITE, path);
     }
   };
 
@@ -377,7 +378,8 @@ export default function App() {
     const isQuota = errorMsg.includes('Quota limit exceeded') || errorMsg.includes('Quota exceeded');
     const isConnectivityIssue = errorMsg.includes('Could not reach Cloud Firestore backend') || 
                                 errorMsg.includes('client is offline') || 
-                                errorMsg.includes('unavailable');
+                                errorMsg.includes('unavailable') ||
+                                errorMsg.includes('network');
 
     if (isConnectivityIssue) {
       setIsOffline(true);
@@ -388,11 +390,13 @@ export default function App() {
         setQuotaExceeded(true);
       }
     }
-    // We log it but avoid throwing if it's a quota error we've already acknowledged to prevent app crashes
+    
     try {
       handleFirestoreError(error, operation, path);
     } catch (e) {
-      console.warn("Firestore error suppressed in UI:", e);
+      // Catch the error thrown by handleFirestoreError to prevent it from bubbling up 
+      // and causing "Uncaught Error in snapshot listener"
+      console.warn(`Firestore ${operation} error at ${path}:`, errorMsg);
     }
   };
 
@@ -1475,6 +1479,18 @@ export default function App() {
                             />
                           </div>
                         </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Profile Photo URL</label>
+                          <div className="relative">
+                            <input 
+                              id="profile-photo-input"
+                              type="text" 
+                              defaultValue={user.photoURL || ''}
+                              className="w-full h-14 px-6 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-3xl font-bold text-sm focus:ring-2 focus:ring-blue-600 transition-all dark:text-white shadow-sm"
+                              placeholder="https://example.com/photo.jpg"
+                            />
+                          </div>
+                        </div>
                         <div className="space-y-2 opacity-60">
                           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Email Address</label>
                           <div className="w-full h-14 px-6 bg-gray-50 dark:bg-gray-800 rounded-3xl font-bold text-sm flex items-center text-gray-500 border border-gray-100 dark:border-gray-700">
@@ -1486,20 +1502,30 @@ export default function App() {
                       <button 
                         onClick={async () => {
                           const nameInput = document.getElementById('profile-name-input') as HTMLInputElement;
+                          const photoInput = document.getElementById('profile-photo-input') as HTMLInputElement;
                           const newName = nameInput.value;
-                          const originalName = user.displayName || '';
+                          const newPhoto = photoInput.value;
                           
-                          if (newName === originalName) {
-                            return;
-                          }
-
                           try {
                             const btn = document.getElementById('save-profile-btn');
                             if (btn) {
                               btn.innerHTML = 'Saving...';
                               btn.classList.add('opacity-50');
                             }
-                            await updateProfile(user, { displayName: newName });
+                            
+                            // Update Auth Profile
+                            await updateProfile(user, { 
+                              displayName: newName,
+                              photoURL: newPhoto 
+                            });
+
+                            // Sync to Global Leaderboard Firestore
+                            await setDoc(doc(db, 'users', user.uid), {
+                              displayName: newName,
+                              photoURL: newPhoto,
+                              updatedAt: new Date().toISOString()
+                            }, { merge: true });
+
                             if (btn) {
                               btn.innerHTML = 'Saved!';
                               setTimeout(() => {
@@ -1508,7 +1534,7 @@ export default function App() {
                               }, 2000);
                             }
                           } catch (err) {
-                            alert("Failed to update name");
+                            alert("Failed to update profile");
                             const btn = document.getElementById('save-profile-btn');
                             if (btn) {
                               btn.innerHTML = 'Save Changes';
