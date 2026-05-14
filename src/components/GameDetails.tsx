@@ -19,11 +19,14 @@ import {
   Star as StarIcon,
   Camera as CameraIcon,
   Mic2 as MicIcon,
-  Lock as LockIcon
+  Lock as LockIcon,
+  X as XIcon,
+  Trophy as TrophyIcon,
+  User as UserIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { doc, updateDoc, setDoc, collection, onSnapshot, query, where } from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType, auth } from '../firebase';
 import { Standings } from './Standings';
 import { GameCard } from './GameCard';
 
@@ -73,6 +76,50 @@ export function GameDetails({
   const [timeLeft, setTimeLeft] = useState<{ d: string; h: string; m: string; s: string } | string | null>(null);
   const [selectedEventPlayer, setSelectedEventPlayer] = useState<string | null>(null);
   const [selectedPlayerOut, setSelectedPlayerOut] = useState<string | null>(null);
+  const [prediction, setPrediction] = useState<'home' | 'draw' | 'away' | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<MatchEvent | null>(null);
+  const [fullScreenStadium, setFullScreenStadium] = useState(false);
+  const [isSavingPrediction, setIsSavingPrediction] = useState(false);
+
+  useEffect(() => {
+    if (!auth.currentUser || !game.id) return;
+    
+    // Check if user already predicted
+    const path = `users/${auth.currentUser.uid}/predictions`;
+    const q = query(collection(db, path), where('gameId', '==', game.id));
+    return onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const data = snapshot.docs[0].data();
+        setPrediction(data.prediction);
+      }
+    });
+  }, [game.id]);
+
+  const handlePredict = async (opt: 'home' | 'draw' | 'away') => {
+    if (!auth.currentUser) {
+      alert("Please sign in to make a prediction");
+      return;
+    }
+
+    setPrediction(opt);
+    setIsSavingPrediction(true);
+    const userId = auth.currentUser.uid;
+    const path = `users/${userId}/predictions`;
+    const predictionId = `${game.id}_${userId}`; // One prediction per user per game
+
+    try {
+      await setDoc(doc(db, path, predictionId), {
+        gameId: game.id,
+        userId: userId,
+        prediction: opt,
+        timestamp: new Date().toISOString()
+      });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, path);
+    } finally {
+      setIsSavingPrediction(false);
+    }
+  };
 
   useEffect(() => {
     if (game.status !== 'scheduled') {
@@ -236,9 +283,16 @@ export function GameDetails({
             <ChevronLeftIcon size={20} className="text-white" />
           </button>
           <div className="flex flex-col items-center">
-            <span className="text-[9px] font-black text-white/50 uppercase tracking-[0.3em] mb-1">
-              {league?.name || 'Match Details'}
-            </span>
+            <div className="flex items-center gap-2 mb-1">
+              {[league, leagues.find(l => l.id === game.leagueId2)].filter(Boolean).map((l, idx) => (
+                <div key={l?.id || idx} className="contents">
+                  {idx > 0 && <span className="text-white/20 font-black">•</span>}
+                  <span className="text-[9px] font-black text-white/50 uppercase tracking-[0.3em] hover:text-white transition-colors cursor-pointer" onClick={() => l && onLeagueClick?.(l.id)}>
+                    {l?.name}
+                  </span>
+                </div>
+              ))}
+            </div>
             <div className="w-8 h-0.5 bg-blue-500 rounded-full" />
           </div>
           <div className="flex items-center gap-2">
@@ -490,8 +544,9 @@ export function GameDetails({
             >
               {/* Match Events Card */}
               <div className="bg-white dark:bg-gray-900 rounded-[32px] overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800">
-                <div className="px-6 py-4 border-b border-gray-50 dark:border-gray-800/50">
+                <div className="px-6 py-4 border-b border-gray-50 dark:border-gray-800/50 flex justify-between items-center">
                   <h4 className="text-[13px] font-bold text-gray-900 dark:text-white">Match Events</h4>
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Tap for details</span>
                 </div>
                 
                 <div className="flex border-b border-gray-50 dark:border-gray-800/50">
@@ -511,12 +566,17 @@ export function GameDetails({
                         const pOut = event.playerOutId ? players.find(p => p.id === event.playerOutId) : null;
 
                         return (
-                          <div key={event.id || idx} className={cn(
-                            "flex items-center gap-4",
-                            isHome ? "flex-row" : "flex-row-reverse"
-                          )}>
+                          <motion.div 
+                            key={event.id || idx} 
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => setSelectedEvent(event)}
+                            className={cn(
+                              "flex items-center gap-4 cursor-pointer group",
+                              isHome ? "flex-row" : "flex-row-reverse"
+                            )}
+                          >
                             <div className={cn("flex-1", isHome ? "text-right" : "text-left")}>
-                              <div className="flex flex-col">
+                              <div className="flex flex-col group-hover:translate-x-1 transition-transform">
                                 {event.type === 'sub' ? (
                                   <>
                                     <div className="flex items-center gap-1 text-[13px] font-bold text-green-600" style={{ justifyContent: isHome ? 'flex-end' : 'flex-start' }}>
@@ -528,7 +588,7 @@ export function GameDetails({
                                   </>
                                 ) : (
                                   <div className="flex items-center gap-2" style={{ justifyContent: isHome ? 'flex-end' : 'flex-start' }}>
-                                    <span className="text-[13px] font-bold text-gray-900 dark:text-white">{eventPlayer?.name}</span>
+                                    <span className="text-[13px] font-bold text-gray-900 dark:text-white group-hover:text-blue-600">{eventPlayer?.name}</span>
                                     <div className={cn(
                                       "w-4 h-4 flex items-center justify-center",
                                       event.type === 'yellow' && "bg-yellow-400 rounded-sm",
@@ -543,13 +603,13 @@ export function GameDetails({
                             </div>
 
                             <div className="w-10 flex flex-col items-center shrink-0">
-                               <div className="bg-white dark:bg-gray-900 px-2 py-1 rounded-lg border border-gray-100 dark:border-gray-800 text-[11px] font-black tabular-nums shadow-sm">
+                               <div className="bg-white dark:bg-gray-900 px-2 py-1 rounded-lg border border-gray-100 dark:border-gray-800 text-[11px] font-black tabular-nums shadow-sm group-hover:border-blue-500 group-hover:text-blue-600 transition-all">
                                 {event.minute}'
                                </div>
                             </div>
 
                             <div className="flex-1" />
-                          </div>
+                          </motion.div>
                         );
                       })
                     ) : (
@@ -567,6 +627,147 @@ export function GameDetails({
                   </div>
                 </div>
               </div>
+
+              {/* Make Your Prediction Card */}
+              <div className="bg-[#1a1a1a] p-8 rounded-[40px] text-white overflow-hidden relative shadow-3d-xl">
+                 <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12">
+                    <TrophyIcon size={120} />
+                 </div>
+                 
+                 <div className="relative z-10 space-y-6">
+                    <div>
+                       <span className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-400">Match Forecast</span>
+                       <h3 className="text-2xl font-black italic tracking-tighter mt-1">Make your prediction</h3>
+                       <p className="text-white/40 text-xs font-medium mt-2">Who will win this encounter? Choose result to earn points.</p>
+                    </div>
+
+                     <div className="grid grid-cols-3 gap-3">
+                       {[
+                         { id: 'home', label: 'Home', icon: homeTeam?.logo },
+                         { id: 'draw', label: 'Draw', icon: null },
+                         { id: 'away', label: 'Away', icon: awayTeam?.logo }
+                       ].map((opt) => (
+                         <button 
+                           key={opt.id}
+                           disabled={isSavingPrediction}
+                           onClick={() => handlePredict(opt.id as any)}
+                           className={cn(
+                             "p-4 rounded-3xl flex flex-col items-center gap-3 transition-all border-2",
+                             prediction === opt.id 
+                               ? "bg-blue-600 border-blue-400 shadow-lg shadow-blue-900/40 scale-[1.02]" 
+                               : "bg-white/5 border-transparent hover:bg-white/10",
+                             isSavingPrediction && "opacity-50 cursor-wait"
+                           )}
+                         >
+                            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                               {opt.icon ? (
+                                 <img src={opt.icon} className="w-6 h-6 object-contain" />
+                               ) : (
+                                 <MinusIcon className="text-white/40" />
+                               )}
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-widest">{opt.label}</span>
+                         </button>
+                       ))}
+                    </div>
+
+                    {prediction && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-between"
+                      >
+                         <div className="flex items-center gap-3 text-xs font-bold text-white/50 uppercase tracking-widest">
+                            {isSavingPrediction ? (
+                               <RefreshCwIcon className="animate-spin text-blue-400" size={14} />
+                            ) : (
+                               <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
+                            )}
+                            {isSavingPrediction ? 'Saving...' : 'Live Prediction Recorded'}
+                         </div>
+                         <div className="text-sm font-black text-blue-400">
+                            +{Math.floor(Math.random() * 20) + 10} XP
+                         </div>
+                      </motion.div>
+                    )}
+                 </div>
+              </div>
+
+              {/* Event Details Modal */}
+              <AnimatePresence>
+                {selectedEvent && (
+                  <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      onClick={() => setSelectedEvent(null)}
+                      className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                    />
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.9, y: 40 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.9, y: 40 }}
+                      className="relative w-full max-w-sm bg-white dark:bg-gray-900 rounded-[48px] shadow-3d-xl border border-white/10 overflow-hidden"
+                    >
+                       <div className="bg-blue-600 p-8 text-center text-white space-y-2">
+                          <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60">Match Incident</span>
+                          <h3 className="text-3xl font-black italic tracking-tighter uppercase">{selectedEvent.type}</h3>
+                          <div className="flex justify-center mt-4">
+                             <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 flex items-center gap-3">
+                                <ClockIcon size={16} />
+                                <span className="font-black tabular-nums">{selectedEvent.minute}' Minute</span>
+                             </div>
+                          </div>
+                       </div>
+
+                       <div className="p-10 space-y-8">
+                          <div className="flex flex-col items-center gap-4">
+                             <div className="w-24 h-24 rounded-[32px] bg-gray-50 dark:bg-gray-800 p-1 border border-gray-100 dark:border-gray-700 shadow-3d-lg overflow-hidden">
+                                {players.find(p => p.id === (selectedEvent.type === 'sub' ? selectedEvent.playerInId : selectedEvent.playerId))?.imageUrl ? (
+                                  <img 
+                                    src={players.find(p => p.id === (selectedEvent.type === 'sub' ? selectedEvent.playerInId : selectedEvent.playerId))?.imageUrl} 
+                                    className="w-full h-full object-cover rounded-[28px]" 
+                                    alt="" 
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-blue-600 text-white rounded-[28px]">
+                                    <UserIcon size={40} />
+                                  </div>
+                                )}
+                             </div>
+                             <div className="text-center">
+                                <p className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">
+                                  {players.find(p => p.id === (selectedEvent.type === 'sub' ? selectedEvent.playerInId : selectedEvent.playerId))?.name}
+                                </p>
+                                <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mt-1">
+                                  {teams.find(t => t.id === selectedEvent.teamId)?.name}
+                                </p>
+                             </div>
+                          </div>
+
+                          <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 space-y-4">
+                             <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Type</span>
+                                <span className="text-xs font-black uppercase text-gray-900 dark:text-white">{selectedEvent.type}</span>
+                             </div>
+                             <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Score After</span>
+                                <span className="text-xs font-black uppercase text-gray-900 dark:text-white">{game.homeScore} - {game.awayScore}</span>
+                             </div>
+                          </div>
+
+                          <button 
+                            onClick={() => setSelectedEvent(null)}
+                            className="w-full py-5 bg-gray-900 text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-3d-lg hover:bg-black transition-all"
+                          >
+                            Dismiss Report
+                          </button>
+                       </div>
+                    </motion.div>
+                  </div>
+                )}
+              </AnimatePresence>
 
               {/* To Score at Any Time Poll - UI Soml Refinement */}
               <div className="bg-white dark:bg-gray-900 rounded-[32px] overflow-hidden shadow-3d-sm border border-gray-100 dark:border-gray-800 p-6 space-y-6">
@@ -677,13 +878,57 @@ export function GameDetails({
                 </div>
               </div>
               {lineupView === 'field' ? (
-                <StadiumLineup 
-                  game={game} 
-                  homeTeam={homeTeam} 
-                  awayTeam={awayTeam} 
-                  players={players}
-                  onPlayerClick={onPlayerClick}
-                />
+                <div className="relative group">
+                   <StadiumLineup 
+                    game={game} 
+                    homeTeam={homeTeam} 
+                    awayTeam={awayTeam} 
+                    players={players}
+                    onPlayerClick={onPlayerClick}
+                  />
+                  <button 
+                    onClick={() => setFullScreenStadium(true)}
+                    className="absolute top-4 right-4 p-3 bg-white/20 backdrop-blur-md rounded-2xl border border-white/20 text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-white/30"
+                  >
+                    <PlusIcon size={20} />
+                  </button>
+
+                  <AnimatePresence>
+                    {fullScreenStadium && (
+                      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-950 p-6 sm:p-12 overflow-hidden">
+                         <motion.div 
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          className="relative w-full h-full max-w-4xl flex flex-col gap-6"
+                         >
+                            <div className="flex justify-between items-center text-white">
+                               <div>
+                                  <h3 className="text-2xl font-black italic tracking-tighter uppercase">Tactical View</h3>
+                                  <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">{homeTeam?.name} vs {awayTeam?.name}</p>
+                               </div>
+                               <button 
+                                onClick={() => setFullScreenStadium(false)}
+                                className="w-12 h-12 flex items-center justify-center bg-white/10 rounded-2xl border border-white/10 hover:bg-white/20 transition-all"
+                               >
+                                  <XIcon size={24} />
+                               </button>
+                            </div>
+                            <div className="flex-1 min-h-0 bg-white/10 rounded-[48px] p-2 border border-white/10 shadow-2xl relative">
+                               <StadiumLineup 
+                                  game={game} 
+                                  homeTeam={homeTeam} 
+                                  awayTeam={awayTeam} 
+                                  players={players}
+                                  onPlayerClick={onPlayerClick}
+                                  fullScreen
+                               />
+                            </div>
+                         </motion.div>
+                      </div>
+                    )}
+                  </AnimatePresence>
+                </div>
               ) : (
                 <div className="space-y-8">
                   {/* Stadium Info */}
@@ -803,6 +1048,7 @@ export function GameDetails({
                 teams={leagueTeams}
                 games={leagueGames}
                 onTeamClick={onTeamClick}
+                onGameClick={onGameClick}
               />
             </motion.div>
           )}
@@ -995,6 +1241,7 @@ interface StadiumLineupProps {
   awayTeam?: Team;
   players: Player[];
   onPlayerClick?: (id: string) => void;
+  fullScreen?: boolean;
 }
 
 const FORMATION_HOME_433 = [
@@ -1011,7 +1258,7 @@ const FORMATION_AWAY_433 = [
   { x: 20, y: 45 }, { x: 50, y: 48 }, { x: 80, y: 45 }, // FWD
 ];
 
-function StadiumLineup({ game, homeTeam, awayTeam, players, onPlayerClick }: StadiumLineupProps) {
+function StadiumLineup({ game, homeTeam, awayTeam, players, onPlayerClick, fullScreen }: StadiumLineupProps) {
   if (!game.lineups || (!game.lineups.home.length && !game.lineups.away.length)) {
     return (
       <div className="py-20 text-center text-gray-400">
@@ -1022,21 +1269,19 @@ function StadiumLineup({ game, homeTeam, awayTeam, players, onPlayerClick }: Sta
   }
 
   return (
-    <div className="relative w-full aspect-[2/3] bg-emerald-600 rounded-[40px] overflow-hidden shadow-2xl border-4 border-white shadow-emerald-900/20">
+    <div className={cn(
+      "relative w-full bg-emerald-600 rounded-[40px] overflow-hidden shadow-2xl border-4 border-white mb-2",
+      fullScreen ? "h-full" : "aspect-[2/3]"
+    )}>
       {/* Field Markings */}
       <div className="absolute inset-4 border border-white/50 rounded-[32px] pointer-events-none">
         {/* Halfway Line */}
         <div className="absolute top-1/2 left-0 right-0 h-px bg-white/50" />
         {/* Center Circle */}
         <div className="absolute top-1/2 left-1/2 w-24 h-24 border border-white/50 rounded-full -translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute top-1/2 left-1/2 w-1 h-1 bg-white/50 rounded-full -translate-x-1/2 -translate-y-1/2" />
-        
         {/* Penalty Areas */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-[15%] border-b border-x border-white/50" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/4 h-[5%] border-b border-x border-white/50" />
-        
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-[15%] border-t border-x border-white/50" />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/4 h-[5%] border-t border-x border-white/50" />
       </div>
 
       {/* Players */}
@@ -1051,11 +1296,16 @@ function StadiumLineup({ game, homeTeam, awayTeam, players, onPlayerClick }: Sta
             onClick={() => onPlayerClick?.(pid)}
           >
             <div className="flex flex-col items-center gap-1">
-              <div className="w-8 h-8 rounded-full bg-blue-600 border-2 border-white shadow-lg flex items-center justify-center text-white text-[10px] font-black group-hover:scale-125 group-hover:bg-blue-700 transition-all">
+              <div className={cn(
+                "rounded-full bg-blue-600 border-2 border-white shadow-lg flex items-center justify-center text-white font-black group-hover:scale-125 group-hover:bg-blue-700 transition-all",
+                fullScreen ? "w-12 h-12 text-sm" : "w-8 h-8 text-[10px]"
+              )}>
                 {p?.number || idx + 1}
               </div>
               <div className="bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/10 group-hover:bg-black/60 transition-colors">
-                <span className="text-[7px] font-black text-white whitespace-nowrap uppercase tracking-tighter">{p?.name || 'Loading...'}</span>
+                <span className={cn("font-black text-white whitespace-nowrap uppercase tracking-tighter", fullScreen ? "text-[10px]" : "text-[7px]")}>
+                  {p?.name || 'Loading...'}
+                </span>
               </div>
             </div>
           </div>
@@ -1074,9 +1324,14 @@ function StadiumLineup({ game, homeTeam, awayTeam, players, onPlayerClick }: Sta
           >
             <div className="flex flex-col items-center gap-1">
               <div className="bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/10 group-hover:bg-black/60 transition-colors mb-1">
-                <span className="text-[7px] font-black text-white whitespace-nowrap uppercase tracking-tighter">{p?.name || 'Loading...'}</span>
+                <span className={cn("font-black text-white whitespace-nowrap uppercase tracking-tighter", fullScreen ? "text-[10px]" : "text-[7px]")}>
+                  {p?.name || 'Loading...'}
+                </span>
               </div>
-              <div className="w-8 h-8 rounded-full bg-white border-2 border-gray-900 shadow-lg flex items-center justify-center text-gray-900 text-[10px] font-black group-hover:scale-125 group-hover:bg-gray-50 transition-all">
+              <div className={cn(
+                "rounded-full bg-white border-2 border-gray-900 shadow-lg flex items-center justify-center text-gray-900 font-black group-hover:scale-125 group-hover:bg-gray-50 transition-all",
+                fullScreen ? "w-12 h-12 text-sm" : "w-8 h-8 text-[10px]"
+              )}>
                 {p?.number || idx + 1}
               </div>
             </div>

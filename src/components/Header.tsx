@@ -1,5 +1,5 @@
 import { User } from 'firebase/auth';
-import { Search as SearchIcon, Plus as PlusIcon, User as UserIcon, Trophy as TrophyIcon, Lock as LockIcon, X as XIcon, Users as UsersIcon, Target as TargetIcon, Bell as BellIcon } from 'lucide-react';
+import { Search as SearchIcon, Plus as PlusIcon, User as UserIcon, Trophy as TrophyIcon, Lock as LockIcon, X as XIcon, Users as UsersIcon, Target as TargetIcon, Bell as BellIcon, Star as StarIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useState, useRef, useEffect } from 'react';
 import { League, Team, Player } from '../types';
@@ -36,6 +36,7 @@ export function Header({
 }: HeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showProfile, setShowProfile] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
   const filteredResults = searchQuery.trim() === '' ? [] : [
@@ -175,7 +176,7 @@ export function Header({
           </button>
 
           <button 
-            onClick={user ? undefined : onLogin}
+            onClick={() => user ? setShowProfile(true) : onLogin()}
             className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 flex items-center justify-center overflow-hidden border-t border-l border-white/50 dark:border-white/10 shadow-3d-sm hover:shadow-3d-md transition-all btn-3d"
           >
             {user?.photoURL ? (
@@ -185,6 +186,74 @@ export function Header({
             )}
           </button>
         </div>
+
+        <AnimatePresence>
+          {showProfile && user && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowProfile(false)}
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              />
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                className="relative w-full max-w-sm bg-white dark:bg-gray-900 rounded-[40px] shadow-3d-xl border border-white/20 overflow-hidden"
+              >
+                <div className="p-8 text-center space-y-6">
+                   <div className="relative inline-block">
+                     <div className="w-24 h-24 rounded-[32px] bg-blue-600 p-1 shadow-3d-lg mx-auto overflow-hidden">
+                        {user.photoURL ? (
+                          <img src={user.photoURL} className="w-full h-full object-cover rounded-[28px]" alt="" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white text-3xl font-black italic">
+                            {user.displayName?.charAt(0) || user.email?.charAt(0) || 'U'}
+                          </div>
+                        )}
+                     </div>
+                     <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-4 border-white dark:border-gray-900 shadow-lg flex items-center justify-center">
+                        <StarIcon size={12} className="text-white fill-white" />
+                     </div>
+                   </div>
+
+                   <div>
+                      <h3 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">{user.displayName || 'Sports Enthusiast'}</h3>
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">{user.email}</p>
+                   </div>
+
+                   <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-3xl border border-gray-100 dark:border-gray-800">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</p>
+                        <p className="text-sm font-black text-blue-600 uppercase">Premium</p>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-3xl border border-gray-100 dark:border-gray-800">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Fan Since</p>
+                        <p className="text-sm font-black text-gray-900 dark:text-white">2024</p>
+                      </div>
+                   </div>
+
+                   <div className="space-y-3 pt-4">
+                     <button 
+                      onClick={() => { setView('settings'); setShowProfile(false); }}
+                      className="w-full py-4 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white rounded-2xl font-black text-xs uppercase tracking-widest border border-gray-100 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-3d-sm"
+                     >
+                       Edit Profile
+                     </button>
+                     <button 
+                      onClick={() => setShowProfile(false)}
+                      className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-3d-md hover:bg-blue-700 transition-all"
+                     >
+                       Close
+                     </button>
+                   </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     </header>
   );

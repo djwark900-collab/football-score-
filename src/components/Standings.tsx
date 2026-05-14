@@ -1,18 +1,39 @@
 import { useMemo, useState } from 'react';
 import { League, Team, Game } from '../types';
-import { Shield as ShieldIcon, TrendingUp as TrendingUpIcon, ChevronDown as ChevronDownIcon, Download as DownloadIcon } from 'lucide-react';
+import { Shield as ShieldIcon, TrendingUp as TrendingUpIcon, ChevronDown as ChevronDownIcon, Download as DownloadIcon, X as XIcon, Clock as ClockIcon, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface StandingsProps {
   leagues: League[];
   teams: Team[];
   games: Game[];
   onTeamClick?: (teamId: string) => void;
+  onGameClick?: (gameId: string) => void;
   showDownload?: boolean;
 }
 
-export function Standings({ leagues = [], teams = [], games = [], onTeamClick, showDownload }: StandingsProps) {
+export function Standings({ leagues = [], teams = [], games = [], onTeamClick, onGameClick, showDownload }: StandingsProps) {
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(leagues?.[0]?.id || null);
+  const [showGamesModal, setShowGamesModal] = useState<{ teamId: string; type: 'W' | 'D' | 'L' | 'ALL' } | null>(null);
+
+  const filteredModalGames = useMemo(() => {
+    if (!showGamesModal) return [];
+    return games.filter(g => {
+      const isTeam = g.homeTeamId === showGamesModal.teamId || g.awayTeamId === showGamesModal.teamId;
+      if (!isTeam) return false;
+      if (g.status !== 'finished') return showGamesModal.type === 'ALL';
+      
+      const isHome = g.homeTeamId === showGamesModal.teamId;
+      const score = isHome ? g.homeScore : g.awayScore;
+      const oppScore = isHome ? g.awayScore : g.homeScore;
+      
+      if (showGamesModal.type === 'W') return score > oppScore;
+      if (showGamesModal.type === 'L') return score < oppScore;
+      if (showGamesModal.type === 'D') return score === oppScore;
+      return true;
+    }).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [games, showGamesModal]);
 
   const standings = useMemo(() => {
     const table: Record<string, {
@@ -190,10 +211,10 @@ export function Standings({ leagues = [], teams = [], games = [], onTeamClick, s
                         )}
                       </div>
                     </td>
-                    <td className="py-5 px-4 text-center text-sm font-black text-gray-900 dark:text-gray-100 tabular-nums">{team.played}</td>
-                    <td className="py-5 px-4 text-center text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums">{team.won}</td>
-                    <td className="py-5 px-4 text-center text-sm font-bold text-gray-400 tabular-nums">{team.drawn}</td>
-                    <td className="py-5 px-4 text-center text-sm font-bold text-gray-400 tabular-nums">{team.lost}</td>
+                    <td className="py-5 px-4 text-center text-sm font-black text-gray-900 dark:text-gray-100 tabular-nums cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800" onClick={() => setShowGamesModal({ teamId: team.id, type: 'ALL' })}>{team.played}</td>
+                    <td className="py-5 px-4 text-center text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600" onClick={() => setShowGamesModal({ teamId: team.id, type: 'W' })}>{team.won}</td>
+                    <td className="py-5 px-4 text-center text-sm font-bold text-gray-400 tabular-nums cursor-pointer hover:bg-yellow-50 dark:hover:bg-yellow-900/20 hover:text-yellow-600" onClick={() => setShowGamesModal({ teamId: team.id, type: 'D' })}>{team.drawn}</td>
+                    <td className="py-5 px-4 text-center text-sm font-bold text-gray-400 tabular-nums cursor-pointer hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-600" onClick={() => setShowGamesModal({ teamId: team.id, type: 'L' })}>{team.lost}</td>
                     <td className="py-5 px-4 text-center text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums">{team.gf}:{team.ga}</td>
                     <td className={cn(
                       "py-5 px-4 text-center text-sm font-black tabular-nums",
@@ -211,6 +232,97 @@ export function Standings({ leagues = [], teams = [], games = [], onTeamClick, s
           </table>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showGamesModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+             <motion.div 
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               onClick={() => setShowGamesModal(null)}
+               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+             />
+             <motion.div 
+               initial={{ opacity: 0, scale: 0.9, y: 20 }}
+               animate={{ opacity: 1, scale: 1, y: 0 }}
+               exit={{ opacity: 0, scale: 0.9, y: 20 }}
+               className="relative w-full max-w-xl bg-white dark:bg-gray-900 rounded-[40px] shadow-3d-xl border border-white/20 overflow-hidden flex flex-col max-h-[80vh]"
+             >
+                <div className="p-8 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+                   <div>
+                      <h3 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">
+                        {teams.find(t => t.id === showGamesModal.teamId)?.name}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-1">
+                         <span className={cn(
+                            "text-[10px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest",
+                            showGamesModal.type === 'W' ? "bg-green-500 text-white" :
+                            showGamesModal.type === 'L' ? "bg-rose-500 text-white" :
+                            showGamesModal.type === 'D' ? "bg-yellow-500 text-white" :
+                            "bg-blue-600 text-white"
+                         )}>
+                            {showGamesModal.type === 'ALL' ? 'Total Matches' : `Related ${showGamesModal.type === 'W' ? 'Wins' : showGamesModal.type === 'L' ? 'Losses' : 'Draws'}`}
+                         </span>
+                         <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">• {filteredModalGames.length} Games</span>
+                      </div>
+                   </div>
+                   <button 
+                    onClick={() => setShowGamesModal(null)}
+                    className="p-3 bg-white dark:bg-gray-700 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-600 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all"
+                   >
+                      <XIcon size={20} />
+                   </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-8 space-y-4 scrollbar-none">
+                   {filteredModalGames.length > 0 ? (
+                      filteredModalGames.map(game => (
+                        <div 
+                          key={game.id}
+                          onClick={() => {
+                            onGameClick?.(game.id);
+                            setShowGamesModal(null);
+                          }}
+                          className="p-5 bg-gray-50 dark:bg-gray-800/50 rounded-3xl border border-gray-100 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800 hover:shadow-md transition-all cursor-pointer group"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                               <CalendarIcon size={12} className="text-gray-400" />
+                               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{new Date(game.date).toLocaleDateString()}</span>
+                            </div>
+                            <span className={cn(
+                               "text-[10px] font-black uppercase px-2 py-0.5 rounded-lg tracking-tighter",
+                               game.status === 'live' ? "bg-rose-600 text-white animate-pulse" : "bg-gray-200 dark:bg-gray-700 text-gray-500"
+                            )}>{game.status}</span>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex-1 flex items-center gap-3">
+                               <img src={teams.find(t => t.id === game.homeTeamId)?.logo} className="w-8 h-8 object-contain" />
+                               <span className="text-sm font-bold truncate">{teams.find(t => t.id === game.homeTeamId)?.name}</span>
+                            </div>
+                            <div className="px-4 py-2 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-700 font-black text-base tabular-nums group-hover:border-blue-500 transition-colors">
+                               {game.homeScore} - {game.awayScore}
+                            </div>
+                            <div className="flex-1 flex items-center justify-end gap-3">
+                               <span className="text-sm font-bold truncate">{teams.find(t => t.id === game.awayTeamId)?.name}</span>
+                               <img src={teams.find(t => t.id === game.awayTeamId)?.logo} className="w-8 h-8 object-contain" />
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                   ) : (
+                      <div className="text-center py-20 bg-gray-50 dark:bg-gray-800/30 rounded-[32px] border-2 border-dashed border-gray-100 dark:border-gray-800">
+                         <ClockIcon className="w-12 h-12 mx-auto mb-4 opacity-10" />
+                         <p className="font-bold text-gray-400">No matching fixtures found for this criteria.</p>
+                      </div>
+                   )}
+                </div>
+             </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

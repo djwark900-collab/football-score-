@@ -133,6 +133,14 @@ service cloud.firestore {
              (!('chips' in data) || data.chips is map);
     }
 
+    function isValidMatchPrediction(data) {
+      return data.keys().hasAll(['gameId', 'userId', 'prediction']) &&
+             data.gameId is string && isValidId(data.gameId) &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.prediction in ['home', 'draw', 'away'] &&
+             (!('timestamp' in data) || data.timestamp is string);
+    }
+
     // Collection Rules
     match /test/connection {
       allow read: if true;
@@ -229,6 +237,11 @@ service cloud.firestore {
 
       match /matchNotifications/{notificationId} {
         allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      match /predictions/{predictionId} {
+        allow read: if isSignedIn() && request.auth.uid == userId;
+        allow write: if isSignedIn() && request.auth.uid == userId && isValidMatchPrediction(incoming());
       }
     }
   }

@@ -152,16 +152,28 @@ export function TeamDetails({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="flex items-center gap-2 mt-4"
+            className="flex flex-wrap justify-center items-center gap-3 mt-4"
           >
             <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em] bg-white/5 px-4 py-1.5 rounded-xl border border-white/5">
               Est. {team.foundedIn || '1898'}
             </span>
-            {league && (
-              <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.4em] bg-blue-500/10 px-4 py-1.5 rounded-xl border border-blue-500/10">
-                {league.name}
+            {teamLeagues.map((l, i) => (
+              <span 
+                key={l.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onLeagueClick?.(l.id);
+                }}
+                className={cn(
+                  "text-[10px] font-black uppercase tracking-[0.4em] px-4 py-1.5 rounded-xl border cursor-pointer transition-all hover:scale-105 active:scale-95",
+                  i === 0 
+                    ? "text-blue-400 bg-blue-500/10 border-blue-500/10" 
+                    : "text-purple-400 bg-purple-500/10 border-purple-500/10"
+                )}
+              >
+                {l.name}
               </span>
-            )}
+            ))}
           </motion.div>
         </div>
       </div>
@@ -301,20 +313,38 @@ export function TeamDetails({
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-4"
+              className="space-y-12"
             >
-              {teamGames.map(game => (
-                <GameCard 
-                  key={game.id} 
-                  game={game} 
-                  teams={teams} 
-                  leagues={leagues} 
-                  onClick={() => onGameClick(game.id)} 
-                  isLive={game.status === 'live'} 
-                  isFollowing={followedGames.includes(game.id)} 
-                  onToggleFollow={() => onToggleFollowMatch(game.id)} 
-                />
-              ))}
+              {teamLeagues.map(l => {
+                const gamesInLeague = teamGames.filter(g => g.leagueId === l.id || g.leagueId2 === l.id);
+                if (gamesInLeague.length === 0) return null;
+
+                return (
+                  <div key={l.id} className="space-y-6">
+                    <div className="flex items-center gap-4 px-2">
+                       <div className="w-8 h-8 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/10 p-1.5 shadow-sm">
+                          {l.logo ? <img src={l.logo} className="w-full h-full object-contain" /> : <ShieldIcon className="text-gray-300" size={14} />}
+                       </div>
+                       <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-900 dark:text-white">{l.name} Fixtures</h3>
+                       <div className="flex-1 h-px bg-gray-100 dark:bg-white/5" />
+                    </div>
+                    <div className="space-y-4">
+                      {gamesInLeague.map(game => (
+                        <GameCard 
+                          key={game.id} 
+                          game={game} 
+                          teams={teams} 
+                          leagues={leagues} 
+                          onClick={() => onGameClick(game.id)} 
+                          isLive={game.status === 'live'} 
+                          isFollowing={followedGames.includes(game.id)} 
+                          onToggleFollow={() => onToggleFollowMatch(game.id)} 
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </motion.div>
           )}
 

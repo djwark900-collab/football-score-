@@ -177,6 +177,18 @@
         }
       },
       "required": ["userId", "name", "playerIds"]
+    },
+    "MatchPrediction": {
+      "title": "Match Prediction",
+      "description": "A user's prediction for a match result",
+      "type": "object",
+      "properties": {
+        "gameId": { "type": "string" },
+        "userId": { "type": "string" },
+        "prediction": { "type": "string", "enum": ["home", "draw", "away"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["gameId", "userId", "prediction"]
     }
   },
   "firestore": {
@@ -190,6 +202,7 @@
     "/admins/{adminId}": { "schema": "Administrator", "description": "Authorized administrators" },
     "/users/{userId}/favorites/{favoriteId}": { "schema": "Favorite", "description": "User's favorite teams" },
     "/transfers/{transferId}": { "schema": "Transfer", "description": "Player transfers" },
-    "/fantasyTeams/{userId}": { "schema": "FantasyTeam", "description": "User's fantasy team" }
+    "/fantasyTeams/{userId}": { "schema": "FantasyTeam", "description": "User's fantasy team" },
+    "/users/{userId}/predictions/{predictionId}": { "schema": "MatchPrediction", "description": "User's match predictions" }
   }
 }

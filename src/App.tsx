@@ -646,42 +646,87 @@ export default function App() {
           <motion.div 
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[1000] bg-white dark:bg-gray-950 flex flex-col items-center justify-center gap-8"
+            className="fixed inset-0 z-[1000] bg-white dark:bg-gray-950 flex flex-col items-center justify-center"
           >
-            <motion.div 
-              animate={{ 
-                scale: [1, 1.1, 1],
-                rotate: [0, 5, -5, 0]
-              }}
-              transition={{ 
-                repeat: Infinity, 
-                duration: 2,
-                ease: "easeInOut"
-              }}
-              className="w-24 h-24 bg-blue-600 rounded-[32px] flex items-center justify-center shadow-2xl shadow-blue-100"
-            >
-              <TrophyIcon className="text-white w-12 h-12" />
-            </motion.div>
-            <div className="space-y-2 text-center">
-              <h2 className="text-2xl font-black text-blue-900 dark:text-white tracking-tight">LiveScore<span className="text-blue-500">Pro</span></h2>
-              <div className="flex gap-1 justify-center">
+            <div className="relative">
+              {/* Spinner Rings */}
+              <motion.div 
+                animate={{ rotate: 360 }}
+                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                className="w-40 h-40 rounded-full border-2 border-transparent border-t-blue-100 dark:border-t-blue-900/30"
+              />
+              <motion.div 
+                animate={{ rotate: -360 }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                className="absolute inset-0 w-40 h-40 rounded-full border-2 border-transparent border-b-blue-600"
+              />
+              
+              {/* Center Logo */}
+              <div className="absolute inset-0 flex items-center justify-center">
                 <motion.div 
-                  animate={{ opacity: [0.3, 1, 0.3] }}
-                  transition={{ repeat: Infinity, duration: 1, delay: 0 }}
-                  className="w-1.5 h-1.5 bg-blue-600 rounded-full" 
-                />
-                <motion.div 
-                  animate={{ opacity: [0.3, 1, 0.3] }}
-                  transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
-                  className="w-1.5 h-1.5 bg-blue-600 rounded-full" 
-                />
-                <motion.div 
-                  animate={{ opacity: [0.3, 1, 0.3] }}
-                  transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
-                  className="w-1.5 h-1.5 bg-blue-600 rounded-full" 
-                />
+                  animate={{ 
+                    scale: [0.95, 1.05, 0.95],
+                  }}
+                  transition={{ 
+                    repeat: Infinity, 
+                    duration: 2,
+                    ease: "easeInOut"
+                  }}
+                  className="w-20 h-20 bg-blue-600 rounded-[32px] flex items-center justify-center shadow-[0_20px_50px_rgba(37,99,235,0.3)]"
+                >
+                  <TrophyIcon className="text-white w-10 h-10" />
+                </motion.div>
               </div>
             </div>
+
+            <div className="mt-12 space-y-6 text-center">
+              <div>
+                <motion.h2 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter"
+                >
+                  LiveScore<span className="text-blue-600">Pro</span>
+                </motion.h2>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em] mt-2">Initializing Arena</p>
+              </div>
+
+              <div className="flex gap-2 justify-center">
+                {[0, 1, 2].map((i) => (
+                  <motion.div 
+                    key={i}
+                    animate={{ 
+                      scale: [1, 1.5, 1],
+                      opacity: [0.3, 1, 0.3]
+                    }}
+                    transition={{ 
+                      repeat: Infinity, 
+                      duration: 1, 
+                      delay: i * 0.2 
+                    }}
+                    className="w-1.5 h-1.5 bg-blue-600 rounded-full" 
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Bottom Credit */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1 }}
+              className="absolute bottom-12 flex flex-col items-center gap-2"
+            >
+              <span className="text-[8px] font-black text-gray-300 dark:text-gray-700 uppercase tracking-widest">Powered by Football Data API</span>
+              <div className="w-12 h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ x: '-100%' }}
+                  animate={{ x: '100%' }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                  className="w-full h-full bg-blue-600/40"
+                />
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1094,6 +1139,10 @@ export default function App() {
                   setSelectedTeamId(id);
                   navigateTo('team-details');
                 }}
+                onGameClick={(id) => {
+                  setSelectedGameId(id);
+                  navigateTo('game-details');
+                }}
               />
             </motion.div>
           )}
@@ -1359,6 +1408,111 @@ export default function App() {
                   <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest leading-none">{t('app_config')}</p>
                 </div>
               </div>
+
+              {user && (
+                <div className="card-3d p-8 space-y-6">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">My Profile</h3>
+                  <div className="flex flex-col sm:flex-row gap-8 items-start">
+                    <div className="relative group">
+                      <div className="w-24 h-24 rounded-[32px] bg-blue-600 p-1 shadow-3d-lg overflow-hidden flex-shrink-0">
+                        {user.photoURL ? (
+                          <img src={user.photoURL} className="w-full h-full object-cover rounded-[28px]" alt="" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white text-3xl font-black italic">
+                            {user.displayName?.charAt(0) || user.email?.charAt(0) || 'U'}
+                          </div>
+                        )}
+                      </div>
+                      <label className="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-600 rounded-full border-4 border-white dark:border-gray-900 shadow-lg flex items-center justify-center cursor-pointer hover:scale-110 transition-transform">
+                        <PlusIcon size={12} className="text-white" />
+                        <input 
+                          type="file" 
+                          className="hidden" 
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = async () => {
+                                const base64 = reader.result as string;
+                                try {
+                                  await updateProfile(user, { photoURL: base64 });
+                                  window.location.reload(); // Refresh to show new photo
+                                } catch (err) {
+                                  alert("Failed to update logo");
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="flex-1 space-y-6 w-full">
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Display Name</label>
+                          <div className="relative">
+                            <input 
+                              id="profile-name-input"
+                              type="text" 
+                              defaultValue={user.displayName || ''}
+                              className="w-full h-14 px-6 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-3xl font-bold text-sm focus:ring-2 focus:ring-blue-600 transition-all dark:text-white shadow-sm"
+                              placeholder="Enter your name"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2 opacity-60">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Email Address</label>
+                          <div className="w-full h-14 px-6 bg-gray-50 dark:bg-gray-800 rounded-3xl font-bold text-sm flex items-center text-gray-500 border border-gray-100 dark:border-gray-700">
+                            {user.email}
+                          </div>
+                        </div>
+                      </div>
+
+                      <button 
+                        onClick={async () => {
+                          const nameInput = document.getElementById('profile-name-input') as HTMLInputElement;
+                          const newName = nameInput.value;
+                          const originalName = user.displayName || '';
+                          
+                          if (newName === originalName) {
+                            return;
+                          }
+
+                          try {
+                            const btn = document.getElementById('save-profile-btn');
+                            if (btn) {
+                              btn.innerHTML = 'Saving...';
+                              btn.classList.add('opacity-50');
+                            }
+                            await updateProfile(user, { displayName: newName });
+                            if (btn) {
+                              btn.innerHTML = 'Saved!';
+                              setTimeout(() => {
+                                btn.innerHTML = 'Save Changes';
+                                btn.classList.remove('opacity-50');
+                              }, 2000);
+                            }
+                          } catch (err) {
+                            alert("Failed to update name");
+                            const btn = document.getElementById('save-profile-btn');
+                            if (btn) {
+                              btn.innerHTML = 'Save Changes';
+                              btn.classList.remove('opacity-50');
+                            }
+                          }
+                        }}
+                        id="save-profile-btn"
+                        className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-[24px] font-black text-xs uppercase tracking-[0.2em] shadow-3d-md transition-all active:scale-95"
+                      >
+                        Save Changes
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="card-3d p-8 space-y-6">
                 <div className="space-y-4">
