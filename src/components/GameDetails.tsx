@@ -102,22 +102,25 @@ export function GameDetails({
     
     const awardResultXP = async () => {
       const result = game.homeScore > game.awayScore ? 'home' : (game.homeScore < game.awayScore ? 'away' : 'draw');
-      if (result !== prediction) return;
-
+      
       const userId = auth.currentUser!.uid;
       const predictionId = `${game.id}_${userId}`;
       const path = `users/${userId}/predictions`;
       const predRef = doc(db, path, predictionId);
       
       try {
+        const isCorrect = result === prediction;
+        // Award XP based on correct/incorrect
+        const xpAmount = isCorrect ? 50 : 25; 
+
         // Use a flag to ensure we only award once
         await updateDoc(predRef, { settled: true });
         
         // Award XP
         const userDocRef = doc(db, 'users', userId);
         await updateDoc(userDocRef, {
-          xp: increment(50), // Bonus for correct prediction
-          correctPredictions: increment(1)
+          xp: increment(xpAmount),
+          correctPredictions: increment(isCorrect ? 1 : 0)
         });
       } catch (e) {
         // If it fails with "no such document" or "already settled" logic (though updateDoc fails if not exists)
@@ -1180,11 +1183,11 @@ export function GameDetails({
                    <p className="text-[10px] font-bold text-white/40 uppercase mb-3">Event Engine</p>
                    <div className="grid grid-cols-2 gap-2">
                       <select 
-                        className="bg-black text-white border border-white/10 rounded-lg p-2 text-[10px] outline-none"
+                        className="bg-black text-white border border-white/10 rounded-lg p-2 text-[10px] outline-none col-span-2 mb-1"
                         value={selectedEventPlayer || ''}
                         onChange={(e) => setSelectedEventPlayer(e.target.value)}
                       >
-                        <option value="">Player</option>
+                        <option value="">Select Player</option>
                         {players.filter(p => p.teamId === game.homeTeamId || p.teamId === game.awayTeamId).map(p => (
                           <option key={p.id} value={p.id}>{p.name}</option>
                         ))}
@@ -1198,9 +1201,49 @@ export function GameDetails({
                             events: [...(game.events || []), newEvent]
                           });
                         }}
-                        className="bg-blue-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-blue-700 active:scale-95 transition-all"
+                        className="bg-blue-600 text-white text-[10px] font-black uppercase rounded-lg h-9 hover:bg-blue-700 transition-all col-span-2"
                       >
                         Add Goal
+                      </button>
+                      <button 
+                        onClick={() => {
+                          const teamId = players.find(p => p.id === selectedEventPlayer)?.teamId || game.homeTeamId;
+                          const newEvent: MatchEvent = { id: Math.random().toString(36).substr(2,9), type: 'yellow', minute: parseInt(game.currentTime || '0'), teamId, playerId: selectedEventPlayer || 'unknown' };
+                          const side = teamId === game.homeTeamId ? 'home' : 'away';
+                          updateGame({ 
+                            events: [...(game.events || []), newEvent],
+                            stats: {
+                              ...(game.stats || {
+                                possession: { home: 50, away: 50 },
+                                shots: { home: 0, away: 0 },
+                                shotsOnGoal: { home: 0, away: 0 },
+                                corners: { home: 0, away: 0 },
+                                yellowCards: { home: 0, away: 0 },
+                                crosses: { home: 0, away: 0 },
+                                goalKicks: { home: 0, away: 0 },
+                              }),
+                              yellowCards: {
+                                ...(game.stats?.yellowCards || { home: 0, away: 0 }),
+                                [side]: (game.stats?.yellowCards?.[side] || 0) + 1
+                              }
+                            }
+                          });
+                        }}
+                        className="bg-yellow-500 text-black text-[10px] font-black uppercase rounded-lg h-9 hover:bg-yellow-600 transition-all"
+                      >
+                        Add Yellow
+                      </button>
+                      <button 
+                        onClick={() => {
+                          const teamId = players.find(p => p.id === selectedEventPlayer)?.teamId || game.homeTeamId;
+                          const newEvent: MatchEvent = { id: Math.random().toString(36).substr(2,9), type: 'red', minute: parseInt(game.currentTime || '0'), teamId, playerId: selectedEventPlayer || 'unknown' };
+                          updateGame({ 
+                            events: [...(game.events || []), newEvent]
+                          });
+                        }}
+                        className="bg-red-600 text-white text-[10px] font-black uppercase rounded-lg h-9 hover:bg-red-700 transition-all"
+                      >
+                        Add Red
                       </button>
                    </div>
                 </div>
