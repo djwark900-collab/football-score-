@@ -540,6 +540,15 @@ export function GameDetails({
                       placeholder="e.g. 45', HT"
                       className="w-24 h-10 bg-white dark:bg-gray-800 rounded-xl text-center font-bold text-xs border-none shadow-sm dark:text-white transition-all outline-none focus:ring-2 focus:ring-blue-500"
                     />
+                    <button 
+                      onClick={() => {
+                        const current = parseInt(game.currentTime || '0') || 0;
+                        updateGame({ currentTime: (current + 1).toString() });
+                      }} 
+                      className="h-10 w-10 bg-blue-600 rounded-xl text-white flex items-center justify-center hover:bg-blue-700 transition-all active:scale-90 shadow-lg shadow-blue-200"
+                    >
+                      <PlusIcon size={14} />
+                    </button>
                   </div>
                 </div>
               )}
@@ -1178,6 +1187,37 @@ export function GameDetails({
                           {s}
                         </button>
                       ))}
+                   </div>
+                </div>
+
+                <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                   <p className="text-[10px] font-bold text-white/40 uppercase mb-3">Time Control</p>
+                   <div className="flex flex-col gap-3">
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => updateGame({ currentTime: '0' })} className="px-3 py-2 bg-white/5 rounded-xl text-white text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all border border-white/5">0'</button>
+                        <button onClick={() => updateGame({ currentTime: '45' })} className="px-3 py-2 bg-white/5 rounded-xl text-white text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all border border-white/5">45'</button>
+                        <button onClick={() => updateGame({ currentTime: 'HT' })} className="px-3 py-2 bg-blue-600/20 text-blue-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-600/30 transition-all border border-blue-500/30">Halftime</button>
+                        <button onClick={() => updateGame({ currentTime: '90' })} className="px-3 py-2 bg-white/5 rounded-xl text-white text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all border border-white/5">90'</button>
+                        <button onClick={() => updateGame({ status: 'finished', currentTime: 'FT' })} className="px-3 py-2 bg-rose-600/20 text-rose-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-rose-600/30 transition-all border border-rose-500/30 whitespace-nowrap">End of 90 Minutes</button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="text" 
+                          value={game.currentTime || ''} 
+                          onChange={(e) => updateGame({ currentTime: e.target.value })}
+                          placeholder="Minute"
+                          className="flex-1 h-10 bg-black rounded-xl text-center font-bold text-xs text-white border border-white/10"
+                        />
+                        <button 
+                          onClick={() => {
+                            const current = parseInt(game.currentTime || '0') || 0;
+                            updateGame({ currentTime: (current + 1).toString() });
+                          }} 
+                          className="h-10 w-10 bg-blue-600 rounded-xl text-white flex items-center justify-center hover:bg-blue-700 transition-all active:scale-90"
+                        >
+                          <PlusIcon size={18} />
+                        </button>
+                      </div>
                    </div>
                 </div>
 
