@@ -16,6 +16,8 @@ interface StandingsProps {
 export function Standings({ leagues = [], teams = [], games = [], onTeamClick, onGameClick, showDownload }: StandingsProps) {
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(leagues?.[0]?.id || null);
   const [showGamesModal, setShowGamesModal] = useState<{ teamId: string; type: 'W' | 'D' | 'L' | 'ALL' } | null>(null);
+  const [isWideMode, setIsWideMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const filteredModalGames = useMemo(() => {
     if (!showGamesModal) return [];
@@ -86,16 +88,37 @@ export function Standings({ leagues = [], teams = [], games = [], onTeamClick, o
     });
 
     return Object.entries(table)
-      .sort((a, b) => b[1].points - a[1].points || (b[1].gf - b[1].ga) - (a[1].gf - a[1].ga))
-      .map(([id, data]) => ({ id, ...data }));
-  }, [teams, games, selectedLeagueId]);
+      .sort((a, b) => b[1].points - a[1].points || (b[1].gf - b[1].ga) - (a[1].gf - a[1].ga) || b[1].gf - a[1].gf)
+      .map(([id, data]) => ({ id, ...data }))
+      .filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [teams, games, selectedLeagueId, searchQuery]);
 
   const currentLeague = leagues.find(l => l.id === selectedLeagueId);
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className={cn("flex flex-col gap-8 transition-all duration-500", isWideMode && "fixed inset-0 z-[200] bg-white dark:bg-[#050505] overflow-y-auto p-4 md:p-12")}>
+      {isWideMode && (
+        <div className="flex justify-between items-center mb-8">
+           <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
+                <ShieldIcon size={24} />
+              </div>
+              <h2 className="text-3xl font-black tracking-tighter dark:text-white">Expanded Table</h2>
+           </div>
+           <button 
+            onClick={() => setIsWideMode(false)}
+            className="p-4 bg-gray-100 dark:bg-gray-800 rounded-2xl text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all"
+           >
+              <XIcon size={24} />
+           </button>
+        </div>
+      )}
+
       {/* Immersive League Header */}
-      <div className="bg-[#0A0A0A] rounded-[40px] p-8 shadow-2xl relative overflow-hidden text-white border border-white/5">
+      <div className={cn(
+        "bg-[#0A0A0A] rounded-[40px] p-8 shadow-2xl relative overflow-hidden text-white border border-white/5 transition-all",
+        isWideMode && "max-w-7xl mx-auto w-full mb-8"
+      )}>
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-indigo-900/20 pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-6">
@@ -116,12 +139,34 @@ export function Standings({ leagues = [], teams = [], games = [], onTeamClick, o
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="relative group min-w-[200px]">
+               <input 
+                type="text"
+                placeholder="Search team..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-12 pl-12 pr-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 text-xs font-black uppercase tracking-widest transition-all outline-none focus:ring-2 focus:ring-blue-600"
+               />
+               <TrendingUpIcon size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" />
+            </div>
+
             {showDownload && (
               <button className="w-12 h-12 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all text-white/60 hover:text-white">
                 <DownloadIcon size={20} />
               </button>
             )}
+
+            <button 
+              onClick={() => setIsWideMode(!isWideMode)}
+              className={cn(
+                "w-12 h-12 flex items-center justify-center rounded-2xl border transition-all text-white/60 hover:text-white",
+                isWideMode ? "bg-blue-600 border-blue-500" : "bg-white/5 border-white/10"
+              )}
+            >
+              <TrendingUpIcon className={isWideMode ? 'rotate-90' : ''} size={20} />
+            </button>
+
             <div className="relative group min-w-[200px]">
               <select 
                 value={selectedLeagueId || ''} 
@@ -139,9 +184,12 @@ export function Standings({ leagues = [], teams = [], games = [], onTeamClick, o
       </div>
 
       {/* Standings Table Card */}
-      <div className="bg-white dark:bg-gray-900 rounded-[40px] shadow-3d-lg border border-gray-100 dark:border-gray-800 overflow-hidden">
+      <div className={cn(
+        "bg-white dark:bg-gray-900 rounded-[40px] shadow-3d-lg border border-gray-100 dark:border-gray-800 overflow-hidden transition-all",
+        isWideMode && "max-w-7xl mx-auto w-full mb-12 shadow-2xl ring-1 ring-black/5"
+      )}>
         <div className="overflow-x-auto scrollbar-none">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-800/50">
                 <th className="py-5 px-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center w-16">Pos</th>
@@ -153,6 +201,7 @@ export function Standings({ leagues = [], teams = [], games = [], onTeamClick, o
                 <th className="py-5 px-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">F:A</th>
                 <th className="py-5 px-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">GD</th>
                 <th className="py-5 px-6 text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest text-center bg-blue-50/50 dark:bg-blue-600/10">PTS</th>
+                <th className="py-5 px-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Form</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
@@ -163,11 +212,14 @@ export function Standings({ leagues = [], teams = [], games = [], onTeamClick, o
                 return (
                   <tr 
                     key={team.id} 
-                    className="group hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+                    className={cn(
+                      "group hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors",
+                      index < 4 && "bg-blue-50/5 dark:bg-blue-600/[0.02]"
+                    )}
                   >
                     <td className="py-5 px-6 text-center">
                       <div className={cn(
-                        "w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black mx-auto",
+                        "w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black mx-auto transition-transform group-hover:scale-110",
                         index < 4 ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : 
                         index === standings.length - 1 ? "bg-rose-500/10 text-rose-500" :
                         "text-gray-400"
@@ -180,15 +232,15 @@ export function Standings({ leagues = [], teams = [], games = [], onTeamClick, o
                       onClick={() => onTeamClick?.(team.id)}
                     >
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-white dark:bg-gray-800 rounded-2xl flex-shrink-0 flex items-center justify-center border border-gray-100 dark:border-gray-700 p-1.5 shadow-sm group-hover:scale-110 transition-transform">
+                        <div className="w-12 h-12 bg-white dark:bg-gray-800 rounded-2xl flex-shrink-0 flex items-center justify-center border border-gray-100 dark:border-gray-700 p-2 shadow-sm group-hover:shadow-md transition-all group-hover:-translate-y-1">
                           {team.logo ? (
                             <img src={team.logo} alt="" className="w-full h-full object-contain" />
                           ) : (
-                            <ShieldIcon className="text-gray-200" size={18} />
+                            <ShieldIcon className="text-gray-200" size={20} />
                           )}
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-[15px] font-black text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors truncate max-w-[200px]">
+                          <span className="text-[15px] font-black text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors truncate max-w-[240px]">
                             {team.name}
                           </span>
                           <div className="flex items-center gap-2 mt-0.5">
@@ -198,14 +250,16 @@ export function Standings({ leagues = [], teams = [], games = [], onTeamClick, o
                                <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest">Europa League</span>
                             ) : index >= standings.length - 3 ? (
                                <span className="text-[8px] font-black text-rose-500 uppercase tracking-widest">Relegation Zone</span>
-                            ) : null}
+                            ) : (
+                               <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Mid Table</span>
+                            )}
                           </div>
                         </div>
                         {liveGame && (
-                          <div className="ml-4">
-                             <div className="bg-rose-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1.5 animate-pulse">
-                               <div className="w-1 h-1 rounded-full bg-white" />
-                               {liveGame.homeScore} - {liveGame.awayScore}
+                          <div className="ml-4 flex items-center gap-2">
+                             <div className="bg-rose-600 text-white text-[9px] font-black px-3 py-1 rounded-full flex items-center gap-1.5 animate-pulse shadow-lg shadow-rose-100">
+                               <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                               LIVE {liveGame.homeScore} - {liveGame.awayScore}
                              </div>
                           </div>
                         )}
@@ -222,8 +276,27 @@ export function Standings({ leagues = [], teams = [], games = [], onTeamClick, o
                     )}>
                       {gd > 0 ? `+${gd}` : gd}
                     </td>
-                    <td className="py-5 px-6 text-center bg-blue-50/20 dark:bg-blue-600/5">
-                      <span className="text-base font-black text-gray-900 dark:text-white tabular-nums">{team.points}</span>
+                    <td className="py-5 px-6 text-center bg-blue-50/20 dark:bg-blue-600/5 group-hover:bg-blue-100/50 transition-colors">
+                      <span className="text-lg font-black text-gray-900 dark:text-white tabular-nums drop-shadow-sm">{team.points}</span>
+                    </td>
+                    <td className="py-5 px-6">
+                      <div className="flex items-center gap-1.5 justify-center">
+                         {team.form.slice(-5).map((r, i) => (
+                           <div 
+                            key={i}
+                            className={cn(
+                              "w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black shadow-sm transition-transform hover:scale-125 hover:z-10 cursor-default",
+                              r === 'W' ? "bg-green-500 text-white" :
+                              r === 'L' ? "bg-rose-500 text-white" :
+                              "bg-gray-200 dark:bg-gray-700 text-gray-500"
+                            )}
+                            title={r === 'W' ? 'Win' : r === 'L' ? 'Loss' : 'Draw'}
+                           >
+                              {r}
+                           </div>
+                         ))}
+                         {team.form.length === 0 && <span className="text-[10px] font-bold text-gray-300">N/A</span>}
+                      </div>
                     </td>
                   </tr>
                 );
