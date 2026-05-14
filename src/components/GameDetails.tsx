@@ -25,7 +25,7 @@ import {
   User as UserIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { doc, updateDoc, setDoc, collection, onSnapshot, query, where } from 'firebase/firestore';
+import { doc, updateDoc, setDoc, collection, onSnapshot, query, where, increment } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType, auth } from '../firebase';
 import { Standings } from './Standings';
 import { GameCard } from './GameCard';
@@ -114,6 +114,16 @@ export function GameDetails({
         prediction: opt,
         timestamp: new Date().toISOString()
       });
+
+      // Award XP
+      const userDocRef = doc(db, 'users', userId);
+      const earnedXP = Math.floor(Math.random() * 20) + 10;
+      await setDoc(userDocRef, {
+        xp: increment(earnedXP),
+        displayName: auth.currentUser?.displayName || 'Anonymous',
+        photoURL: auth.currentUser?.photoURL || '',
+        level: increment(0) // Ensure level exists
+      }, { merge: true });
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, path);
     } finally {
@@ -629,69 +639,71 @@ export function GameDetails({
               </div>
 
               {/* Make Your Prediction Card */}
-              <div className="bg-[#1a1a1a] p-8 rounded-[40px] text-white overflow-hidden relative shadow-3d-xl">
-                 <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12">
-                    <TrophyIcon size={120} />
-                 </div>
-                 
-                 <div className="relative z-10 space-y-6">
-                    <div>
-                       <span className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-400">Match Forecast</span>
-                       <h3 className="text-2xl font-black italic tracking-tighter mt-1">Make your prediction</h3>
-                       <p className="text-white/40 text-xs font-medium mt-2">Who will win this encounter? Choose result to earn points.</p>
-                    </div>
+              {game.status === 'scheduled' && (
+                <div className="bg-[#1a1a1a] p-8 rounded-[40px] text-white overflow-hidden relative shadow-3d-xl">
+                   <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12">
+                      <TrophyIcon size={120} />
+                   </div>
+                   
+                   <div className="relative z-10 space-y-6">
+                      <div>
+                         <span className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-400">Match Forecast</span>
+                         <h3 className="text-2xl font-black italic tracking-tighter mt-1">Make your prediction</h3>
+                         <p className="text-white/40 text-xs font-medium mt-2">Who will win this encounter? Choose result to earn points.</p>
+                      </div>
 
-                     <div className="grid grid-cols-3 gap-3">
-                       {[
-                         { id: 'home', label: 'Home', icon: homeTeam?.logo },
-                         { id: 'draw', label: 'Draw', icon: null },
-                         { id: 'away', label: 'Away', icon: awayTeam?.logo }
-                       ].map((opt) => (
-                         <button 
-                           key={opt.id}
-                           disabled={isSavingPrediction}
-                           onClick={() => handlePredict(opt.id as any)}
-                           className={cn(
-                             "p-4 rounded-3xl flex flex-col items-center gap-3 transition-all border-2",
-                             prediction === opt.id 
-                               ? "bg-blue-600 border-blue-400 shadow-lg shadow-blue-900/40 scale-[1.02]" 
-                               : "bg-white/5 border-transparent hover:bg-white/10",
-                             isSavingPrediction && "opacity-50 cursor-wait"
-                           )}
-                         >
-                            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                               {opt.icon ? (
-                                 <img src={opt.icon} className="w-6 h-6 object-contain" />
-                               ) : (
-                                 <MinusIcon className="text-white/40" />
-                               )}
-                            </div>
-                            <span className="text-[10px] font-black uppercase tracking-widest">{opt.label}</span>
-                         </button>
-                       ))}
-                    </div>
+                       <div className="grid grid-cols-3 gap-3">
+                         {[
+                           { id: 'home', label: 'Home', icon: homeTeam?.logo },
+                           { id: 'draw', label: 'Draw', icon: null },
+                           { id: 'away', label: 'Away', icon: awayTeam?.logo }
+                         ].map((opt) => (
+                           <button 
+                             key={opt.id}
+                             disabled={isSavingPrediction}
+                             onClick={() => handlePredict(opt.id as any)}
+                             className={cn(
+                               "p-4 rounded-3xl flex flex-col items-center gap-3 transition-all border-2",
+                               prediction === opt.id 
+                                 ? "bg-blue-600 border-blue-400 shadow-lg shadow-blue-900/40 scale-[1.02]" 
+                                 : "bg-white/5 border-transparent hover:bg-white/10",
+                               isSavingPrediction && "opacity-50 cursor-wait"
+                             )}
+                           >
+                              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                                 {opt.icon ? (
+                                   <img src={opt.icon} className="w-6 h-6 object-contain" />
+                                 ) : (
+                                   <MinusIcon className="text-white/40" />
+                                 )}
+                              </div>
+                              <span className="text-[10px] font-black uppercase tracking-widest">{opt.label}</span>
+                           </button>
+                         ))}
+                      </div>
 
-                    {prediction && (
-                      <motion.div 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-between"
-                      >
-                         <div className="flex items-center gap-3 text-xs font-bold text-white/50 uppercase tracking-widest">
-                            {isSavingPrediction ? (
-                               <RefreshCwIcon className="animate-spin text-blue-400" size={14} />
-                            ) : (
-                               <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
-                            )}
-                            {isSavingPrediction ? 'Saving...' : 'Live Prediction Recorded'}
-                         </div>
-                         <div className="text-sm font-black text-blue-400">
-                            +{Math.floor(Math.random() * 20) + 10} XP
-                         </div>
-                      </motion.div>
-                    )}
-                 </div>
-              </div>
+                      {prediction && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-between"
+                        >
+                           <div className="flex items-center gap-3 text-xs font-bold text-white/50 uppercase tracking-widest">
+                              {isSavingPrediction ? (
+                                 <RefreshCwIcon className="animate-spin text-blue-400" size={14} />
+                              ) : (
+                                 <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
+                              )}
+                              {isSavingPrediction ? 'Saving...' : 'Live Prediction Recorded'}
+                           </div>
+                           <div className="text-sm font-black text-blue-400">
+                              +{Math.floor(Math.random() * 20) + 10} XP
+                           </div>
+                        </motion.div>
+                      )}
+                   </div>
+                </div>
+              )}
 
               {/* Event Details Modal */}
               <AnimatePresence>

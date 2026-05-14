@@ -64,8 +64,9 @@ import { PlayerDetails } from './components/PlayerDetails';
 import { TeamDetails } from './components/TeamDetails';
 import { FantasyManager } from './components/FantasyManager';
 import { SignInModal } from './components/SignInModal';
+import { Leaderboard } from './components/Leaderboard';
 
-type View = 'matches' | 'leagues' | 'standings' | 'admin' | 'settings' | 'game-details' | 'league-details' | 'team-details' | 'player-details' | 'transfers' | 'fantasy';
+type View = 'matches' | 'leagues' | 'standings' | 'admin' | 'settings' | 'game-details' | 'league-details' | 'team-details' | 'player-details' | 'transfers' | 'fantasy' | 'leaderboard';
 
 export default function App() {
   const [view, setView] = useState<View>('matches');
@@ -1372,6 +1373,17 @@ export default function App() {
             />
           )}
 
+          {view === 'leaderboard' && (
+            <motion.div
+              key="leaderboard"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <Leaderboard />
+            </motion.div>
+          )}
+
           {view === 'admin' && isAdmin && (
             <AdminPanel 
               leagues={leagues}
@@ -1736,7 +1748,7 @@ export default function App() {
             <NavButton active={view === 'matches'} onClick={() => { navigateTo('matches'); setSelectedLeagueId(null); setSelectedPlayerId(null); setSelectedTeamId(null); }} icon={<ClockIcon />} label={prefLanguage === 'English' ? 'Home' : 'سەرەکی'} />
             <NavButton active={view === 'leagues'} onClick={() => navigateTo('leagues')} icon={<ShieldIcon />} label={prefLanguage === 'English' ? 'Leagues' : 'خولەکان'} />
             <NavButton active={view === 'fantasy'} onClick={() => navigateTo('fantasy')} icon={<CrownIcon />} label={t('fantasy')} />
-            <NavButton active={view === 'transfers'} onClick={() => navigateTo('transfers')} icon={<TransferIcon />} label={prefLanguage === 'English' ? 'Market' : 'بازاڕ'} />
+            <NavButton active={view === 'leaderboard'} onClick={() => navigateTo('leaderboard')} icon={<TrophyIcon />} label={prefLanguage === 'English' ? 'Ranking' : 'ڕیزبەندی'} />
             <NavButton active={view === 'settings'} onClick={() => navigateTo('settings')} icon={<SettingsIcon />} label={prefLanguage === 'English' ? 'Settings' : 'ڕێکخستن'} />
           </div>
         </nav>

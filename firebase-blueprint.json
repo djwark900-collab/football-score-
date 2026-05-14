@@ -189,6 +189,17 @@
         "timestamp": { "type": "string", "format": "date-time" }
       },
       "required": ["gameId", "userId", "prediction"]
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Global profile for a user",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "xp": { "type": "number" },
+        "level": { "type": "number" }
+      }
     }
   },
   "firestore": {
@@ -200,6 +211,7 @@
     "/venues/{venueId}": { "schema": "Venue", "description": "Venues/Stadiums" },
     "/games/{gameId}": { "schema": "Game", "description": "All matches" },
     "/admins/{adminId}": { "schema": "Administrator", "description": "Authorized administrators" },
+    "/users/{userId}": { "schema": "UserProfile", "description": "Global user profiles" },
     "/users/{userId}/favorites/{favoriteId}": { "schema": "Favorite", "description": "User's favorite teams" },
     "/transfers/{transferId}": { "schema": "Transfer", "description": "Player transfers" },
     "/fantasyTeams/{userId}": { "schema": "FantasyTeam", "description": "User's fantasy team" },
