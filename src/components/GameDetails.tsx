@@ -111,7 +111,7 @@ export function GameDetails({
       try {
         const isCorrect = result === prediction;
         // Award XP based on correct/incorrect
-        const xpAmount = isCorrect ? 50 : 25; 
+        const xpAmount = isCorrect ? 50 : 0; 
 
         // Use a flag to ensure we only award once
         await updateDoc(predRef, { settled: true });
@@ -151,12 +151,11 @@ export function GameDetails({
         timestamp: new Date().toISOString()
       });
 
-      // Award XP only for the first prediction on this game
+      // Award 1 XP on initial prediction tap
       if (!prediction) {
         const userDocRef = doc(db, 'users', userId);
-        const earnedXP = Math.floor(Math.random() * 20) + 10;
         await setDoc(userDocRef, {
-          xp: increment(earnedXP),
+          xp: increment(1),
           displayName: auth.currentUser?.displayName || 'Anonymous',
           photoURL: auth.currentUser?.photoURL || '',
           level: increment(0),
@@ -760,14 +759,17 @@ export function GameDetails({
                            </div>
                            <div className="flex items-center gap-2">
                              <div className="text-sm font-black text-blue-400">
-                                {game.status === 'finished' && 
+                                {game.status === 'finished' ? (
                                   ((prediction === 'home' && game.homeScore > game.awayScore) ||
                                    (prediction === 'away' && game.awayScore > game.homeScore) ||
                                    (prediction === 'draw' && game.homeScore === game.awayScore))
                                    ? '+50 Bonus XP'
-                                   : '+25 XP'}
+                                   : '+0 XP'
+                                ) : (
+                                  '+1 XP Awarded'
+                                )}
                              </div>
-                             <StarIcon size={14} className="text-yellow-400 fill-yellow-400" />
+                             <StarIcon size={14} className={cn("transition-all scale-110", game.status === 'finished' ? "text-yellow-400 fill-yellow-400" : "text-blue-400 fill-blue-400")} />
                            </div>
                         </motion.div>
                       )}
