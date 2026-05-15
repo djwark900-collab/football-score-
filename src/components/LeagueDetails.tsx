@@ -11,7 +11,8 @@ import {
   Download as DownloadIcon,
   Users as UsersIcon,
   LayoutGrid as LayoutGridIcon,
-  ArrowRight as ArrowRightIcon
+  ArrowRight as ArrowRightIcon,
+  X as XIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { GameCard } from './GameCard';
@@ -51,6 +52,7 @@ export function LeagueDetails({
   onToggleFollowMatch 
 }: LeagueDetailsProps) {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('matches');
+  const [isWideMode, setIsWideMode] = useState(false);
 
   const leagueTeams = useMemo(() => 
     teams.filter(t => t.leagueId === league.id || t.leagueId2 === league.id), 
@@ -63,9 +65,35 @@ export function LeagueDetails({
   );
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50/50 dark:bg-gray-950">
+    <div className={cn(
+      "flex flex-col min-h-screen bg-gray-50/50 dark:bg-gray-950 transition-all duration-700",
+      isWideMode && "fixed inset-0 z-[200] bg-white dark:bg-[#030303] overflow-y-auto p-6 md:p-12 animate-in fade-in zoom-in-95"
+    )}>
+      {isWideMode && (
+        <div className="flex justify-between items-center mb-12 max-w-7xl mx-auto w-full">
+           <div className="flex items-center gap-5">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl flex items-center justify-center text-white shadow-2xl shadow-blue-500/20">
+                {league.logo ? <img src={league.logo} className="w-10 h-10 object-contain" /> : <TrophyIcon size={32} />}
+              </div>
+              <div>
+                <h2 className="text-4xl font-black tracking-tight dark:text-white">{league.name}</h2>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                  <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Premium Competition View</p>
+                </div>
+              </div>
+           </div>
+           <button 
+            onClick={() => setIsWideMode(false)}
+            className="p-5 bg-gray-100 dark:bg-gray-800 rounded-3xl text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all hover:scale-110 active:scale-95 group"
+           >
+              <XIcon size={28} className="group-hover:rotate-90 transition-transform duration-300" />
+           </button>
+        </div>
+      )}
       {/* Immersive League Header */}
-      <div className="relative h-[40vh] min-h-[360px] bg-[#0A0A0A] overflow-hidden">
+      {!isWideMode && (
+        <div className="relative h-[40vh] min-h-[360px] bg-[#0A0A0A] overflow-hidden">
         {/* Dynamic Background Blur */}
         <div className="absolute inset-0 z-0">
           {league.logo && (
@@ -92,9 +120,18 @@ export function LeagueDetails({
             </span>
             <div className="w-6 h-0.5 bg-blue-500 rounded-full" />
           </div>
-          <button className="w-10 h-10 flex items-center justify-center bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 text-white/60 hover:text-white transition-all">
-            <DownloadIcon size={18} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setIsWideMode(true)}
+              className="w-10 h-10 flex items-center justify-center bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 text-white/60 hover:text-white transition-all"
+              title="Expand View"
+            >
+              <LayoutGridIcon size={18} />
+            </button>
+            <button className="w-10 h-10 flex items-center justify-center bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 text-white/60 hover:text-white transition-all">
+              <DownloadIcon size={18} />
+            </button>
+          </div>
         </div>
 
         {/* League Identity */}
@@ -117,37 +154,61 @@ export function LeagueDetails({
           </button>
         </div>
       </div>
+    )}
 
-      {/* Modern Tabs Navigation */}
-      <div className="sticky top-0 z-40 bg-white/80 dark:bg-gray-950/80 backdrop-blur-2xl border-b border-gray-100 dark:border-white/5 flex justify-start px-4 overflow-x-auto scrollbar-none">
-        <div className="flex gap-2 py-4">
-          {(['info', 'matches', 'standings', 'knockout', 'top_players', 'transfers', 'honors'] as SubTab[]).map((tab) => {
-            if (tab === 'knockout' && league.type !== 'cup') return null;
-            return (
-              <button
-                key={tab}
-                onClick={() => setActiveSubTab(tab)}
-                className={cn(
-                  "px-6 py-2 text-[12px] font-black uppercase tracking-widest rounded-full transition-all whitespace-nowrap shrink-0",
-                  activeSubTab === tab 
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" 
-                    : "text-gray-400 dark:text-gray-600 hover:text-gray-900 dark:hover:text-white border border-transparent hover:border-gray-200 dark:hover:border-white/10"
-                )}
-              >
-                {tab === 'info' ? 'Details' : 
-                 tab === 'matches' ? 'Matches' :
-                 tab === 'standings' ? 'Standings' : 
-                 tab === 'knockout' ? 'Knockout' :
-                 tab === 'top_players' ? 'Top Players' :
-                 tab === 'transfers' ? 'Transfers' : 'Honors'}
-              </button>
-            );
-          })}
+    {/* Modern Tabs Navigation */}
+      {!isWideMode && (
+        <div className="sticky top-0 z-40 bg-white/80 dark:bg-gray-950/80 backdrop-blur-2xl border-b border-gray-100 dark:border-white/5 flex justify-start px-4 overflow-x-auto scrollbar-none">
+          <div className="flex gap-2 py-4">
+            {(['info', 'matches', 'standings', 'knockout', 'top_players', 'transfers', 'honors'] as SubTab[]).map((tab) => {
+              if (tab === 'knockout' && league.type !== 'cup') return null;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveSubTab(tab)}
+                  className={cn(
+                    "px-6 py-2 text-[12px] font-black uppercase tracking-widest rounded-full transition-all whitespace-nowrap shrink-0",
+                    activeSubTab === tab 
+                      ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" 
+                      : "text-gray-400 dark:text-gray-600 hover:text-gray-900 dark:hover:text-white border border-transparent hover:border-gray-200 dark:hover:border-white/10"
+                  )}
+                >
+                  {tab === 'info' ? 'Details' : 
+                   tab === 'matches' ? 'Matches' :
+                   tab === 'standings' ? 'Standings' : 
+                   tab === 'knockout' ? 'Knockout' :
+                   tab === 'top_players' ? 'Top Players' :
+                   tab === 'transfers' ? 'Transfers' : 'Honors'}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Content Area */}
-      <div className="p-4 sm:p-8 max-w-5xl mx-auto w-full space-y-8">
+      <div className={cn("p-4 sm:p-8 w-full space-y-8 mx-auto", isWideMode ? "max-w-7xl" : "max-w-5xl")}>
+        {isWideMode && (
+          <div className="flex gap-2 pb-8 overflow-x-auto scrollbar-none border-b dark:border-white/5">
+             {(['info', 'matches', 'standings', 'knockout', 'top_players', 'transfers', 'honors'] as SubTab[]).map((tab) => {
+                if (tab === 'knockout' && league.type !== 'cup') return null;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveSubTab(tab)}
+                    className={cn(
+                      "px-8 py-3 text-[14px] font-black uppercase tracking-[0.2em] rounded-2xl transition-all whitespace-nowrap shrink-0",
+                      activeSubTab === tab 
+                        ? "bg-blue-600 text-white shadow-2xl shadow-blue-600/40 scale-105" 
+                        : "text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-50 dark:bg-gray-900/50"
+                    )}
+                  >
+                    {tab.replace('_', ' ')}
+                  </button>
+                );
+             })}
+          </div>
+        )}
         <AnimatePresence mode="wait">
           {activeSubTab === 'info' && (
             <motion.div

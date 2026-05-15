@@ -1,6 +1,8 @@
 {
   "name": "LiveScore Pro",
-  "description": "A comprehensive sports management platform for tracking real-time scores, team statistics, leagues, and championships with administrative controls.",
+  "description": "LiveScore Pro v1.1.5 - A comprehensive sports management platform for tracking real-time scores, team statistics, leagues, and expanded tournament standings.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

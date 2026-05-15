@@ -22,6 +22,36 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
   const league = leagues.find(l => l.id === game.leagueId);
   const [pulse, setPulse] = useState<'home' | 'away' | null>(null);
   const [prevScores, setPrevScores] = useState({ h: game.homeScore, a: game.awayScore });
+  const [timeLeft, setTimeLeft] = useState<{ d: string; h: string; m: string; s: string } | string | null>(null);
+
+  useEffect(() => {
+    if (game.status !== 'scheduled') {
+      setTimeLeft(null);
+      return;
+    }
+
+    const calculateTimeLeft = () => {
+      const difference = new Date(game.date).getTime() - new Date().getTime();
+      
+      if (difference <= 0) return "LIVE";
+
+      const d = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const h = Math.floor((difference / (1000 * 60 * 60)) % 24);
+      const m = Math.floor((difference / 1000 / 60) % 60);
+      const s = Math.floor((difference / 1000) % 60);
+
+      return {
+        d: d < 10 ? "0" + d : d.toString(),
+        h: h < 10 ? "0" + h : h.toString(),
+        m: m < 10 ? "0" + m : m.toString(),
+        s: s < 10 ? "0" + s : s.toString()
+      };
+    };
+
+    const timer = setInterval(() => setTimeLeft(calculateTimeLeft()), 1000);
+    setTimeLeft(calculateTimeLeft());
+    return () => clearInterval(timer);
+  }, [game.date, game.status]);
 
   useEffect(() => {
     if (game.homeScore > prevScores.h) {
@@ -190,36 +220,35 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
             </div>
 
             {/* Central Score/Time */}
-            <div className="flex flex-col items-center justify-center px-4 shrink-0">
+            <div className="flex flex-col items-center justify-center px-2 shrink-0">
               {game.status === 'scheduled' ? (
-                <div className="flex flex-col items-center gap-1.5 translate-y-[-4px]">
-                  <div className="bg-blue-600 px-3 py-0.5 rounded-lg shadow-lg shadow-blue-600/10 mb-1">
-                    <ZapIcon size={10} className="text-white fill-current" />
+                <div className="flex flex-col items-center">
+                  <div className="px-3 py-1 bg-gray-50 dark:bg-gray-800 rounded-full border border-gray-100 dark:border-gray-800">
+                    <span className="text-[12px] font-black text-gray-900 dark:text-white tabular-nums tracking-tighter">
+                      {new Date(game.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                    </span>
                   </div>
-                  <span className="text-[20px] font-black text-gray-900 dark:text-white tabular-nums tracking-tighter">
-                    {new Date(game.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
-                  </span>
-                  <span className="text-[9px] font-black text-gray-300 uppercase tracking-widest">Kick off</span>
+                  <span className="text-[8px] font-black text-blue-500 uppercase tracking-[0.2em] mt-1.5 opacity-50 italic">VS</span>
                 </div>
               ) : (
                 <div className="flex flex-col items-center">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
                     <span className={cn(
-                      "text-[28px] font-black tabular-nums tracking-tighter",
+                      "text-2xl font-black tabular-nums tracking-tighter",
                       game.status === 'finished' && game.homeScore > game.awayScore ? "text-gray-900 dark:text-white" : "text-gray-400"
                     )}>
                       {game.homeScore}
                     </span>
-                    <span className="text-[18px] font-semibold text-gray-100 dark:text-gray-800">-</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-gray-800" />
                     <span className={cn(
-                      "text-[28px] font-black tabular-nums tracking-tighter",
+                      "text-2xl font-black tabular-nums tracking-tighter",
                       game.status === 'finished' && game.awayScore > game.homeScore ? "text-gray-900 dark:text-white" : "text-gray-400"
                     )}>
                       {game.awayScore}
                     </span>
                   </div>
                   {game.status === 'finished' && (
-                    <span className="text-[9px] font-black text-gray-300 dark:text-gray-700 uppercase tracking-[0.3em] mt-1">Full Time</span>
+                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1">FT</span>
                   )}
                 </div>
               )}
@@ -242,6 +271,47 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
               </span>
             </div>
           </div>
+
+          {/* New Countdown Bottom Row */}
+          {game.status === 'scheduled' && typeof timeLeft === 'object' && timeLeft && (
+            <div className="pt-2 mt-1 border-t border-gray-50 dark:border-gray-800/50 flex justify-center">
+              <motion.div 
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-4 py-1"
+              >
+                <div className="flex items-center gap-1 bg-blue-500/10 dark:bg-blue-400/10 px-2 py-0.5 rounded-md">
+                   <ZapIcon size={8} className="text-blue-500 fill-current" />
+                   <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest">Countdown</span>
+                </div>
+                <div className="flex gap-1.5">
+                  {parseInt(timeLeft.d) > 0 && (
+                    <>
+                      <div className="flex flex-col items-center">
+                        <span className="text-[9px] font-black tabular-nums text-indigo-600 dark:text-indigo-400 leading-none">{timeLeft.d}</span>
+                        <span className="text-[5px] font-black text-gray-400 uppercase tracking-tighter mt-0.5">Days</span>
+                      </div>
+                      <span className="text-[8px] font-black text-gray-200 dark:text-gray-800 leading-none self-center">:</span>
+                    </>
+                  )}
+                  <div className="flex flex-col items-center">
+                    <span className="text-[9px] font-black tabular-nums text-gray-900 dark:text-white leading-none">{timeLeft.h}</span>
+                    <span className="text-[5px] font-black text-gray-400 uppercase tracking-tighter mt-0.5">Hrs</span>
+                  </div>
+                  <span className="text-[8px] font-black text-gray-200 dark:text-gray-800 leading-none self-center">:</span>
+                  <div className="flex flex-col items-center">
+                    <span className="text-[9px] font-black tabular-nums text-gray-900 dark:text-white leading-none">{timeLeft.m}</span>
+                    <span className="text-[5px] font-black text-gray-400 uppercase tracking-tighter mt-0.5">Min</span>
+                  </div>
+                  <span className="text-[8px] font-black text-gray-200 dark:text-gray-800 leading-none self-center">:</span>
+                  <div className="flex flex-col items-center">
+                    <span className="text-[9px] font-black tabular-nums text-blue-600 dark:text-blue-400 leading-none">{timeLeft.s}</span>
+                    <span className="text-[5px] font-black text-blue-500/50 uppercase tracking-tighter mt-0.5">Sec</span>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
         </div>
 
       )}

@@ -59,6 +59,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(defaultPlayerId || null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [copiedTeamData, setCopiedTeamData] = useState<any>(null);
   
   // Poster Generation States
@@ -227,7 +228,27 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
 
   const showFeedback = (msg: string) => {
     setSuccessMessage(msg);
+    setError(null);
     setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
+  const showError = (e: any) => {
+    console.error(e);
+    let msg = 'An error occurred. Please check the console.';
+    try {
+      if (typeof e === 'string') msg = e;
+      else if (e.message) {
+        try {
+          const parsed = JSON.parse(e.message);
+          msg = parsed.error || e.message;
+        } catch {
+          msg = e.message;
+        }
+      }
+    } catch {}
+    setError(msg);
+    setSuccessMessage(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleAddCompetition = async () => {
@@ -245,6 +266,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
       setCompetitionForm({ name: '', logo: '', type: 'league' });
       setEditingId(null);
     } catch (e) {
+      showError(e);
       handleFirestoreError(e, OperationType.WRITE, path);
     } finally {
       setLoading(false);
@@ -266,6 +288,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
       setLeagueForm({ name: '', country: '', logo: '', description: '', type: 'league', competitionId: '', currentSeasonId: '', history: [] });
       setEditingId(null);
     } catch (e) {
+      showError(e);
       handleFirestoreError(e, OperationType.WRITE, path);
     } finally {
       setLoading(false);
@@ -340,6 +363,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
       });
       setEditingId(null);
     } catch (e) {
+      showError(e);
       handleFirestoreError(e, OperationType.WRITE, path);
     } finally {
       setLoading(false);
@@ -378,6 +402,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
       });
       setEditingId(null);
     } catch (e) {
+      showError(e);
       handleFirestoreError(e, OperationType.WRITE, path);
     } finally {
       setLoading(false);
@@ -464,6 +489,19 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
         [teamType]: updated
       }
     });
+  };
+
+  const movePlayerBetweenTeamsInLineup = async (playerId: string, targetTeamId: string) => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      await updateDoc(doc(db, 'players', playerId), { teamId: targetTeamId });
+      showFeedback('Player moved successfully!');
+    } catch (e) {
+      showError(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const awardPoints = (type: 'goal' | 'assist' | 'cleanSheet') => {
@@ -553,6 +591,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
       });
       setEditingId(null);
     } catch (e) {
+      showError(e);
       handleFirestoreError(e, OperationType.WRITE, path);
     } finally {
       setLoading(false);
@@ -607,6 +646,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
       setVenueForm({ name: '', city: '', capacity: 0 });
       setEditingId(null);
     } catch (e) {
+      showError(e);
       handleFirestoreError(e, OperationType.WRITE, path);
     } finally {
       setLoading(false);
@@ -621,6 +661,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
       await addDoc(collection(db, 'admins'), adminForm);
       setAdminForm({ email: '', role: 'editor' });
     } catch (e) {
+      showError(e);
       handleFirestoreError(e, OperationType.WRITE, path);
     } finally {
       setLoading(false);
@@ -656,6 +697,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
       });
       setEditingId(null);
     } catch (e) {
+      showError(e);
       handleFirestoreError(e, OperationType.WRITE, path);
     } finally {
       setLoading(false);
@@ -686,6 +728,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
     try {
       await updateDoc(doc(db, 'games', gameId), { homeScore: home, awayScore: away });
     } catch (e) {
+      showError(e);
       handleFirestoreError(e, OperationType.WRITE, path);
     }
   };
@@ -759,6 +802,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
   };
 
   const cancelEdit = () => {
+    setError(null);
     setPlayerForm({ 
       name: '', 
       teamId: '', 
@@ -822,7 +866,9 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
       const path = `${coll}/${id}`;
       try {
         await deleteDoc(doc(db, coll, id));
+        setEditingId(null);
       } catch (e) {
+        showError(e);
         handleFirestoreError(e, OperationType.DELETE, path);
       }
     }
@@ -1026,10 +1072,26 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
+                      key="success-toast"
                       className="bg-green-600 text-white px-4 py-2 rounded-xl shadow-lg shadow-green-100 border border-green-500 flex items-center gap-2 font-black text-xs"
                     >
                       <ZapIcon size={14} className="animate-pulse" />
                       {successMessage}
+                    </motion.div>
+                  )}
+                  {error && (
+                    <motion.div 
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      key="error-toast"
+                      className="bg-rose-600 text-white px-4 py-2 rounded-xl shadow-lg shadow-rose-100 border border-rose-500 flex items-center gap-2 font-black text-xs"
+                    >
+                      <XIcon size={14} />
+                      {error}
+                      <button onClick={() => setError(null)} className="ml-2 hover:opacity-70">
+                        <XIcon size={10} />
+                      </button>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -1712,6 +1774,67 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                   </button>
                 </div>
               </div>
+
+              {editingId && (
+                <div className="mt-8 pt-8 border-t border-gray-100 space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <h4 className="text-[11px] font-black uppercase text-gray-400 tracking-widest flex items-center gap-2">
+                      <UsersIcon size={14} className="text-blue-600" /> Team Roster ({players.filter(p => p.teamId === editingId).length} Players)
+                    </h4>
+                    <button 
+                      onClick={() => {
+                        const teamId = editingId;
+                        setPlayerForm({ ...playerForm, teamId: teamId || '' });
+                        setActiveTab('players');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="text-[10px] font-black uppercase text-blue-600 hover:underline"
+                    >
+                      + Add Player to Team
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {players.filter(p => p.teamId === editingId).map(p => (
+                      <div key={p.id} className="p-3 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-between group">
+                        <div className="flex items-center gap-3">
+                           <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-[10px] font-black text-gray-400 border overflow-hidden">
+                              {p.imageUrl ? <img src={p.imageUrl} className="w-full h-full object-cover" /> : p.number}
+                           </div>
+                           <div>
+                              <p className="text-xs font-bold text-gray-900">{p.name}</p>
+                              <p className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">{p.position}</p>
+                           </div>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                           <button 
+                            onClick={() => {
+                              setEditingId(null);
+                              setTransferForm({
+                                ...transferForm,
+                                playerId: p.id,
+                                fromTeamId: p.teamId,
+                                date: new Date().toISOString().slice(0, 10)
+                              });
+                              setActiveTab('transfers');
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Move Player"
+                           >
+                              <TransferIcon size={14} />
+                           </button>
+                           <button 
+                            onClick={() => startEditingPlayer(p)}
+                            className="p-1.5 text-gray-400 hover:text-gray-900 rounded-lg transition-colors"
+                           >
+                              <EditIcon size={14} />
+                           </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </AdminCard>
 
              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -2040,17 +2163,25 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                                <h6 className="text-[10px] font-bold text-center uppercase tracking-widest text-gray-400">Home</h6>
                                <div className="space-y-1 max-h-[400px] overflow-y-auto scrollbar-thin bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
                                  {players.filter(p => p.teamId === gameForm.homeTeamId).map(p => (
-                                   <button 
-                                     key={p.id}
-                                     onClick={() => toggleLineupPlayer('home', p.id)}
-                                     className={cn(
-                                       "w-full p-2 rounded-xl text-left text-xs transition-all flex items-center justify-between",
-                                       gameForm.lineups.home.includes(p.id) ? "bg-blue-600 text-white font-bold shadow-md" : "hover:bg-gray-100 text-gray-600"
-                                     )}
-                                   >
-                                     <span>{p.name}</span>
-                                     <span className="opacity-50 text-[10px]">{p.position}</span>
-                                   </button>
+                                   <div key={p.id} className="flex gap-1 group">
+                                     <button 
+                                       onClick={() => toggleLineupPlayer('home', p.id)}
+                                       className={cn(
+                                         "flex-1 p-2 rounded-xl text-left text-xs transition-all flex items-center justify-between",
+                                         gameForm.lineups.home.includes(p.id) ? "bg-blue-600 text-white font-bold shadow-md" : "hover:bg-gray-100 text-gray-600"
+                                       )}
+                                     >
+                                       <span>{p.name}</span>
+                                       <span className="opacity-50 text-[10px]">{p.position}</span>
+                                     </button>
+                                     <button 
+                                      onClick={() => movePlayerBetweenTeamsInLineup(p.id, gameForm.awayTeamId)}
+                                      title="Move to Away Team"
+                                      className="w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-400 hover:bg-orange-50 hover:text-orange-500 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                                     >
+                                        <TransferIcon size={12} />
+                                     </button>
+                                   </div>
                                  ))}
                                </div>
                              </div>
@@ -2059,17 +2190,26 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                                <h6 className="text-[10px] font-bold text-center uppercase tracking-widest text-gray-400">Away</h6>
                                <div className="space-y-1 max-h-[400px] overflow-y-auto scrollbar-thin bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
                                  {players.filter(p => p.teamId === gameForm.awayTeamId).map(p => (
-                                   <button 
-                                     key={p.id}
-                                     onClick={() => toggleLineupPlayer('away', p.id)}
-                                     className={cn(
-                                       "w-full p-2 rounded-xl text-left text-xs transition-all flex items-center justify-between",
-                                       gameForm.lineups.away.includes(p.id) ? "bg-blue-600 text-white font-bold shadow-md" : "hover:bg-gray-100 text-gray-600"
-                                     )}
-                                   >
-                                     <span>{p.name}</span>
-                                     <span className="opacity-50 text-[10px]">{p.position}</span>
-                                   </button>
+                                   <div key={p.id} className="flex gap-1 group">
+                                      <button 
+                                        onClick={() => movePlayerBetweenTeamsInLineup(p.id, gameForm.homeTeamId)}
+                                        title="Move to Home Team"
+                                        className="w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-400 hover:bg-orange-50 hover:text-orange-500 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                                      >
+                                          <TransferIcon size={12} />
+                                      </button>
+                                      <button 
+                                        key={p.id}
+                                        onClick={() => toggleLineupPlayer('away', p.id)}
+                                        className={cn(
+                                          "flex-1 p-2 rounded-xl text-left text-xs transition-all flex items-center justify-between",
+                                          gameForm.lineups.away.includes(p.id) ? "bg-blue-600 text-white font-bold shadow-md" : "hover:bg-gray-100 text-gray-600"
+                                        )}
+                                      >
+                                        <span>{p.name}</span>
+                                        <span className="opacity-50 text-[10px]">{p.position}</span>
+                                      </button>
+                                   </div>
                                  ))}
                                </div>
                              </div>

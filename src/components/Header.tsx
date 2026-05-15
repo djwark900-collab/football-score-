@@ -65,7 +65,10 @@ export function Header({
           </div>
           <div>
             <h1 className="text-xl font-black tracking-tight text-blue-900 dark:text-white leading-none">LiveScore<span className="text-blue-500">Pro</span></h1>
-            <p className="text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.3em] mt-1 ml-0.5">Premium Sports</p>
+            <div className="flex items-center gap-2 mt-1 ml-0.5">
+              <p className="text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.3em]">Premium Sports</p>
+              <span className="text-[7px] font-black bg-blue-500/10 text-blue-500 px-1 rounded uppercase tracking-tighter">v1.1.5</span>
+            </div>
           </div>
         </div>
 

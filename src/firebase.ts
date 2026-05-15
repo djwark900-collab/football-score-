@@ -11,7 +11,7 @@ export const db = initializeFirestore(app, {
 export const auth = getAuth(app);
 
 // Connection test as per guidelines
-async function testConnection() {
+export async function testConnection() {
   try {
     // We use getDocFromServer to verify real network connectivity
     // If this fails, Firestore SDK will automatically switch to offline mode

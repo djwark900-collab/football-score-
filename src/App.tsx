@@ -50,7 +50,7 @@ import {
   signInWithEmailAndPassword,
   updateProfile
 } from 'firebase/auth';
-import { db, auth, handleFirestoreError, OperationType } from './firebase';
+import { db, auth, handleFirestoreError, OperationType, testConnection } from './firebase';
 import { cn } from './lib/utils';
 import { League, Game, Team, Player, Venue, Administrator, Transfer, AppNotification, Competition } from './types';
 
@@ -66,6 +66,7 @@ import { TeamDetails } from './components/TeamDetails';
 import { FantasyManager } from './components/FantasyManager';
 import { SignInModal } from './components/SignInModal';
 import { Leaderboard } from './components/Leaderboard';
+import { FootballLoading } from './components/Loading';
 
 type View = 'matches' | 'leagues' | 'standings' | 'admin' | 'settings' | 'game-details' | 'league-details' | 'team-details' | 'player-details' | 'transfers' | 'fantasy' | 'leaderboard';
 
@@ -644,96 +645,25 @@ export default function App() {
 
   const liveGames = useMemo(() => games.filter(g => g.status === 'live'), [games]);
 
+  const tryReconnect = async () => {
+    setIsOffline(false);
+    setQuotaExceeded(false);
+    try {
+      await testConnection();
+      // If we're here, testConnection didn't throw (or we can check more if needed)
+      // Realistically testConnection logs success, but let's re-verify with a small delay
+      setTimeout(() => {
+        if (!navigator.onLine) setIsOffline(true);
+      }, 1000);
+    } catch (e) {
+      setIsOffline(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-mesh text-[#1A1A1A] dark:text-gray-100 font-sans selection:bg-blue-100 pb-24">
       <AnimatePresence>
-        {isLoading && (
-          <motion.div 
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[1000] bg-white dark:bg-gray-950 flex flex-col items-center justify-center"
-          >
-            <div className="relative">
-              {/* Spinner Rings */}
-              <motion.div 
-                animate={{ rotate: 360 }}
-                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                className="w-40 h-40 rounded-full border-2 border-transparent border-t-blue-100 dark:border-t-blue-900/30"
-              />
-              <motion.div 
-                animate={{ rotate: -360 }}
-                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-0 w-40 h-40 rounded-full border-2 border-transparent border-b-blue-600"
-              />
-              
-              {/* Center Logo */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <motion.div 
-                  animate={{ 
-                    scale: [0.95, 1.05, 0.95],
-                  }}
-                  transition={{ 
-                    repeat: Infinity, 
-                    duration: 2,
-                    ease: "easeInOut"
-                  }}
-                  className="w-20 h-20 bg-blue-600 rounded-[32px] flex items-center justify-center shadow-[0_20px_50px_rgba(37,99,235,0.3)]"
-                >
-                  <TrophyIcon className="text-white w-10 h-10" />
-                </motion.div>
-              </div>
-            </div>
-
-            <div className="mt-12 space-y-6 text-center">
-              <div>
-                <motion.h2 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter"
-                >
-                  LiveScore<span className="text-blue-600">Pro</span>
-                </motion.h2>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em] mt-2">Initializing Arena</p>
-              </div>
-
-              <div className="flex gap-2 justify-center">
-                {[0, 1, 2].map((i) => (
-                  <motion.div 
-                    key={i}
-                    animate={{ 
-                      scale: [1, 1.5, 1],
-                      opacity: [0.3, 1, 0.3]
-                    }}
-                    transition={{ 
-                      repeat: Infinity, 
-                      duration: 1, 
-                      delay: i * 0.2 
-                    }}
-                    className="w-1.5 h-1.5 bg-blue-600 rounded-full" 
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Bottom Credit */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1 }}
-              className="absolute bottom-12 flex flex-col items-center gap-2"
-            >
-              <span className="text-[8px] font-black text-gray-300 dark:text-gray-700 uppercase tracking-widest">Powered by Football Data API</span>
-              <div className="w-12 h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                <motion.div 
-                  initial={{ x: '-100%' }}
-                  animate={{ x: '100%' }}
-                  transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                  className="w-full h-full bg-blue-600/40"
-                />
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
+        {isLoading && <FootballLoading />}
       </AnimatePresence>
 
       {/* Header */}
@@ -762,8 +692,16 @@ export default function App() {
       />
 
       {(hasDismissedQuota || isOffline) && (
-        <div className="bg-orange-500 text-white px-4 py-1.5 text-center text-[10px] font-black uppercase tracking-widest animate-pulse sticky top-0 z-50">
-          {isOffline ? 'OFFLINE • CHECK CONNECTION' : 'STALE DATA • OFFLINE MODE'}
+        <div className="bg-orange-500 text-white px-4 py-1.5 text-center text-[10px] font-black uppercase tracking-widest animate-pulse sticky top-0 z-50 flex items-center justify-center gap-4">
+          <span>{isOffline ? 'OFFLINE • CHECK CONNECTION' : 'STALE DATA • OFFLINE MODE'}</span>
+          {isOffline && (
+            <button 
+              onClick={tryReconnect}
+              className="bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded border border-white/40 transition-all active:scale-95"
+            >
+              RETRY
+            </button>
+          )}
         </div>
       )}
 
@@ -1140,6 +1078,7 @@ export default function App() {
                 leagues={leagues}
                 teams={teams}
                 games={games}
+                players={players}
                 onTeamClick={(id) => {
                   setSelectedTeamId(id);
                   navigateTo('team-details');
@@ -1453,9 +1392,9 @@ export default function App() {
                                 const base64 = reader.result as string;
                                 try {
                                   await updateProfile(user, { photoURL: base64 });
-                                  window.location.reload(); // Refresh to show new photo
+                                  setUser(prev => prev ? { ...prev, photoURL: base64 } : null);
                                 } catch (err) {
-                                  alert("Failed to update logo");
+                                  alert("Failed to update profile picture");
                                 }
                               };
                               reader.readAsDataURL(file);
@@ -1518,6 +1457,9 @@ export default function App() {
                               displayName: newName,
                               photoURL: newPhoto 
                             });
+
+                            // Update React State immediately
+                            setUser(prev => prev ? { ...prev, displayName: newName, photoURL: newPhoto } : null);
 
                             // Sync to Global Leaderboard Firestore
                             await setDoc(doc(db, 'users', user.uid), {
@@ -1605,7 +1547,7 @@ export default function App() {
                         <p className="text-xs text-gray-500 font-medium">Current build version of the application</p>
                       </div>
                       <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-black border border-blue-100 dark:border-blue-800">
-                        v1.1.4
+                        v1.1.5
                       </div>
                     </div>
 

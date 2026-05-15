@@ -34,13 +34,13 @@ service cloud.firestore {
       return data.keys().hasAll(['name', 'type']) &&
              data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
              data.type in ['league', 'cup', 'international'] &&
-             (!('logo' in data) || (data.logo is string && data.logo.size() <= 1000000));
+             (!('logo' in data) || (data.logo is string && data.logo.size() <= 2000000));
     }
 
     function isValidLeague(data) {
       return data.keys().hasAll(['name']) &&
              data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
-             (!('logo' in data) || (data.logo is string && data.logo.size() <= 1000000)) &&
+             (!('logo' in data) || (data.logo is string && data.logo.size() <= 2000000)) &&
              (!('competitionId' in data) || (data.competitionId is string && (data.competitionId == "" || isValidId(data.competitionId)))) &&
              (!('country' in data) || (data.country is string && data.country.size() <= 100)) &&
              (!('description' in data) || (data.description is string && data.description.size() <= 5000)) &&
@@ -61,14 +61,14 @@ service cloud.firestore {
              data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
              data.leagueId is string && isValidId(data.leagueId) &&
              (!('leagueId2' in data) || (data.leagueId2 is string && (data.leagueId2 == "" || isValidId(data.leagueId2)))) &&
-             (!('logo' in data) || (data.logo is string && data.logo.size() <= 1000000)) &&
+             (!('logo' in data) || (data.logo is string && data.logo.size() <= 2000000)) &&
              (!('coachName' in data) || (data.coachName is string && data.coachName.size() <= 100)) &&
-             (!('coachImageUrl' in data) || (data.coachImageUrl is string && data.coachImageUrl.size() <= 1000000)) &&
+             (!('coachImageUrl' in data) || (data.coachImageUrl is string && data.coachImageUrl.size() <= 2000000)) &&
              (!('foundedIn' in data) || (data.foundedIn is string && data.foundedIn.size() <= 20)) &&
              (!('marketValue' in data) || (data.marketValue is string && data.marketValue.size() <= 50)) &&
              (!('foreignPlayers' in data) || (data.foreignPlayers is number)) &&
              (!('nationalPlayers' in data) || (data.nationalPlayers is number)) &&
-             (!('stadiumImageUrl' in data) || (data.stadiumImageUrl is string && data.stadiumImageUrl.size() <= 1000000));
+             (!('stadiumImageUrl' in data) || (data.stadiumImageUrl is string && data.stadiumImageUrl.size() <= 2000000));
     }
 
     function isValidGame(data) {
@@ -82,7 +82,8 @@ service cloud.firestore {
              data.homeScore is number && data.homeScore >= 0 &&
              data.awayScore is number && data.awayScore >= 0 &&
              (!('events' in data) || data.events is list) &&
-             (!('lineups' in data) || data.lineups is map);
+             (!('lineups' in data) || data.lineups is map) &&
+             (!('posterUrl' in data) || (data.posterUrl is string && data.posterUrl.size() <= 2000000));
     }
 
     function isValidAdministrator(data) {
@@ -97,10 +98,10 @@ service cloud.firestore {
              data.teamId is string && isValidId(data.teamId) &&
              data.position is string && data.position.size() <= 50 &&
              data.number is number &&
-             (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 2000)) &&
+             (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 2000000)) &&
              (!('overview' in data) || (data.overview is string && data.overview.size() <= 5000)) &&
-             (!('career' in data) || (data.career is string && data.career.size() <= 10000)) &&
-             (!('transferHistory' in data) || (data.transferHistory is string && data.transferHistory.size() <= 10000));
+             (!('career' in data) || (data.career is string && data.career.size() <= 15000)) &&
+             (!('transferHistory' in data) || (data.transferHistory is string && data.transferHistory.size() <= 15000));
     }
 
     function isValidVenue(data) {
@@ -143,7 +144,7 @@ service cloud.firestore {
 
     function isValidUserProfile(data) {
       return (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
-             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1000000)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 2000000)) &&
              (!('xp' in data) || data.xp is number) &&
              (!('level' in data) || data.level is number);
     }
@@ -208,7 +209,7 @@ service cloud.firestore {
         // Action: Update Status
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])) ||
         // Action: Patch (more robust)
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['leagueId', 'leagueId2', 'homeTeamId', 'awayTeamId', 'date', 'status', 'homeScore', 'awayScore', 'events', 'lineups', 'round', 'venueId', 'attendance'])) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['leagueId', 'leagueId2', 'homeTeamId', 'awayTeamId', 'date', 'status', 'homeScore', 'awayScore', 'events', 'lineups', 'round', 'venueId', 'attendance', 'posterUrl', 'refereeName', 'broadcastChannels'])) ||
         // Action: Full Update
         isValidGame(incoming())
       );

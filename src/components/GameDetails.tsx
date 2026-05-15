@@ -47,7 +47,7 @@ interface GameDetailsProps {
   onToggleFollow?: () => void;
 }
 
-type Tab = 'details' | 'lineups' | 'stats' | 'standings';
+type Tab = 'details' | 'lineups' | 'stats' | 'standings' | 'h2h';
 
 export function GameDetails({ 
   game, 
@@ -382,43 +382,68 @@ export function GameDetails({
               </h2>
             </div>
 
-            {/* Score / Time */}
-            <div className="flex flex-col items-center gap-3">
-              {game.status === 'live' && (
-                <div className="bg-rose-600 px-3 py-0.5 rounded-full animate-pulse shadow-lg shadow-rose-900/40">
-                  <span className="text-[9px] font-black text-white tabular-nums tracking-widest uppercase">
-                    {game.currentTime || '00:00'}
-                  </span>
-                </div>
-              )}
-              
-              <div className="flex items-center gap-3">
-                <span className="text-4xl sm:text-5xl font-black text-white tabular-nums tracking-tighter drop-shadow-xl">
-                  {game.status === 'scheduled' ? '-' : game.homeScore}
-                </span>
-                <span className="text-2xl font-black text-white/20">:</span>
-                <span className="text-4xl sm:text-5xl font-black text-white tabular-nums tracking-tighter drop-shadow-xl">
-                  {game.status === 'scheduled' ? '-' : game.awayScore}
-                </span>
-              </div>
-
-              {game.status === 'scheduled' && (
-                <div className="flex flex-col items-center">
-                  <div className="bg-blue-600/20 backdrop-blur-md px-4 py-1 rounded-xl border border-blue-500/30">
-                    <span className="text-sm font-black text-blue-400 tabular-nums">
-                      {new Date(game.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+              <div className="flex flex-col items-center gap-1">
+                {game.status === 'live' && (
+                  <div className="bg-rose-600 px-3 py-0.5 rounded-full animate-pulse shadow-lg shadow-rose-900/40">
+                    <span className="text-[9px] font-black text-white tabular-nums tracking-widest uppercase">
+                      {game.currentTime || '00:00'}
                     </span>
                   </div>
-                  <span className="text-[8px] font-black text-white/40 uppercase tracking-widest mt-1.5">Kick Off</span>
+                )}
+                
+                <div className="flex items-center gap-3">
+                  {game.status === 'scheduled' ? (
+                     <div className="flex flex-col items-center gap-1">
+                        <span className="text-4xl sm:text-5xl font-black text-white/10 italic tracking-tighter scale-110 drop-shadow-lg">VS</span>
+                        <div className="bg-blue-600/20 backdrop-blur-md px-3 py-1 rounded-xl border border-white/5 mt-2">
+                           <span className="text-[12px] font-black text-blue-400 tabular-nums">
+                              {new Date(game.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                           </span>
+                        </div>
+                     </div>
+                  ) : (
+                    <>
+                      <span className="text-4xl sm:text-5xl font-black text-white tabular-nums tracking-tighter drop-shadow-xl">
+                        {game.homeScore}
+                      </span>
+                      <span className="text-2xl font-black text-white/20">:</span>
+                      <span className="text-4xl sm:text-5xl font-black text-white tabular-nums tracking-tighter drop-shadow-xl">
+                        {game.awayScore}
+                      </span>
+                    </>
+                  )}
                 </div>
-              )}
 
-              {game.status === 'finished' && (
-                <span className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em] bg-white/5 px-3 py-0.5 rounded-full border border-white/5">
-                  Full Time
-                </span>
-              )}
-            </div>
+                {game.status === 'scheduled' && typeof timeLeft === 'object' && timeLeft && (
+                  <div className="flex gap-2 mt-4 items-center">
+                    <div className="flex flex-col items-center">
+                      <span className="text-[12px] font-black tabular-nums text-white leading-none">{timeLeft.d}</span>
+                      <span className="text-[5px] font-black text-white/30 uppercase tracking-tighter mt-1">Days</span>
+                    </div>
+                    <span className="text-[10px] font-black text-white/20 self-center">:</span>
+                    <div className="flex flex-col items-center">
+                      <span className="text-[12px] font-black tabular-nums text-white leading-none">{timeLeft.h}</span>
+                      <span className="text-[5px] font-black text-white/30 uppercase tracking-tighter mt-1">Hrs</span>
+                    </div>
+                    <span className="text-[10px] font-black text-white/20 self-center">:</span>
+                    <div className="flex flex-col items-center">
+                      <span className="text-[12px] font-black tabular-nums text-white leading-none">{timeLeft.m}</span>
+                      <span className="text-[5px] font-black text-white/30 uppercase tracking-tighter mt-1">Min</span>
+                    </div>
+                    <span className="text-[10px] font-black text-white/20 self-center">:</span>
+                    <div className="flex flex-col items-center">
+                      <span className="text-[12px] font-black tabular-nums text-blue-400 leading-none">{timeLeft.s}</span>
+                      <span className="text-[5px] font-black text-blue-400/50 uppercase tracking-tighter mt-1">Sec</span>
+                    </div>
+                  </div>
+                )}
+
+                {game.status === 'finished' && (
+                  <span className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em] bg-white/5 px-3 py-0.5 rounded-full border border-white/5 mt-2">
+                    Full Time
+                  </span>
+                )}
+              </div>
 
             {/* Away Team */}
             <div className="flex flex-col items-center gap-3 flex-1">
@@ -441,10 +466,9 @@ export function GameDetails({
         </div>
       </div>
 
-      {/* Tabs Menu Overlay */}
-      <div className="sticky top-0 z-40 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 flex justify-center px-4 overflow-x-auto scrollbar-none">
+      <div className="sticky top-0 z-40 bg-white/80 dark:bg-gray-900 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 flex justify-center px-4 overflow-x-auto scrollbar-none">
         <div className="flex w-full max-w-2xl px-2">
-          {(['details', 'lineups', 'stats', 'standings'] as Tab[]).map((tab) => (
+          {(['details', 'lineups', 'stats', 'standings', 'h2h'] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
