@@ -190,7 +190,7 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
                 )}
               </div>
               <span className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-                {league?.name}
+                {league?.name} {game.round && <span className="text-gray-300 dark:text-gray-700 mx-1">•</span>} {game.round}
               </span>
             </div>
             {game.status === 'scheduled' && (
@@ -224,9 +224,12 @@ export function GameCard({ game, teams, leagues, onClick, onTeamClick, isLive, i
               {game.status === 'scheduled' ? (
                 <div className="flex flex-col items-center">
                   <div className="px-3 py-1 bg-gray-50 dark:bg-gray-800 rounded-full border border-gray-100 dark:border-gray-800">
-                    <span className="text-[12px] font-black text-gray-900 dark:text-white tabular-nums tracking-tighter">
-                      {new Date(game.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
-                    </span>
+                    <div className="flex flex-col items-center">
+                      <span className="text-[12px] font-black text-gray-900 dark:text-white tabular-nums tracking-tighter leading-none">
+                        {new Date(game.date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Baghdad' })}
+                      </span>
+                      <span className="text-[6px] font-black text-blue-500 uppercase tracking-widest mt-1">Time Baghdad</span>
+                    </div>
                   </div>
                   <span className="text-[8px] font-black text-blue-500 uppercase tracking-[0.2em] mt-1.5 opacity-50 italic">VS</span>
                 </div>

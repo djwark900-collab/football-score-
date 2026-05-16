@@ -108,6 +108,7 @@
         "date": { "type": "string", "format": "date-time" },
         "venueId": { "type": "string" },
         "attendance": { "type": "number" },
+        "round": { "type": "string", "description": "Match round (e.g. Round 1, Quarter Final)" },
         "events": { "type": "array", "items": { "type": "object" } },
         "lineups": {
           "type": "object",

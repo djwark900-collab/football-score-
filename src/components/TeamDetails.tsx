@@ -10,6 +10,7 @@ import {
 import { cn } from '../lib/utils';
 import { GameCard } from './GameCard';
 import { Standings } from './Standings';
+import { HonorsSection } from './HonorsSection';
 
 interface TeamDetailsProps {
   team: Team;
@@ -30,7 +31,7 @@ interface TeamDetailsProps {
   onEditTeam?: (teamId: string) => void;
 }
 
-type SubTab = 'Details' | 'Matches' | 'Standings' | 'Player Stats';
+type SubTab = 'Details' | 'Matches' | 'Standings' | 'Player Stats' | 'Honors';
 
 export function TeamDetails({ 
   team, 
@@ -181,7 +182,7 @@ export function TeamDetails({
       {/* Modern Tabs Navigation */}
       <div className="sticky top-0 z-40 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-2xl border-b border-gray-100 dark:border-white/5 flex justify-center px-4 overflow-x-auto scrollbar-none">
         <div className="flex w-full max-w-2xl">
-          {(['Details', 'Matches', 'Standings', 'Player Stats'] as SubTab[]).map((tab) => (
+          {(['Details', 'Matches', 'Standings', 'Player Stats', 'Honors'] as SubTab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveSubTab(tab)}
@@ -266,6 +267,32 @@ export function TeamDetails({
                   </div>
                 </div>
               </div>
+
+              {/* Team Kit Section */}
+              {team.uniformUrl && (
+                <div className="bg-white dark:bg-gray-900 rounded-[40px] shadow-3d-lg border border-gray-100 dark:border-white/5 p-8">
+                  <div className="flex items-center justify-between mb-8">
+                    <h3 className="text-lg font-black text-gray-900 dark:text-white tracking-tight">Official Team Kit</h3>
+                    <div className="px-3 py-1 bg-blue-500/10 rounded-full border border-blue-500/20">
+                      <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest">2023/24 Season</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-center">
+                    <motion.div 
+                      whileHover={{ scale: 1.05 }}
+                      className="w-full max-w-[200px] aspect-[4/5] relative group"
+                    >
+                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-blue-500/5 blur-3xl rounded-full group-hover:bg-blue-500/10 transition-colors" />
+                      <img 
+                        src={team.uniformUrl} 
+                        className="w-full h-full object-contain relative z-10 drop-shadow-2xl" 
+                        alt={`${team.name} Uniform`} 
+                        referrerPolicy="no-referrer"
+                      />
+                    </motion.div>
+                  </div>
+                </div>
+              )}
 
               {/* Voting Section */}
               <div className="bg-[#0A0A0A] rounded-[40px] shadow-2xl p-8 text-white relative overflow-hidden">
@@ -386,6 +413,22 @@ export function TeamDetails({
                   </div>
                 </button>
               ))}
+            </motion.div>
+          )}
+
+          {activeSubTab === 'Honors' && (
+            <motion.div
+              key="honors"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              <HonorsSection 
+                honors={team.honors || []}
+                title={`${team.name} Trophy Cabinet`}
+                accentColor="blue"
+              />
             </motion.div>
           )}
         </AnimatePresence>

@@ -17,6 +17,8 @@ import {
 import { cn } from '../lib/utils';
 import { GameCard } from './GameCard';
 import { Standings } from './Standings';
+import { KnockoutBracket } from './KnockoutBracket';
+import { HonorsSection } from './HonorsSection';
 
 interface LeagueDetailsProps {
   league: League;
@@ -162,6 +164,7 @@ export function LeagueDetails({
           <div className="flex gap-2 py-4">
             {(['info', 'matches', 'standings', 'knockout', 'top_players', 'transfers', 'honors'] as SubTab[]).map((tab) => {
               if (tab === 'knockout' && league.type !== 'cup') return null;
+              if (tab === 'standings' && league.type === 'cup') return null;
               return (
                 <button
                   key={tab}
@@ -192,6 +195,7 @@ export function LeagueDetails({
           <div className="flex gap-2 pb-8 overflow-x-auto scrollbar-none border-b dark:border-white/5">
              {(['info', 'matches', 'standings', 'knockout', 'top_players', 'transfers', 'honors'] as SubTab[]).map((tab) => {
                 if (tab === 'knockout' && league.type !== 'cup') return null;
+                if (tab === 'standings' && league.type === 'cup') return null;
                 return (
                   <button
                     key={tab}
@@ -306,14 +310,13 @@ export function LeagueDetails({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="flex flex-col items-center py-8"
+              className="w-full"
             >
-              {/* Knockout bracket rendering remains similar but with updated styling */}
-              <div className="p-12 text-center bg-white dark:bg-gray-900 rounded-[40px] border border-gray-100 dark:border-white/5 shadow-3d-lg w-full">
-                <LayoutGridIcon className="mx-auto w-12 h-12 text-gray-200 mb-6" />
-                <h3 className="font-black text-gray-900 dark:text-white uppercase tracking-widest text-sm mb-2">Tournament Bracket</h3>
-                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest opacity-60">Visualizing cup progression...</p>
-              </div>
+              <KnockoutBracket 
+                games={leagueGames}
+                teams={teams}
+                onGameClick={onGameClick}
+              />
             </motion.div>
           )}
 
@@ -425,23 +428,19 @@ export function LeagueDetails({
               exit={{ opacity: 0, y: -20 }}
               className="space-y-6"
             >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {league.history?.map((record, i) => {
+              <HonorsSection 
+                title={`${league.name} Champions History`}
+                accentColor="amber"
+                honors={league.history?.map(record => {
                   const winner = teams.find(t => t.id === record.winnerId);
-                  return (
-                    <div key={i} className="bg-white dark:bg-gray-900 p-8 rounded-[40px] shadow-3d-lg border border-gray-100 dark:border-white/5 flex flex-col items-center text-center group transition-all hover:translate-y-[-4px]" onClick={() => winner && onTeamClick(winner.id)}>
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-6">{record.season}</span>
-                      <div className="w-16 h-16 mb-4 group-hover:scale-110 transition-transform">
-                        {winner?.logo ? <img src={winner.logo} className="w-full h-full object-contain" alt="" /> : <ShieldIcon size={48} className="text-gray-200" />}
-                      </div>
-                      <span className="font-black text-gray-900 dark:text-white uppercase tracking-tight text-sm">{winner?.name}</span>
-                      <div className="mt-4 flex gap-1">
-                        {[1,2,3].map(s => <div key={s} className="w-1.5 h-1.5 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.4)]" />)}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                  return {
+                    season: record.season,
+                    title: winner?.name || 'Unknown Champion',
+                    description: 'League Winner',
+                    type: 'winner'
+                  };
+                }) || []}
+              />
             </motion.div>
           )}
         </AnimatePresence>

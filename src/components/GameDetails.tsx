@@ -22,7 +22,8 @@ import {
   Lock as LockIcon,
   X as XIcon,
   Trophy as TrophyIcon,
-  User as UserIcon
+  User as UserIcon,
+  ArrowLeftRight as TransferIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { doc, updateDoc, setDoc, collection, onSnapshot, query, where, increment } from 'firebase/firestore';
@@ -340,6 +341,12 @@ export function GameDetails({
                   </span>
                 </div>
               ))}
+              {game.round && (
+                <div className="contents">
+                  <span className="text-white/20 font-black">•</span>
+                  <span className="text-[9px] font-black text-blue-400 uppercase tracking-[0.3em]">{game.round}</span>
+                </div>
+              )}
             </div>
             <div className="w-8 h-0.5 bg-blue-500 rounded-full" />
           </div>
@@ -396,9 +403,12 @@ export function GameDetails({
                      <div className="flex flex-col items-center gap-1">
                         <span className="text-4xl sm:text-5xl font-black text-white/10 italic tracking-tighter scale-110 drop-shadow-lg">VS</span>
                         <div className="bg-blue-600/20 backdrop-blur-md px-3 py-1 rounded-xl border border-white/5 mt-2">
-                           <span className="text-[12px] font-black text-blue-400 tabular-nums">
-                              {new Date(game.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
-                           </span>
+                           <div className="flex flex-col items-center">
+                              <span className="text-[12px] font-black text-blue-400 tabular-nums leading-none">
+                                 {new Date(game.date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Baghdad' })}
+                              </span>
+                              <span className="text-[6px] font-black text-blue-400 uppercase tracking-widest mt-1">Time Baghdad</span>
+                           </div>
                         </div>
                      </div>
                   ) : (
@@ -417,22 +427,22 @@ export function GameDetails({
                 {game.status === 'scheduled' && typeof timeLeft === 'object' && timeLeft && (
                   <div className="flex gap-2 mt-4 items-center">
                     <div className="flex flex-col items-center">
-                      <span className="text-[12px] font-black tabular-nums text-white leading-none">{timeLeft.d}</span>
+                      <span className="text-[10px] font-black tabular-nums text-white leading-none">{timeLeft.d}</span>
                       <span className="text-[5px] font-black text-white/30 uppercase tracking-tighter mt-1">Days</span>
                     </div>
                     <span className="text-[10px] font-black text-white/20 self-center">:</span>
                     <div className="flex flex-col items-center">
-                      <span className="text-[12px] font-black tabular-nums text-white leading-none">{timeLeft.h}</span>
+                      <span className="text-[10px] font-black tabular-nums text-white leading-none">{timeLeft.h}</span>
                       <span className="text-[5px] font-black text-white/30 uppercase tracking-tighter mt-1">Hrs</span>
                     </div>
                     <span className="text-[10px] font-black text-white/20 self-center">:</span>
                     <div className="flex flex-col items-center">
-                      <span className="text-[12px] font-black tabular-nums text-white leading-none">{timeLeft.m}</span>
+                      <span className="text-[10px] font-black tabular-nums text-white leading-none">{timeLeft.m}</span>
                       <span className="text-[5px] font-black text-white/30 uppercase tracking-tighter mt-1">Min</span>
                     </div>
                     <span className="text-[10px] font-black text-white/20 self-center">:</span>
                     <div className="flex flex-col items-center">
-                      <span className="text-[12px] font-black tabular-nums text-blue-400 leading-none">{timeLeft.s}</span>
+                      <span className="text-[10px] font-black tabular-nums text-blue-400 leading-none">{timeLeft.s}</span>
                       <span className="text-[5px] font-black text-blue-400/50 uppercase tracking-tighter mt-1">Sec</span>
                     </div>
                   </div>
@@ -1074,7 +1084,29 @@ export function GameDetails({
                         {game.lineups?.home && game.lineups.home.length > 0 ? (
                           game.lineups.home.map(pid => {
                             const p = players.find(player => player.id === pid);
-                            return <LineupItem key={pid} player={p} onClick={() => onPlayerClick?.(pid)} />;
+                            if (!p) return null;
+                            return (
+                              <div key={pid} className="flex items-center justify-between group">
+                                 <LineupItem player={p} onClick={() => onPlayerClick?.(pid)} />
+                                 {isAdmin && (
+                                   <button 
+                                     onClick={async () => {
+                                       if (confirm(`Move ${p.name} to ${awayTeam?.name}?`)) {
+                                         try {
+                                           await updateDoc(doc(db, 'players', pid), { teamId: game.awayTeamId });
+                                         } catch (err) {
+                                           handleFirestoreError(err, OperationType.UPDATE, `players/${pid}`);
+                                         }
+                                       }
+                                     }}
+                                     className="p-2 bg-white/5 rounded-xl text-white/20 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all"
+                                     title="Move to Away Team"
+                                   >
+                                     <TransferIcon size={14} />
+                                   </button>
+                                 )}
+                              </div>
+                            );
                           })
                         ) : (
                           <p className="text-[10px] text-gray-400 italic px-2">Lineup not announced</p>
@@ -1094,7 +1126,29 @@ export function GameDetails({
                         {game.lineups?.away && game.lineups.away.length > 0 ? (
                           game.lineups.away.map(pid => {
                             const p = players.find(player => player.id === pid);
-                            return <LineupItem key={pid} player={p} isRight onClick={() => onPlayerClick?.(pid)} />;
+                            if (!p) return null;
+                            return (
+                              <div key={pid} className="flex items-center justify-between group">
+                                 {isAdmin && (
+                                   <button 
+                                     onClick={async () => {
+                                       if (confirm(`Move ${p.name} to ${homeTeam?.name}?`)) {
+                                         try {
+                                           await updateDoc(doc(db, 'players', pid), { teamId: game.homeTeamId });
+                                         } catch (err) {
+                                           handleFirestoreError(err, OperationType.UPDATE, `players/${pid}`);
+                                         }
+                                       }
+                                     }}
+                                     className="p-2 bg-white/5 rounded-xl text-white/20 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all"
+                                     title="Move to Home Team"
+                                   >
+                                     <TransferIcon size={14} />
+                                   </button>
+                                 )}
+                                 <LineupItem player={p} isRight onClick={() => onPlayerClick?.(pid)} />
+                              </div>
+                            );
                           })
                         ) : (
                           <p className="text-[10px] text-gray-400 italic text-right px-2">Lineup not announced</p>

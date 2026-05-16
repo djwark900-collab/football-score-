@@ -18,6 +18,7 @@ import {
   Clock as ClockIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { HonorsSection } from './HonorsSection';
 import { 
   Radar, 
   RadarChart, 
@@ -41,7 +42,7 @@ interface PlayerDetailsProps {
   onGameClick?: (gameId: string) => void;
 }
 
-type Tab = 'PROFILE' | 'STATS' | 'FANTASY';
+type Tab = 'PROFILE' | 'STATS' | 'FANTASY' | 'HONORS';
 
 export function PlayerDetails({ 
   player, 
@@ -185,7 +186,7 @@ export function PlayerDetails({
 
         {/* PROFILE / STATS / FANTASY Tabs */}
         <div className="flex px-2 mt-4 border-t border-white/5 overflow-x-auto scrollbar-none">
-          {(['PROFILE', 'STATS', 'FANTASY'] as Tab[]).map((tab) => (
+          {(['PROFILE', 'STATS', 'FANTASY', 'HONORS'] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -518,6 +519,22 @@ export function PlayerDetails({
                 <h3 className="text-lg font-black dark:text-white mb-6">Detailed Season Stats</h3>
                 <p className="text-gray-500 dark:text-gray-400 text-sm">Detailed performance statistics are being aggregated for the current season.</p>
               </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'HONORS' && (
+            <motion.div
+              key="honors-content"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="space-y-6"
+            >
+              <HonorsSection 
+                honors={player.honors || []}
+                title={`${player.name} Career Achievements`}
+                accentColor="red"
+              />
             </motion.div>
           )}
         </AnimatePresence>

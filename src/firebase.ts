@@ -5,8 +5,8 @@ import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 export const db = initializeFirestore(app, {
-  // Use auto-detect for better compatibility in various environments
-  experimentalAutoDetectLongPolling: true,
+  // Force long polling to avoid issues with blocked WebSockets/gRPC in some environments
+  experimentalForceLongPolling: true,
 }, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 

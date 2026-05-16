@@ -67,8 +67,9 @@ import { FantasyManager } from './components/FantasyManager';
 import { SignInModal } from './components/SignInModal';
 import { Leaderboard } from './components/Leaderboard';
 import { FootballLoading } from './components/Loading';
+import { SearchPage } from './components/SearchPage';
 
-type View = 'matches' | 'leagues' | 'standings' | 'admin' | 'settings' | 'game-details' | 'league-details' | 'team-details' | 'player-details' | 'transfers' | 'fantasy' | 'leaderboard';
+type View = 'matches' | 'leagues' | 'standings' | 'admin' | 'settings' | 'game-details' | 'league-details' | 'team-details' | 'player-details' | 'transfers' | 'fantasy' | 'leaderboard' | 'search';
 
 export default function App() {
   const [view, setView] = useState<View>('matches');
@@ -181,6 +182,7 @@ export default function App() {
         settings: 'Settings',
         standings: 'Standings',
         search_placeholder: 'Search leagues, teams, players...',
+        recent_searches: 'Recent Searches',
         admin: 'Admin',
         admin_panel: 'Admin Panel',
         pref_notifications: 'Allow Notifications',
@@ -221,6 +223,7 @@ export default function App() {
         settings: 'ڕێکخستن',
         standings: 'ڕیزبەندی',
         search_placeholder: 'بگەڕێ بۆ خول، تیم، یاریزان...',
+        recent_searches: 'گەڕانەکانى ئەمدواییە',
         admin: 'ئەدمین',
         admin_panel: 'پانێڵی ئەدمین',
         pref_notifications: 'ئاگادارکردنەوەکان',
@@ -1300,6 +1303,28 @@ export default function App() {
                 })()}
               </div>
             </motion.div>
+          )}
+
+          {view === 'search' && (
+            <SearchPage 
+              leagues={leagues}
+              teams={teams}
+              players={players}
+              onLeagueClick={(id) => {
+                setSelectedLeagueId(id);
+                navigateTo('league-details');
+              }}
+              onTeamClick={(id) => {
+                setSelectedTeamId(id);
+                navigateTo('team-details');
+              }}
+              onPlayerClick={(id) => {
+                setSelectedPlayerId(id);
+                navigateTo('player-details');
+              }}
+              onBack={() => navigateTo('matches')}
+              t={t}
+            />
           )}
 
           {view === 'fantasy' && (

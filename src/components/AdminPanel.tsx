@@ -137,7 +137,9 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
     marketValue: '',
     foreignPlayers: 0,
     nationalPlayers: 0,
-    stadiumImageUrl: ''
+    stadiumImageUrl: '',
+    uniformUrl: '',
+    honors: [] as { season: string; title: string; description?: string; type?: 'winner' | 'runner-up' | 'individual'; }[]
   });
   const [gameForm, setGameForm] = useState<{
     leagueId: string;
@@ -156,6 +158,12 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
     broadcastChannels: { name: string; commentator?: string; isImportant?: boolean; }[];
     events: MatchEvent[];
     lineups: { home: string[]; away: string[]; };
+    isKnockout: boolean;
+    leg: 1 | 2;
+    homePenalties: number;
+    awayPenalties: number;
+    homeAggregate: number;
+    awayAggregate: number;
   }>({ 
     leagueId: defaultLeagueId || '', 
     leagueId2: '',
@@ -172,7 +180,13 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
     refereeName: '',
     broadcastChannels: [],
     events: [],
-    lineups: { home: [], away: [] }
+    lineups: { home: [], away: [] },
+    isKnockout: false,
+    leg: 1,
+    homePenalties: 0,
+    awayPenalties: 0,
+    homeAggregate: 0,
+    awayAggregate: 0
   });
   const [eventForm, setEventForm] = useState({
     type: 'goal' as 'goal' | 'yellow' | 'red' | 'sub',
@@ -212,7 +226,8 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
     fantasyPoints: 0,
     goals: 0,
     assists: 0,
-    cleanSheets: 0
+    cleanSheets: 0,
+    honors: [] as { season: string; title: string; description?: string; type?: 'winner' | 'runner-up' | 'individual'; }[]
   });
   const [playerSearch, setPlayerSearch] = useState('');
   const [venueForm, setVenueForm] = useState({ name: '', city: '', capacity: 0 });
@@ -359,7 +374,9 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
         marketValue: '',
         foreignPlayers: 0,
         nationalPlayers: 0,
-        stadiumImageUrl: ''
+        stadiumImageUrl: '',
+        uniformUrl: '',
+        honors: []
       });
       setEditingId(null);
     } catch (e) {
@@ -375,11 +392,17 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
     setLoading(true);
     const path = editingId ? `games/${editingId}` : 'games';
     try {
+      const finalData = {
+        ...gameForm,
+        penalties: gameForm.isKnockout ? { home: gameForm.homePenalties, away: gameForm.awayPenalties } : undefined,
+        aggregateScore: gameForm.isKnockout ? { home: gameForm.homeAggregate, away: gameForm.awayAggregate } : undefined
+      };
+
       if (editingId) {
-        await updateDoc(doc(db, 'games', editingId), gameForm);
+        await updateDoc(doc(db, 'games', editingId), finalData);
         showFeedback('Match details updated!');
       } else {
-        await addDoc(collection(db, 'games'), gameForm);
+        await addDoc(collection(db, 'games'), finalData);
         showFeedback('Match scheduled successfully!');
       }
       setGameForm({ 
@@ -398,7 +421,13 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
         refereeName: '',
         broadcastChannels: [],
         events: [],
-        lineups: { home: [], away: [] }
+        lineups: { home: [], away: [] },
+        isKnockout: false,
+        leg: 1,
+        homePenalties: 0,
+        awayPenalties: 0,
+        homeAggregate: 0,
+        awayAggregate: 0
       });
       setEditingId(null);
     } catch (e) {
@@ -568,7 +597,8 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
         fantasyPoints: playerForm.fantasyPoints ?? 0,
         goals: playerForm.goals ?? 0,
         assists: playerForm.assists ?? 0,
-        cleanSheets: playerForm.cleanSheets ?? 0
+        cleanSheets: playerForm.cleanSheets ?? 0,
+        honors: playerForm.honors ?? []
       };
 
       if (editingId) {
@@ -626,7 +656,8 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
       fantasyPoints: p.fantasyPoints || 0,
       goals: p.goals || 0,
       assists: p.assists || 0,
-      cleanSheets: p.cleanSheets || 0
+      cleanSheets: p.cleanSheets || 0,
+      honors: p.honors || []
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -772,7 +803,9 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
       marketValue: t.marketValue || '',
       foreignPlayers: t.foreignPlayers || 0,
       nationalPlayers: t.nationalPlayers || 0,
-      stadiumImageUrl: t.stadiumImageUrl || ''
+      stadiumImageUrl: t.stadiumImageUrl || '',
+      uniformUrl: t.uniformUrl || '',
+      honors: t.honors || []
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -796,7 +829,13 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
       refereeName: g.refereeName || '',
       broadcastChannels: g.broadcastChannels || [],
       events: g.events || [],
-      lineups: g.lineups || { home: [], away: [] }
+      lineups: g.lineups || { home: [], away: [] },
+      isKnockout: g.isKnockout || false,
+      leg: g.leg || 1,
+      homePenalties: g.penalties?.home || 0,
+      awayPenalties: g.penalties?.away || 0,
+      homeAggregate: g.aggregateScore?.home || 0,
+      awayAggregate: g.aggregateScore?.away || 0
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -826,7 +865,11 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
       },
       recentRatingsRaw: '',
       price: 4.5,
-      fantasyPoints: 0
+      fantasyPoints: 0,
+      goals: 0,
+      assists: 0,
+      cleanSheets: 0,
+      honors: []
     });
     setVenueForm({ name: '', city: '', capacity: 0 });
     setEditingId(null);
@@ -844,7 +887,9 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
       marketValue: '',
       foreignPlayers: 0,
       nationalPlayers: 0,
-      stadiumImageUrl: ''
+      stadiumImageUrl: '',
+      uniformUrl: '',
+      honors: []
     });
     setGameForm({ 
       leagueId: defaultLeagueId || '', 
@@ -1322,6 +1367,13 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                         className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-600 transition-all font-medium min-h-[60px] text-sm"
                       />
                     </div>
+
+                    <div className="pt-4 border-t border-gray-100">
+                      <HonorsManager 
+                        honors={playerForm.honors} 
+                        onChange={(h) => setPlayerForm({ ...playerForm, honors: h })}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1762,6 +1814,20 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                   onFileSelect={handleFileUpload}
                 />
 
+                <ImageUpload 
+                  label="Team Uniform (File or URL)" 
+                  value={teamForm.uniformUrl || ''} 
+                  onChange={v => setTeamForm({ ...teamForm, uniformUrl: v })}
+                  onFileSelect={handleFileUpload}
+                />
+
+                <div className="sm:col-span-2 pt-4 border-t border-gray-100">
+                  <HonorsManager 
+                    honors={teamForm.honors} 
+                    onChange={(h) => setTeamForm({ ...teamForm, honors: h })}
+                  />
+                </div>
+
                 <div className="sm:pt-7 flex gap-2 sm:col-span-2">
                   {editingId && (
                     <button onClick={cancelEdit} className="px-6 h-[54px] bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all">
@@ -1986,6 +2052,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                     onChange={v => setGameForm({ ...gameForm, round: v })}
                     options={[
                       { label: 'Group Stage', value: 'Group Stage' },
+                      { label: 'Knockout Stage', value: 'Knockout' },
                       { label: 'Round of 16', value: 'Round of 16' },
                       { label: 'Quarter-final', value: 'Quarter-final' },
                       { label: 'Semi-final', value: 'Semi-final' },
@@ -1999,6 +2066,60 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                       { label: 'Matchday 6', value: 'Matchday 6' }
                     ]}
                   />
+
+                  {/* Knockout Settings */}
+                  <div className="sm:col-span-3 p-6 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-3xl space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-white/10">
+                          <ZapIcon className={gameForm.isKnockout ? "text-yellow-500" : "text-gray-300"} size={16} />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black uppercase tracking-tight">Knockout Match Settings</h4>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Aggregates, Legs, and Penalties</p>
+                        </div>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => setGameForm({ ...gameForm, isKnockout: !gameForm.isKnockout })}
+                        className={cn(
+                          "px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all",
+                          gameForm.isKnockout ? "bg-yellow-500 text-white shadow-lg shadow-yellow-100" : "bg-white dark:bg-gray-800 text-gray-400 border border-gray-100 dark:border-white/10"
+                        )}
+                      >
+                        {gameForm.isKnockout ? "Enabled" : "Disabled"}
+                      </button>
+                    </div>
+
+                    {gameForm.isKnockout && (
+                      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 border-t border-gray-100 dark:border-white/10">
+                         <div className="space-y-4">
+                            <Select 
+                              label="Leg Number" 
+                              value={gameForm.leg.toString()} 
+                              onChange={v => setGameForm({ ...gameForm, leg: parseInt(v) as any })}
+                              options={[{ label: '1st Leg', value: '1' }, { label: '2nd Leg', value: '2' }]}
+                            />
+                         </div>
+                         
+                         <div className="space-y-3">
+                            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Aggregate Score</label>
+                            <div className="grid grid-cols-2 gap-2">
+                               <Input label="Home Agg" type="number" value={gameForm.homeAggregate} onChange={v => setGameForm({ ...gameForm, homeAggregate: parseInt(v) || 0 })} />
+                               <Input label="Away Agg" type="number" value={gameForm.awayAggregate} onChange={v => setGameForm({ ...gameForm, awayAggregate: parseInt(v) || 0 })} />
+                            </div>
+                         </div>
+
+                         <div className="space-y-3">
+                            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Penalty Shootout</label>
+                            <div className="grid grid-cols-2 gap-2">
+                               <Input label="Home Pens" type="number" value={gameForm.homePenalties} onChange={v => setGameForm({ ...gameForm, homePenalties: parseInt(v) || 0 })} />
+                               <Input label="Away Pens" type="number" value={gameForm.awayPenalties} onChange={v => setGameForm({ ...gameForm, awayPenalties: parseInt(v) || 0 })} />
+                            </div>
+                         </div>
+                      </motion.div>
+                    )}
+                  </div>
                   <Select 
                     label="Venue" 
                     value={gameForm.venueId} 
@@ -2515,6 +2636,87 @@ function AdminCard({ title, icon, children }: { title: string; icon: React.React
       </div>
       {children}
     </div>
+  );
+}
+
+function HonorsManager({ honors, onChange }: { honors: any[]; onChange: (h: any[]) => void }) {
+  const [form, setForm] = useState({ season: '', title: '', description: '', type: 'winner' as any });
+
+  const add = () => {
+    if (!form.season || !form.title) return;
+    onChange([...honors, { ...form }]);
+    setForm({ season: '', title: '', description: '', type: 'winner' });
+  };
+
+  const remove = (idx: number) => {
+    onChange(honors.filter((_, i) => i !== idx));
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="p-6 bg-gray-50 dark:bg-white/5 rounded-[32px] border border-gray-100 dark:border-white/5">
+        <h5 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-4">Add Honor/Achievement</h5>
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <Input label="Season/Year" value={form.season} onChange={v => setForm({ ...form, season: v })} placeholder="e.g. 2023/24" />
+          <Select label="Type" value={form.type} onChange={v => setForm({ ...form, type: v as any })} options={[
+            { label: 'Winner (Trophy)', value: 'winner' },
+            { label: 'Runner-up (Medal)', value: 'runner-up' },
+            { label: 'Individual (Star)', value: 'individual' }
+          ]} />
+        </div>
+        <Input label="Achievement Title" value={form.title} onChange={v => setForm({ ...form, title: v })} placeholder="e.g. League Champions" />
+        <div className="mt-4">
+          <Input label="Short Description (Optional)" value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder="e.g. First title in 10 years" />
+        </div>
+        <button 
+          onClick={add}
+          className="w-full mt-4 h-12 bg-gray-900 dark:bg-white dark:text-gray-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all"
+        >
+          Add to Cabinet
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-2">
+        {honors.map((h, i) => (
+          <div key={i} className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-white/5 group shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-600">
+                {h.type === 'winner' ? <TrophyIcon size={16} /> : h.type === 'individual' ? <StarIcon size={16} /> : <AwardIcon size={16} />}
+              </div>
+              <div>
+                 <p className="font-black text-xs uppercase tracking-tight">{h.title}</p>
+                 <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{h.season} • {h.type}</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => remove(i)}
+              className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors opacity-0 group-hover:opacity-100"
+            >
+              <Trash2Icon size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AwardIcon({ size, className }: { size?: number; className?: string }) {
+  return (
+    <svg 
+      width={size || 24} 
+      height={size || 24} 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      className={className}
+    >
+      <path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526" />
+      <circle cx="12" cy="8" r="7" />
+    </svg>
   );
 }
 

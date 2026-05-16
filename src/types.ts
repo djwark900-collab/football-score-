@@ -41,6 +41,13 @@ export interface Team {
   foreignPlayers?: number;
   nationalPlayers?: number;
   stadiumImageUrl?: string;
+  uniformUrl?: string;
+  honors?: {
+    season: string;
+    title: string;
+    description?: string;
+    type?: 'winner' | 'runner-up' | 'individual';
+  }[];
 }
 
 export interface Player {
@@ -72,6 +79,12 @@ export interface Player {
   goals?: number;
   assists?: number;
   cleanSheets?: number;
+  honors?: {
+    season: string;
+    title: string;
+    description?: string;
+    type?: 'winner' | 'runner-up' | 'individual';
+  }[];
 }
 
 export interface Venue {
@@ -107,6 +120,11 @@ export interface Game {
   venueId?: string;
   attendance?: number;
   round?: 'Group Stage' | 'Knockout' | 'Knockout Stage' | 'Playoff' | 'Quarter-final' | 'Semi-final' | 'Semi-finals' | 'semi finals' | 'Final' | string;
+  isKnockout?: boolean;
+  aggregateScore?: { home: number; away: number };
+  penalties?: { home: number; away: number };
+  nextMatchId?: string;
+  leg?: 1 | 2;
   // Stats
   stats?: {
     possession: { home: number; away: number };

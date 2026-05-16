@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { League, Team, Game, Player } from '../types';
-import { Shield as ShieldIcon, TrendingUp as TrendingUpIcon, ChevronDown as ChevronDownIcon, Download as DownloadIcon, X as XIcon, Clock as ClockIcon, Calendar as CalendarIcon, Trophy as TrophyIcon } from 'lucide-react';
+import { Shield as ShieldIcon, TrendingUp as TrendingUpIcon, ChevronDown as ChevronDownIcon, Download as DownloadIcon, X as XIcon, Clock as ClockIcon, Calendar as CalendarIcon, Trophy as TrophyIcon, Radio as RadioIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -15,7 +15,8 @@ interface StandingsProps {
 }
 
 export function Standings({ leagues = [], teams = [], games = [], players = [], onTeamClick, onGameClick, showDownload }: StandingsProps) {
-  const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(leagues?.[0]?.id || null);
+  const availableLeagues = useMemo(() => leagues.filter(l => l.type !== 'cup'), [leagues]);
+  const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(availableLeagues?.[0]?.id || null);
   const [showGamesModal, setShowGamesModal] = useState<{ teamId: string; type: 'W' | 'D' | 'L' | 'ALL' } | null>(null);
   const [isWideMode, setIsWideMode] = useState(false);
 
@@ -92,7 +93,7 @@ export function Standings({ leagues = [], teams = [], games = [], players = [], 
       .map(([id, data]) => ({ id, ...data }));
   }, [teams, games, selectedLeagueId]);
 
-  const currentLeague = leagues.find(l => l.id === selectedLeagueId);
+  const currentLeague = availableLeagues.find(l => l.id === selectedLeagueId);
 
   const topScorers = useMemo(() => {
     if (!selectedLeagueId || !games || !players) return [];
@@ -240,7 +241,7 @@ export function Standings({ leagues = [], teams = [], games = [], players = [], 
                 onChange={(e) => setSelectedLeagueId(e.target.value)}
                 className="w-full h-12 pl-4 pr-10 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 text-xs font-black uppercase tracking-widest appearance-none cursor-pointer transition-all outline-none focus:ring-2 focus:ring-blue-600"
               >
-                {leagues.map(l => (
+                {availableLeagues.map(l => (
                   <option key={l.id} value={l.id} className="bg-gray-900">{l.name}</option>
                 ))}
               </select>
@@ -310,15 +311,23 @@ export function Standings({ leagues = [], teams = [], games = [], players = [], 
                               {team.name}
                             </span>
                             {liveGame && (
-                              <span className="bg-rose-600 text-white text-[8px] font-black px-1.5 py-0 rounded flex items-center gap-1 animate-pulse shrink-0">
-                                {liveGame.homeScore}-{liveGame.awayScore}
-                              </span>
+                              <div className="flex items-center gap-1.5 ml-1">
+                                <div className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse shadow-[0_0_8px_rgba(220,38,38,0.5)]" />
+                                <span className={cn(
+                                  "text-white text-[7px] font-black px-1.5 py-0 rounded flex items-center gap-1 shrink-0 tracking-tighter shadow-sm",
+                                  liveGame.homeScore === liveGame.awayScore ? "bg-yellow-500" :
+                                  ((liveGame.homeTeamId === team.id && liveGame.homeScore > liveGame.awayScore) || (liveGame.awayTeamId === team.id && liveGame.awayScore > liveGame.homeScore)) ? "bg-green-600" : "bg-rose-600"
+                                )}>
+                                  {teams.find(t => t.id === liveGame.homeTeamId)?.name.substring(0, 3).toUpperCase()} {liveGame.homeScore}-{liveGame.awayScore} {teams.find(t => t.id === liveGame.awayTeamId)?.name.substring(0, 3).toUpperCase()}
+                                </span>
+                              </div>
                             )}
                           </div>
                         </div>
                         {liveGame && (
                           <div className="ml-1 hidden sm:flex items-center gap-2 shrink-0">
-                             <div className="bg-rose-600/10 text-rose-600 text-[7px] sm:text-[8px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-sm border border-rose-100 italic">
+                             <div className="bg-red-600 text-white text-[7px] sm:text-[8px] font-black px-2 py-0.5 rounded-full flex items-center gap-1.5 shadow-[0_0_10px_rgba(220,38,38,0.3)] border border-red-500 italic overflow-hidden relative">
+                                <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse shrink-0" />
                                 LIVE
                              </div>
                           </div>
@@ -326,10 +335,10 @@ export function Standings({ leagues = [], teams = [], games = [], players = [], 
                       </div>
                     </td>
                     <td className="py-5 px-1.5 sm:px-4 text-center text-[10px] sm:text-sm font-black text-gray-900 dark:text-gray-100 tabular-nums cursor-pointer hover:bg-gray-100" onClick={() => setShowGamesModal({ teamId: team.id, type: 'ALL' })}>{team.played}</td>
-                    <td className="py-5 px-1.5 sm:px-4 text-center text-[10px] sm:text-sm font-bold text-green-600 dark:text-green-400 bg-green-50/50 dark:bg-green-600/10 tabular-nums cursor-pointer" onClick={() => setShowGamesModal({ teamId: team.id, type: 'W' })}>{team.won}</td>
-                    <td className="py-5 px-1.5 sm:px-4 text-center text-[10px] sm:text-sm font-bold text-yellow-600 dark:text-yellow-400 bg-yellow-50/50 dark:bg-yellow-600/10 tabular-nums cursor-pointer" onClick={() => setShowGamesModal({ teamId: team.id, type: 'D' })}>{team.drawn}</td>
-                    <td className="py-5 px-1.5 sm:px-4 text-center text-[10px] sm:text-sm font-bold text-rose-600 dark:text-rose-400 bg-rose-50/50 dark:bg-rose-600/10 tabular-nums cursor-pointer" onClick={() => setShowGamesModal({ teamId: team.id, type: 'L' })}>{team.lost}</td>
-                    <td className="py-5 px-1.5 sm:px-4 text-center text-[10px] sm:text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums">{team.gf}</td>
+                    <td className="py-5 px-1.5 sm:px-4 text-center text-[10px] sm:text-sm font-bold text-green-600 dark:text-green-400 bg-green-50/5 dark:bg-green-600/5 tabular-nums cursor-pointer" onClick={() => setShowGamesModal({ teamId: team.id, type: 'W' })}>{team.won}</td>
+                    <td className="py-5 px-1.5 sm:px-4 text-center text-[10px] sm:text-sm font-bold text-yellow-600 dark:text-yellow-400 bg-yellow-50/5 dark:bg-yellow-600/5 tabular-nums cursor-pointer" onClick={() => setShowGamesModal({ teamId: team.id, type: 'D' })}>{team.drawn}</td>
+                    <td className="py-5 px-1.5 sm:px-4 text-center text-[10px] sm:text-sm font-bold text-rose-600 dark:text-rose-400 bg-rose-50/5 dark:bg-rose-600/5 tabular-nums cursor-pointer" onClick={() => setShowGamesModal({ teamId: team.id, type: 'L' })}>{team.lost}</td>
+                    <td className="py-5 px-1.5 sm:px-4 text-center text-[10px] sm:text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums">{team.gf}:{team.ga}</td>
                     <td className="py-5 px-2 sm:px-6 text-center bg-blue-50/20 dark:bg-blue-600/5 group-hover:bg-blue-100/50 transition-colors">
                       <span className="text-xs sm:text-lg font-black text-gray-900 dark:text-white tabular-nums drop-shadow-sm">{team.points}</span>
                     </td>
@@ -483,9 +492,12 @@ export function Standings({ leagues = [], teams = [], games = [], players = [], 
                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{new Date(game.date).toLocaleDateString()}</span>
                             </div>
                             <span className={cn(
-                               "text-[10px] font-black uppercase px-2 py-0.5 rounded-lg tracking-tighter",
-                               game.status === 'live' ? "bg-rose-600 text-white animate-pulse" : "bg-gray-200 dark:bg-gray-700 text-gray-500"
-                            )}>{game.status}</span>
+                               "text-[10px] font-black uppercase px-2 py-0.5 rounded-lg tracking-tighter flex items-center gap-1.5",
+                               game.status === 'live' ? "bg-rose-600 text-white animate-pulse shadow-lg shadow-rose-500/20" : "bg-gray-200 dark:bg-gray-700 text-gray-500"
+                            )}>
+                               {game.status === 'live' && <RadioIcon size={10} className="text-white" />}
+                               {game.status}
+                            </span>
                           </div>
 
                           <div className="flex items-center justify-between gap-4">
