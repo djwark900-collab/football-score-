@@ -23,7 +23,9 @@ import {
   X as XIcon,
   Trophy as TrophyIcon,
   User as UserIcon,
-  ArrowLeftRight as TransferIcon
+  ArrowLeftRight as TransferIcon,
+  Shirt as TShirtIcon,
+  ChevronRight as ChevronRightIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { doc, updateDoc, setDoc, collection, onSnapshot, query, where, increment } from 'firebase/firestore';
@@ -1361,10 +1363,46 @@ export function GameDetails({
                             events: [...(game.events || []), newEvent]
                           });
                         }}
-                        className="bg-red-600 text-white text-[10px] font-black uppercase rounded-lg h-9 hover:bg-red-700 transition-all"
+                        className="bg-red-600 text-white text-[10px] font-black uppercase rounded-lg h-9 hover:bg-red-700 transition-all font-black"
                       >
                         Add Red
                       </button>
+                      <div className="col-span-2 space-y-2 pt-2 border-t border-white/5">
+                        <select 
+                          className="w-full bg-black text-white border border-white/10 rounded-lg p-2 text-[10px] outline-none"
+                          value={selectedPlayerOut || ''}
+                          onChange={(e) => setSelectedPlayerOut(e.target.value)}
+                        >
+                          <option value="">Player Out</option>
+                          {players.filter(p => (p.teamId === game.homeTeamId || p.teamId === game.awayTeamId) && p.id !== selectedEventPlayer).map(p => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                        <button 
+                          onClick={() => {
+                            if (!selectedEventPlayer || !selectedPlayerOut) {
+                              alert("Please select both Player In and Player Out");
+                              return;
+                            }
+                            const teamId = players.find(p => p.id === selectedEventPlayer)?.teamId || game.homeTeamId;
+                            const newEvent: MatchEvent = { 
+                              id: Math.random().toString(36).substr(2,9), 
+                              type: 'sub', 
+                              minute: parseInt(game.currentTime || '0'), 
+                              teamId, 
+                              playerId: selectedEventPlayer,
+                              playerInId: selectedEventPlayer,
+                              playerOutId: selectedPlayerOut
+                            };
+                            updateGame({ 
+                              events: [...(game.events || []), newEvent]
+                            });
+                          }}
+                          className="w-full bg-emerald-600 text-white text-[10px] font-black uppercase rounded-lg h-9 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-900/20"
+                        >
+                          Confirm Substitution
+                        </button>
+                      </div>
                    </div>
                 </div>
               </div>
@@ -1389,9 +1427,9 @@ export function GameDetails({
                     const isHomeOutcome = g.homeTeamId === game.homeTeamId;
                     return (
                       <div 
-                        key={g.id} 
-                        onClick={() => onGameClick(g.id)}
-                        className="bg-white dark:bg-gray-900 p-4 rounded-[28px] border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md dark:hover:shadow-black/20 transition-all cursor-pointer flex items-center justify-between group"
+                         key={g.id} 
+                         onClick={() => onGameClick(g.id)}
+                         className="bg-white dark:bg-gray-900 p-4 rounded-[28px] border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md dark:hover:shadow-black/20 transition-all cursor-pointer flex items-center justify-between group"
                       >
                          <div className="flex items-center gap-4">
                             <span className="text-[10px] font-black text-gray-400 w-12">{new Date(g.date).getFullYear()}</span>
@@ -1403,7 +1441,7 @@ export function GameDetails({
                                </div>
                                <div className="bg-gray-50 dark:bg-gray-800 px-3 py-1 rounded-xl border border-gray-100 dark:border-gray-700 font-black text-xs tabular-nums dark:text-white">
                                  {g.homeScore} - {g.awayScore}
-                               </div>
+                                </div>
                                <div className="flex flex-col items-start">
                                  <span className={cn("text-[11px] font-bold", !isHomeOutcome ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400")}>
                                    {teams.find(t => t.id === g.awayTeamId)?.name}
@@ -1466,8 +1504,19 @@ function LineupItem({ player, isRight, ...props }: LineupItemProps & { key?: any
       "flex items-center gap-3 p-2 bg-gray-50/50 dark:bg-gray-800/50 rounded-2xl border border-gray-100/50 dark:border-gray-700/50 cursor-pointer hover:bg-white dark:hover:bg-gray-800 hover:shadow-md transition-all group",
       isRight ? "flex-row-reverse" : "flex-row"
     )}>
-      <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-700 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center font-black text-gray-400 text-[10px] shadow-sm transition-colors">
-        {player.number}
+      <div className="relative">
+        <div className="w-10 h-10 rounded-full bg-white dark:bg-gray-700 overflow-hidden border-2 border-white dark:border-gray-800 shadow-sm flex items-center justify-center transition-transform group-hover:scale-110">
+          {player.imageUrl ? (
+            <img src={player.imageUrl} className="w-full h-full object-cover" alt="" referrerPolicy="no-referrer" />
+          ) : (
+            <span className="font-black text-gray-400 text-[10px]">{player.number}</span>
+          )}
+        </div>
+        {player.imageUrl && (
+          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-600 rounded-lg flex items-center justify-center text-white text-[9px] font-black border-2 border-white dark:border-gray-900 shadow-sm">
+            {player.number}
+          </div>
+        )}
       </div>
       <div className={cn("flex-1 overflow-hidden", isRight ? "text-right" : "text-left")}>
         <p className="text-xs font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">{player.name}</p>
@@ -1510,76 +1559,147 @@ function StadiumLineup({ game, homeTeam, awayTeam, players, onPlayerClick, fullS
     );
   }
 
+  const pitchTilt = fullScreen ? 20 : 35;
+
   return (
-    <div className={cn(
-      "relative w-full bg-emerald-600 rounded-[40px] overflow-hidden shadow-2xl border-4 border-white mb-2",
-      fullScreen ? "h-full" : "aspect-[2/3]"
-    )}>
-      {/* Field Markings */}
-      <div className="absolute inset-4 border border-white/50 rounded-[32px] pointer-events-none">
-        {/* Halfway Line */}
-        <div className="absolute top-1/2 left-0 right-0 h-px bg-white/50" />
-        {/* Center Circle */}
-        <div className="absolute top-1/2 left-1/2 w-24 h-24 border border-white/50 rounded-full -translate-x-1/2 -translate-y-1/2" />
-        {/* Penalty Areas */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-[15%] border-b border-x border-white/50" />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-[15%] border-t border-x border-white/50" />
-      </div>
+    <div 
+      className={cn(
+        "relative w-full bg-emerald-700 bg-gradient-to-b from-emerald-600 to-emerald-800 rounded-[40px] overflow-hidden shadow-2xl transition-all duration-700 group",
+        fullScreen ? "h-full" : "aspect-[2/3]",
+        !fullScreen && "hover:scale-[1.02]"
+      )}
+      style={{
+        perspective: '1500px',
+        transformStyle: 'preserve-3d'
+      }}
+    >
+      <motion.div 
+        initial={false}
+        animate={{ 
+          rotateX: pitchTilt,
+        }}
+        className="w-full h-full relative"
+        style={{
+          transformStyle: 'preserve-3d'
+        }}
+      >
+        {/* Grass Texture Patterns */}
+        <div className="absolute inset-0 pointer-events-none opacity-20" style={{ 
+          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 10%, rgba(0,0,0,0.1) 10%, rgba(0,0,0,0.1) 20%)',
+          backgroundSize: '100% 20%'
+        }} />
 
-      {/* Players */}
-      {game.lineups.home.slice(0, 11).map((pid, idx) => {
-        const p = players.find(player => player.id === pid);
-        const pos = FORMATION_HOME_433[idx] || { x: 50, y: 50 };
-        return (
-          <div 
-            key={pid} 
-            className="absolute -translate-x-1/2 -translate-y-1/2 transition-all cursor-pointer group"
-            style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-            onClick={() => onPlayerClick?.(pid)}
-          >
-            <div className="flex flex-col items-center gap-1">
-              <div className={cn(
-                "rounded-full bg-blue-600 border-2 border-white shadow-lg flex items-center justify-center text-white font-black group-hover:scale-125 group-hover:bg-blue-700 transition-all",
-                fullScreen ? "w-12 h-12 text-sm" : "w-8 h-8 text-[10px]"
-              )}>
-                {p?.number || idx + 1}
-              </div>
-              <div className="bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/10 group-hover:bg-black/60 transition-colors">
-                <span className={cn("font-black text-white whitespace-nowrap uppercase tracking-tighter", fullScreen ? "text-[10px]" : "text-[7px]")}>
-                  {p?.name || 'Loading...'}
-                </span>
-              </div>
-            </div>
+        {/* Field Markings */}
+        <div className="absolute inset-6 border-2 border-white/40 rounded-[32px] pointer-events-none">
+          {/* Halfway Line */}
+          <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white/40" />
+          {/* Center Circle */}
+          <div className="absolute top-1/2 left-1/2 w-32 h-32 border-2 border-white/40 rounded-full -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
+             {/* Field Logo Icon */}
+             <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/10 opacity-20">
+                <span className="text-white font-black italic text-xl tracking-tighter">365</span>
+             </div>
           </div>
-        );
-      })}
+          <div className="absolute top-1/2 left-1/2 w-1.5 h-1.5 bg-white/40 rounded-full -translate-x-1/2 -translate-y-1/2" />
+          
+          {/* Penalty Areas */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-[18%] border-b-2 border-x-2 border-white/40" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[30%] h-[8%] border-b-2 border-x-2 border-white/40" />
+          
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[60%] h-[18%] border-t-2 border-x-2 border-white/40" />
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[30%] h-[8%] border-t-2 border-x-2 border-white/40" />
+        </div>
 
-      {game.lineups.away.slice(0, 11).map((pid, idx) => {
-        const p = players.find(player => player.id === pid);
-        const pos = FORMATION_AWAY_433[idx] || { x: 50, y: 50 };
-        return (
-          <div 
-            key={pid} 
-            className="absolute -translate-x-1/2 -translate-y-1/2 transition-all cursor-pointer group px-2"
-            style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-            onClick={() => onPlayerClick?.(pid)}
-          >
-            <div className="flex flex-col items-center gap-1">
-              <div className="bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/10 group-hover:bg-black/60 transition-colors mb-1">
-                <span className={cn("font-black text-white whitespace-nowrap uppercase tracking-tighter", fullScreen ? "text-[10px]" : "text-[7px]")}>
-                  {p?.name || 'Loading...'}
-                </span>
+        {/* Home Players */}
+        {game.lineups?.home.slice(0, 11).map((pid, idx) => {
+          const p = players.find(player => player.id === pid);
+          const pos = FORMATION_HOME_433[idx] || { x: 50, y: 50 };
+          return (
+            <motion.div 
+              key={pid} 
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1, rotateX: -pitchTilt }}
+              transition={{ delay: idx * 0.05 }}
+              className="absolute -translate-x-1/2 -translate-y-1/2 transition-all cursor-pointer z-10"
+              style={{ 
+                left: `${pos.x}%`, 
+                top: `${pos.y}%`,
+                transformStyle: 'preserve-3d'
+              }}
+              onClick={() => onPlayerClick?.(pid)}
+            >
+              <div className="flex flex-col items-center gap-1.5 group/player">
+                <div className={cn(
+                  "relative rounded-full border-2 border-white shadow-xl flex items-center justify-center text-white font-black group-hover/player:scale-125 transition-all overflow-hidden",
+                  fullScreen ? "w-14 h-14" : "w-10 h-10",
+                  p?.imageUrl ? "bg-white" : "bg-blue-600"
+                )}>
+                  {p?.imageUrl ? (
+                    <img src={p.imageUrl} className="w-full h-full object-cover" alt="" referrerPolicy="no-referrer" />
+                  ) : (
+                    <span className={fullScreen ? "text-sm" : "text-[10px]"}>{p?.number || idx + 1}</span>
+                  )}
+                  {p?.imageUrl && (
+                    <div className="absolute bottom-0 inset-x-0 bg-blue-600/90 text-[8px] font-black py-0.5 text-center">
+                      {p.number}
+                    </div>
+                  )}
+                </div>
+                <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 shadow-lg">
+                  <span className={cn("font-black text-white whitespace-nowrap uppercase tracking-tighter", fullScreen ? "text-[10px]" : "text-[7px]")}>
+                    {p?.name.split(' ').pop() || '...'}
+                  </span>
+                </div>
               </div>
-              <div className={cn(
-                "rounded-full bg-white border-2 border-gray-900 shadow-lg flex items-center justify-center text-gray-900 font-black group-hover:scale-125 group-hover:bg-gray-50 transition-all",
-                fullScreen ? "w-12 h-12 text-sm" : "w-8 h-8 text-[10px]"
-              )}>
-                {p?.number || idx + 1}
+            </motion.div>
+          );
+        })}
+
+        {/* Away Players */}
+        {game.lineups?.away.slice(0, 11).map((pid, idx) => {
+          const p = players.find(player => player.id === pid);
+          const pos = FORMATION_AWAY_433[idx] || { x: 50, y: 50 };
+          return (
+            <motion.div 
+              key={pid} 
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1, rotateX: -pitchTilt }}
+              transition={{ delay: (idx + 11) * 0.05 }}
+              className="absolute -translate-x-1/2 -translate-y-1/2 transition-all cursor-pointer z-10"
+              style={{ 
+                left: `${pos.x}%`, 
+                top: `${pos.y}%`,
+                transformStyle: 'preserve-3d'
+              }}
+              onClick={() => onPlayerClick?.(pid)}
+            >
+              <div className="flex flex-col items-center gap-1.5 group/player">
+                <div className={cn(
+                  "relative rounded-full border-2 border-white shadow-xl flex items-center justify-center text-white font-black group-hover/player:scale-125 transition-all overflow-hidden",
+                  fullScreen ? "w-14 h-14" : "w-10 h-10",
+                  p?.imageUrl ? "bg-white" : "bg-rose-600"
+                )}>
+                  {p?.imageUrl ? (
+                    <img src={p.imageUrl} className="w-full h-full object-cover" alt="" referrerPolicy="no-referrer" />
+                  ) : (
+                    <span className={fullScreen ? "text-sm" : "text-[10px]"}>{p?.number || idx + 1}</span>
+                  )}
+                  {p?.imageUrl && (
+                    <div className="absolute bottom-0 inset-x-0 bg-rose-600/90 text-[8px] font-black py-0.5 text-center">
+                      {p.number}
+                    </div>
+                  )}
+                </div>
+                <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 shadow-lg">
+                  <span className={cn("font-black text-white whitespace-nowrap uppercase tracking-tighter", fullScreen ? "text-[10px]" : "text-[7px]")}>
+                    {p?.name.split(' ').pop() || '...'}
+                  </span>
+                </div>
               </div>
-            </div>
-          </div>
-        );
-      })}
+            </motion.div>
+          );
+        })}
+      </motion.div>
     </div>
   );
 }

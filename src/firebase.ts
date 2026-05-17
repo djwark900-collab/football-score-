@@ -1,12 +1,19 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { 
+  initializeFirestore, 
+  doc, 
+  getDocFromServer,
+  persistentLocalCache, 
+  persistentMultipleTabManager 
+} from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 export const db = initializeFirestore(app, {
   // Force long polling to avoid issues with blocked WebSockets/gRPC in some environments
   experimentalForceLongPolling: true,
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
 }, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 

@@ -1,257 +1,121 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 0. Global Safety Net
+    // 0. Default Deny Catch-all
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Phase 3: Primitives & Global Helpers
-    function isSignedIn() {
-      return request.auth != null;
-    }
+    // --- 1. Global Primitives ---
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
+    function isVerifiedUser() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
 
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
-    function isAdmin() {
-      return isSignedIn() && 
-             request.auth.token.email == 'pitop6988@gmail.com' && 
-             request.auth.token.email_verified == true;
-    }
-
-    function incoming() {
-      return request.resource.data;
-    }
-
-    function existing() {
-      return resource.data;
-    }
-
-    // Entity Validation Blueprints
-    function isValidCompetition(data) {
-      return data.keys().hasAll(['name', 'type']) &&
-             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
-             data.type in ['league', 'cup', 'international'] &&
-             (!('logo' in data) || (data.logo is string && data.logo.size() <= 2000000));
-    }
-
-    function isValidLeague(data) {
-      return data.keys().hasAll(['name']) &&
-             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
-             (!('logo' in data) || (data.logo is string && data.logo.size() <= 2000000)) &&
-             (!('competitionId' in data) || (data.competitionId is string && (data.competitionId == "" || isValidId(data.competitionId)))) &&
-             (!('country' in data) || (data.country is string && data.country.size() <= 100)) &&
-             (!('description' in data) || (data.description is string && data.description.size() <= 5000)) &&
-             (!('type' in data) || (data.type in ['league', 'cup'])) &&
-             (!('history' in data) || (data.history is list)) &&
-             (!('currentSeasonId' in data) || (data.currentSeasonId is string && (data.currentSeasonId == "" || isValidId(data.currentSeasonId))));
-    }
-
-    function isValidSeason(data) {
-      return data.keys().hasAll(['leagueId', 'year', 'status']) &&
-             data.leagueId is string && isValidId(data.leagueId) &&
-             data.year is string && data.year.size() > 0 &&
-             data.status in ['active', 'finished', 'upcoming'];
-    }
-
-    function isValidTeam(data) {
-      return data.keys().hasAll(['name', 'leagueId']) &&
-             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
-             data.leagueId is string && isValidId(data.leagueId) &&
-             (!('leagueId2' in data) || (data.leagueId2 is string && (data.leagueId2 == "" || isValidId(data.leagueId2)))) &&
-             (!('logo' in data) || (data.logo is string && data.logo.size() <= 2000000)) &&
-             (!('coachName' in data) || (data.coachName is string && data.coachName.size() <= 100)) &&
-             (!('coachImageUrl' in data) || (data.coachImageUrl is string && data.coachImageUrl.size() <= 2000000)) &&
-             (!('foundedIn' in data) || (data.foundedIn is string && data.foundedIn.size() <= 20)) &&
-             (!('marketValue' in data) || (data.marketValue is string && data.marketValue.size() <= 50)) &&
-             (!('foreignPlayers' in data) || (data.foreignPlayers is number)) &&
-             (!('nationalPlayers' in data) || (data.nationalPlayers is number)) &&
-             (!('stadiumImageUrl' in data) || (data.stadiumImageUrl is string && data.stadiumImageUrl.size() <= 2000000));
-    }
-
-    function isValidGame(data) {
-      return data.keys().hasAll(['leagueId', 'homeTeamId', 'awayTeamId', 'date', 'status', 'homeScore', 'awayScore']) &&
-             data.leagueId is string &&
-             (!('leagueId2' in data) || (data.leagueId2 is string && (data.leagueId2 == "" || isValidId(data.leagueId2)))) &&
-             data.homeTeamId is string &&
-             data.awayTeamId is string &&
-             data.date is string &&
-             data.status in ['scheduled', 'live', 'finished'] &&
-             data.homeScore is number && data.homeScore >= 0 &&
-             data.awayScore is number && data.awayScore >= 0 &&
-             (!('events' in data) || data.events is list) &&
-             (!('lineups' in data) || data.lineups is map) &&
-             (!('posterUrl' in data) || (data.posterUrl is string && data.posterUrl.size() <= 2000000));
-    }
-
-    function isValidAdministrator(data) {
-      return data.keys().hasAll(['email', 'role']) &&
-             data.email is string && data.email.size() > 0 &&
-             data.role in ['super', 'editor'];
-    }
-
-    function isValidPlayer(data) {
-      return data.keys().hasAll(['name', 'teamId', 'position', 'number']) &&
-             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
-             data.teamId is string && isValidId(data.teamId) &&
-             data.position is string && data.position.size() <= 50 &&
-             data.number is number &&
-             (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 2000000)) &&
-             (!('overview' in data) || (data.overview is string && data.overview.size() <= 5000)) &&
-             (!('career' in data) || (data.career is string && data.career.size() <= 15000)) &&
-             (!('transferHistory' in data) || (data.transferHistory is string && data.transferHistory.size() <= 15000));
-    }
-
-    function isValidVenue(data) {
-      return data.keys().hasAll(['name', 'city', 'capacity']) &&
-             data.name is string && data.name.size() > 0 &&
-             data.city is string &&
-             data.capacity is number;
-    }
-
-    function isValidTransfer(data) {
-      return data.keys().hasAll(['playerId', 'fromTeamId', 'toTeamId', 'date', 'type']) &&
-             isValidId(data.playerId) &&
-             isValidId(data.fromTeamId) &&
-             isValidId(data.toTeamId) &&
-             data.date is string &&
-             data.type in ['permanent', 'loan', 'free'] &&
-             (!('fee' in data) || data.fee is string);
-    }
-
-    function isValidFantasyTeam(data) {
-      return data.keys().hasAll(['userId', 'name', 'playerIds']) &&
-             data.userId is string && data.userId == request.auth.uid &&
-             data.name is string && data.name.size() > 0 && data.name.size() <= 50 &&
-             data.playerIds is list &&
-             (!('benchPlayerIds' in data) || data.benchPlayerIds is list) &&
-             (!('captainId' in data) || data.captainId is string) &&
-             (!('viceCaptainId' in data) || data.viceCaptainId is string) &&
-             (!('budget' in data) || data.budget is number) &&
-             (!('totalPoints' in data) || data.totalPoints is number) &&
-             (!('chips' in data) || data.chips is map);
-    }
-
-    function isValidMatchPrediction(data) {
-      return data.keys().hasAll(['gameId', 'userId', 'prediction']) &&
-             data.gameId is string && isValidId(data.gameId) &&
-             data.userId is string && data.userId == request.auth.uid &&
-             data.prediction in ['home', 'draw', 'away'] &&
-             (!('timestamp' in data) || data.timestamp is string);
-    }
-
-    function isValidUserProfile(data) {
-      return (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
-             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 2000000)) &&
-             (!('xp' in data) || data.xp is number) &&
-             (!('level' in data) || data.level is number);
-    }
-
-    // Collection Rules
-    match /test/connection {
+    // --- 2. Public Read Data (Competitions, Leagues, etc.) ---
+    match /competitions/{compId} {
       allow read: if true;
-    }
-
-    match /competitions/{competitionId} {
-      allow read: if true;
-      allow create: if isAdmin() && isValidCompetition(incoming());
-      allow update: if isAdmin() && isValidCompetition(incoming());
-      allow delete: if isAdmin();
-    }
-
-    match /admins/{adminId} {
-      allow read, list: if true; // Allow reading admins publicly for now to diagnose permission issues, and because it only contains emails.
       allow write: if isAdmin();
     }
-
-    match /transfers/{transferId} {
-      allow get, list, read: if true;
-      allow write: if isAdmin() && isValidTransfer(incoming());
-    }
-
-    match /fantasyTeams/{userId} {
-      allow get, list, read: if isSignedIn() && request.auth.uid == userId;
-      allow write: if isSignedIn() && request.auth.uid == userId && isValidFantasyTeam(incoming());
-    }
-
+    
     match /leagues/{leagueId} {
-      allow get, list, read: if true;
-      allow create: if isAdmin() && isValidLeague(incoming());
-      allow update: if isAdmin() && isValidLeague(incoming());
-      allow delete: if isAdmin();
-
+      allow read: if true;
+      allow write: if isAdmin();
+      
       match /seasons/{seasonId} {
-        allow get, list, read: if true;
-        allow write: if isAdmin() && isValidSeason(incoming());
+        allow read: if true;
+        allow write: if isAdmin();
       }
     }
 
     match /teams/{teamId} {
-      allow get, list, read: if true;
-      allow create: if isAdmin() && isValidTeam(incoming());
-      allow update: if isAdmin() && (
-        // Action: Generic Update
-        isValidTeam(incoming()) ||
-        // Action: Patch (more robust)
-        (incoming().diff(existing()).affectedKeys().hasOnly(['name', 'logo', 'leagueId', 'leagueId2', 'coachName', 'coachImageUrl', 'foundedIn', 'marketValue', 'foreignPlayers', 'nationalPlayers', 'stadiumImageUrl']))
-      );
-      allow delete: if isAdmin();
-    }
-
-    match /games/{gameId} {
-      allow get, list, read: if true;
-      allow create: if isAdmin() && isValidGame(incoming());
-      allow update: if isAdmin() && (
-        // Action: Update Score (Specific Action)
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['homeScore', 'awayScore'])) ||
-        // Action: Update Status
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])) ||
-        // Action: Patch (more robust)
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['leagueId', 'leagueId2', 'homeTeamId', 'awayTeamId', 'date', 'status', 'homeScore', 'awayScore', 'events', 'lineups', 'round', 'venueId', 'attendance', 'posterUrl', 'refereeName', 'broadcastChannels'])) ||
-        // Action: Full Update
-        isValidGame(incoming())
-      );
-      allow delete: if isAdmin();
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /players/{playerId} {
-      allow get, list, read: if true;
-      allow create: if isAdmin() && isValidPlayer(incoming());
-      allow update: if isAdmin() && isValidPlayer(incoming());
-      allow delete: if isAdmin();
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /games/{gameId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /venues/{venueId} {
-      allow get, list, read: if true;
-      allow create: if isAdmin() && isValidVenue(incoming());
-      allow update: if isAdmin() && isValidVenue(incoming());
-      allow delete: if isAdmin();
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /transfers/{transferId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /news/{newsId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // --- 3. User Data (Favorites, Notifications, Fantasy) ---
+    function isValidFavorite(data) {
+      return data.keys().hasAll(['teamId']) && 
+             data.teamId is string && data.teamId.size() <= 128;
+             // Optional fields name/logo are handled by the relaxed keys check
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['gameId']) && data.keys().size() == 1 &&
+             data.gameId is string && data.gameId.size() <= 128;
     }
 
     match /users/{userId} {
-      allow get, list, read: if true;
-      allow write: if isSignedIn() && request.auth.uid == userId && isValidUserProfile(incoming());
-      
-      match /favorites/{favoriteId} {
-        allow get, list, read: if isSignedIn() && request.auth.uid == userId;
-        allow create: if isSignedIn() && request.auth.uid == userId && 
-                      incoming().keys().hasAll(['teamId']) &&
-                      incoming().teamId is string &&
-                      isValidId(incoming().teamId);
-        allow update: if false; 
-        allow delete: if isSignedIn() && request.auth.uid == userId;
+      allow read: if true;
+      allow create: if isOwner(userId) && incoming().keys().size() <= 10;
+      allow update: if isOwner(userId) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'xp', 'level'])
+      );
+
+      match /favorites/{favId} {
+        allow list, get: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidFavorite(incoming());
+        allow update: if isOwner(userId) && isValidFavorite(incoming()) && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'logo', 'teamId'])
+        );
+        allow delete: if isOwner(userId);
       }
 
-      match /matchNotifications/{notificationId} {
-        allow get, list, read, write: if isSignedIn() && request.auth.uid == userId;
+      match /matchNotifications/{noteId} {
+        allow list, get: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidNotification(incoming());
+        allow delete: if isOwner(userId);
       }
 
-      match /predictions/{predictionId} {
-        allow get, list, read: if isSignedIn() && request.auth.uid == userId;
-        allow write: if isSignedIn() && request.auth.uid == userId && isValidMatchPrediction(incoming());
+      match /predictions/{predId} {
+        allow list, get: if true;
+        allow create: if isOwner(userId) && 
+                      incoming().keys().hasAll(['gameId', 'prediction']) &&
+                      incoming().prediction in ['home', 'draw', 'away'];
+        allow delete: if isOwner(userId);
       }
+    }
+
+    match /fantasyTeams/{userId} {
+      allow read: if true;
+      allow create: if isOwner(userId) && incoming().keys().hasAll(['userId', 'name', 'playerIds']) && incoming().userId == userId;
+      allow update: if isOwner(userId) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'playerIds', 'budget', 'totalPoints', 'benchPlayerIds', 'captainId', 'viceCaptainId', 'chips'])
+      ) && incoming().userId == existing().userId;
+    }
+
+    // --- 4. Admin Security ---
+    match /admins/{adminId} {
+      allow read: if isSignedIn(); // Allow checking for admin status
+      allow write: if false; // Managed via console
     }
   }
 }

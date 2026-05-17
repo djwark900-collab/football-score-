@@ -394,8 +394,8 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
     try {
       const finalData = {
         ...gameForm,
-        penalties: gameForm.isKnockout ? { home: gameForm.homePenalties, away: gameForm.awayPenalties } : undefined,
-        aggregateScore: gameForm.isKnockout ? { home: gameForm.homeAggregate, away: gameForm.awayAggregate } : undefined
+        penalties: gameForm.isKnockout ? { home: gameForm.homePenalties, away: gameForm.awayPenalties } : null,
+        aggregateScore: gameForm.isKnockout ? { home: gameForm.homeAggregate, away: gameForm.awayAggregate } : null
       };
 
       if (editingId) {
@@ -891,19 +891,6 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
       uniformUrl: '',
       honors: []
     });
-    setGameForm({ 
-      leagueId: defaultLeagueId || '', 
-      leagueId2: '',
-      homeTeamId: '', awayTeamId: '',
-      date: new Date().toISOString().slice(0, 16),
-      status: 'scheduled', homeScore: 0, awayScore: 0,
-      attendance: 0, venueId: '', round: '',
-      currentTime: '',
-      refereeName: '',
-      broadcastChannels: [],
-      events: [],
-      lineups: { home: [], away: [] }
-    });
   };
 
   const handleDelete = async (coll: string, id: string) => {
@@ -1079,7 +1066,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
 
               <div className="pt-6 mt-6 border-t border-gray-50 flex items-center justify-between px-4">
                 <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Version</span>
-                <span className="text-[10px] font-black text-blue-500/50 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100/50">v1.1.4</span>
+                <span className="text-[10px] font-black text-blue-500/50 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100/50">v1.1.6</span>
               </div>
             </div>
 
@@ -2461,7 +2448,7 @@ export function AdminPanel({ leagues = [], competitions = [], teams = [], games 
                           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">Production Build</p>
                         </div>
                       </div>
-                      <span className="text-xs font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">v1.1.4</span>
+                      <span className="text-xs font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">v1.1.6</span>
                     </div>
 
                     <div className="p-6 bg-gray-50 rounded-[32px] border border-gray-100 flex items-center justify-between">

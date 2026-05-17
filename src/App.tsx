@@ -24,7 +24,12 @@ import {
   Heart as HeartIcon,
   ArrowLeftRight as TransferIcon,
   Bell as BellIcon,
-  X as XIcon
+  X as XIcon,
+  Sparkles as SparklesIcon,
+  Globe as GlobeIcon,
+  Zap as ZapIcon,
+  ArrowRight as ArrowRightIcon,
+  RefreshCw as RefreshCwIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -109,6 +114,7 @@ export default function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
   const [showOnlyLive, setShowOnlyLive] = useState(false);
+  const [leagueSearchQuery, setLeagueSearchQuery] = useState('');
   const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [hasDismissedQuota, setHasDismissedQuota] = useState(false);
@@ -159,6 +165,12 @@ export default function App() {
   const [prefNotifications, setPrefNotifications] = useState(() => {
     return localStorage.getItem('pref_notifications') === 'true';
   });
+  const [prefPlaySounds, setPrefPlaySounds] = useState(() => {
+    return localStorage.getItem('pref_play_sounds') !== 'false'; // Default to true
+  });
+  const [prefGoalAlerts, setPrefGoalAlerts] = useState(() => {
+    return localStorage.getItem('pref_goal_alerts') !== 'false'; // Default to true
+  });
   const [prefMobileBanners, setPrefMobileBanners] = useState(() => {
     return localStorage.getItem('pref_mobile_banners') === 'true';
   });
@@ -189,10 +201,13 @@ export default function App() {
         pref_notifications_desc: 'Get real-time alerts for match events',
         pref_banners: 'Banners mobile',
         pref_banners_desc: 'Show match updates as floating top banners',
+        pref_play_sounds: 'Play Sounds',
+        pref_play_sounds_desc: 'Sound effects for match events',
         pref_time: 'Time Format',
         pref_time_desc: 'Choose how match times are displayed',
         pref_appearance: 'Appearance',
         pref_language: 'Language',
+        pref_goal_alerts: 'Goal Alerts',
         pref_system: 'System Default',
         pref_light: 'Light Mode',
         pref_dark: 'Dark Mode',
@@ -226,31 +241,75 @@ export default function App() {
         recent_searches: 'گەڕانەکانى ئەمدواییە',
         admin: 'ئەدمین',
         admin_panel: 'پانێڵی ئەدمین',
+        favorite: 'دڵخواز',
+        all: 'هەموو',
+        live: 'پەخش',
+        finished: 'کۆتایی',
+        lineups: 'پێکهاتە',
+        stats: 'سەرژمێری',
+        h2h: 'ڕووبەڕوو',
+        venue: 'یاریگا',
+        referee: 'ناوبژیوان',
+        search: 'گەڕان',
+        language: 'زمان',
+        theme: 'شێواز',
+        light: 'رووناک',
+        dark: 'تاریک',
+        system: 'سیستەم',
+        notifications: 'ئاگادارکردنەوەکان',
+        logout: 'چوونەدەرەوە',
+        login: 'چوونەژوورەوە',
+        predict: 'پێشبینی',
+        leaderboard: 'پلەبەندی',
+        transfer_market: 'بازاڕی گواستنەوە',
+        top_scorers: 'گۆڵکاران',
+        top_assists: 'ئەسیستەکان',
+        red_cards: 'کارتی سوور',
+        yellow_cards: 'کارتی زەرد',
+        goals_conceded: 'گۆڵەکان',
+        clean_sheets: 'تۆڕی پاک',
+        follow: 'فۆڵۆ',
+        unfollow: 'لادان',
+        players: 'یاریزانان',
+        overview: 'پێشەکی',
+        squad: 'پێکهاتە',
+        fixtures: 'یارییەکان',
+        results: 'ئەنجامەکان',
+        form: 'ئاست',
+        position: 'پلە',
+        points: 'خاڵەکان',
+        played: 'ئەنجامدراو',
+        won: 'بردنەوە',
+        drawn: 'یەکسان',
+        lost: 'دۆڕان',
+        goals_for: 'گۆڵ',
+        goals_against: 'بەرامبەر',
+        goal_difference: 'جیاوازی گۆڵ',
+        market_value: 'بەهای بازاڕ',
+        contracts: 'گرێبەستەکان',
+        upcoming_matches: 'یارییەکانی داهاتوو',
+        latest_results: 'دوایین ئەنجامەکان',
+        all_matches: 'هەموو یارییەکان',
+        my_favorites: 'دڵخوازەکانم',
+        no_matches: 'یاری نییە',
+        worldwide: 'جیهانی',
+        top_leagues: 'خولە بەهێزەکان',
+        domestic: 'ناوخۆیی',
+        transfer_fee: 'نرخی گواستنەوە',
         pref_notifications: 'ئاگادارکردنەوەکان',
         pref_notifications_desc: 'ئاگاداری ڕاستەوخۆ بۆ ڕووداوەکانی یاری',
         pref_banners: 'بانەری مۆبایل',
         pref_banners_desc: 'پیشاندانی نوێکارییەکان وەک بانەری سەرەوە',
+        pref_play_sounds: 'دەنگی ڕووداوەکان',
+        pref_play_sounds_desc: 'دەنگ بۆ ڕووداوەکانی یاری',
         pref_time: 'کاتی یاری',
         pref_time_desc: 'شێوازی پیشاندانی کاتی یارییەکان هەڵبژێرە',
         pref_appearance: 'شێوە',
-        pref_language: 'زمان',
-        pref_system: 'سیستەمی بنەڕەتی',
+        pref_goal_alerts: 'ئاگاداری گۆڵ',
         pref_light: 'دۆخی ڕووناک',
         pref_dark: 'دۆخی تاریک',
-        tap_lang: 'tap English Language',
-        tap_lang_ku: 'tap Kurdish Language',
-        live_match: 'یاری ڕاستەوخۆ',
-        all_matches: 'هەموو یارییەکان',
-        recent_upcoming: 'یارییە نوێیەکان',
-        my_favorites: 'دڵخوازەکانم',
-        no_matches: 'هیچ یارییەک نەدۆزرایەوە',
-        view_all: 'ببینە هەمووی',
-        show_all: 'هەمووی پیشان بدە',
-        transfer_market: 'بازاڕی گواستنەوە',
-        worldwide: 'جیهانی',
-        top_leagues: 'خولە باڵاکان',
-        domestic: 'ناوخۆیی',
-        transfer_fee: 'تێچووی گواستنەوە',
+        pref_system: 'سیستەمی بنەڕەتی',
+        pref_language: 'زمان',
         preferences: 'پەسەندکراوەکان',
         app_config: 'ڕێکخستنی بەرنامە',
         no_transfers: 'هیچ گواستنەوەیەک لەم بەشەدا نییە.',
@@ -263,6 +322,14 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('pref_notifications', prefNotifications.toString());
   }, [prefNotifications]);
+
+  useEffect(() => {
+    localStorage.setItem('pref_play_sounds', prefPlaySounds.toString());
+  }, [prefPlaySounds]);
+
+  useEffect(() => {
+    localStorage.setItem('pref_goal_alerts', prefGoalAlerts.toString());
+  }, [prefGoalAlerts]);
 
   useEffect(() => {
     localStorage.setItem('pref_mobile_banners', prefMobileBanners.toString());
@@ -436,6 +503,11 @@ export default function App() {
     }, (error) => handleError(error, OperationType.LIST, path));
   }, []);
 
+  // News Sync
+  useEffect(() => {
+    setSyncStatus(prev => ({ ...prev, news: true }));
+  }, []);
+
   // Firestore Sync - Games
   useEffect(() => {
     const path = 'games';
@@ -574,6 +646,7 @@ export default function App() {
             case 'goal':
               title = 'GOAL! ⚽️';
               message = `${player?.name || 'Player'} scores for ${team?.name || 'Team'} vs ${opponent?.name || 'Opponent'}!`;
+              if (prefPlaySounds && prefGoalAlerts) playGoalSound();
               break;
             case 'penalty':
               title = 'PENALTY! 🥅';
@@ -619,7 +692,15 @@ export default function App() {
     if (newNotifications.length > 0) {
       setNotifications(prev => [...newNotifications, ...prev].slice(0, 50));
     }
-  }, [games, teams, players]);
+  }, [games, teams, players, prefNotifications, prefMobileBanners, prefPlaySounds]);
+
+  const playGoalSound = () => {
+    try {
+      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3'); // Goal cheer sfx
+      audio.volume = 0.5;
+      audio.play().catch(() => console.log('Audio playback blocked by browser'));
+    } catch (e) {}
+  };
 
   const handleLogin = () => {
     setShowSignInModal(true);
@@ -748,9 +829,9 @@ export default function App() {
       <AnimatePresence>
         {activeBanner && (
           <motion.div
-            initial={{ y: -100, opacity: 0 }}
+            initial={{ y: -120, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -100, opacity: 0 }}
+            exit={{ y: -120, opacity: 0 }}
             onClick={() => {
               if (activeBanner.gameId) {
                 setSelectedGameId(activeBanner.gameId);
@@ -758,46 +839,48 @@ export default function App() {
               }
               setActiveBanner(null);
             }}
-            className="fixed top-4 left-4 right-4 z-[100] cursor-pointer"
+            className="fixed top-6 left-4 right-4 z-[100] cursor-pointer"
           >
-            <div className="bg-white/90 dark:bg-gray-900/90 text-gray-900 dark:text-white p-3.5 rounded-[28px] shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex items-center gap-4 border border-white/20 backdrop-blur-2xl ring-1 ring-black/5">
-               <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-blue-200">
+            <div className="bg-white/80 dark:bg-gray-900/80 text-gray-900 dark:text-white p-4 rounded-[40px] shadow-3d-xl flex items-center gap-4 border border-white/40 dark:border-white/5 backdrop-blur-3xl ring-1 ring-black/5">
+               <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[28px] flex items-center justify-center text-3xl shadow-3d-md">
                  {activeBanner.type === 'goal' ? '⚽️' : activeBanner.type === 'penalty' ? '🥅' : activeBanner.type === 'red' ? '🟥' : '🟨'}
                </div>
                <div className="flex-1 overflow-hidden">
                  <div className="flex items-center gap-2 mb-0.5">
-                   <p className="font-black text-[13px] leading-none">{activeBanner.title}</p>
-                   <span className="text-[10px] text-gray-400 font-bold">• Just now</span>
+                   <p className="font-black text-sm tracking-tight leading-none">{activeBanner.title}</p>
+                   <span className="text-[10px] text-blue-500 font-bold uppercase tracking-widest animate-pulse">Live</span>
                  </div>
-                 <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 truncate tracking-tight">{activeBanner.message}</p>
+                 <p className="text-xs font-bold text-gray-500 dark:text-gray-400 truncate tracking-tight">{activeBanner.message}</p>
                </div>
-               <div className="w-1 h-8 bg-gray-100 rounded-full mx-1" />
                <button 
                 onClick={(e) => {
                   e.stopPropagation();
                   setActiveBanner(null);
                 }}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-all"
+                className="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-white/5 rounded-full hover:bg-gray-200 transition-all"
                >
-                 <XIcon size={16} className="text-gray-400" />
+                 <XIcon size={18} className="text-gray-400" />
                 </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <main className="max-w-[1092px] mx-auto px-4 pt-6">
+      <main className={cn(
+        "mx-auto px-4 sm:px-6 lg:px-8 pt-6 transition-all duration-700 ease-in-out",
+        (view === 'leagues') ? "max-w-[1536px]" : "max-w-[1140px]"
+      )}>
         <AnimatePresence mode="wait">
           {view === 'matches' && (
             <motion.div
               key="matches"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-8"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              className="space-y-10"
             >
-              {/* League Tabs */}
-              <div className="flex gap-4 overflow-x-auto pb-6 px-2 scrollbar-none -mx-2">
+            {/* Match Listings */}
+            <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar items-center">
                 <button 
                   onClick={() => setSelectedLeagueId(null)}
                   className={cn(
@@ -824,20 +907,64 @@ export default function App() {
                     {league.name}
                   </button>
                 ))}
-              </div>
+            </div>
 
-              {/* Live Match Hero (if any) */}
-              {liveGames.length > 0 && !selectedLeagueId && (
-                <section className="space-y-4">
-                  <div className="flex justify-between items-center px-2">
-                    <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Live Match</h2>
+            {/* Match Feed */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              <div className="lg:col-span-8 space-y-10">
+                {/* Live Match Hero (if any) */}
+                {liveGames.length > 0 && !selectedLeagueId && (
+                  <section className="space-y-4">
+                    <div className="flex justify-between items-center px-2">
+                      <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-3 italic">
+                         LIVE <span className="text-blue-500">FEED</span>
+                      </h2>
+                    </div>
+                    <div className="flex gap-6 overflow-x-auto pb-8 snap-x snap-mandatory scrollbar-none -mx-2 px-2">
+                      {liveGames.map(game => (
+                        <div key={game.id} className="snap-center min-w-[320px] sm:min-w-[400px]">
+                          <GameCard 
+                            game={game} 
+                            teams={teams || []} 
+                            leagues={leagues || []}
+                            onClick={() => {
+                              setSelectedGameId(game.id);
+                              navigateTo('game-details');
+                            }}
+                            onTeamClick={(id) => {
+                              setSelectedTeamId(id);
+                              navigateTo('team-details');
+                            }}
+                            isLive
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                <section>
+                  <div className="flex justify-between items-center mb-6 px-2">
+                    <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight italic uppercase">{t('matches')}</h2>
+                    <button 
+                      onClick={() => {
+                        setShowOnlyLive(false);
+                        setSelectedLeagueId(null);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="text-xs font-black text-blue-600 hover:text-blue-700 uppercase tracking-widest transition-colors flex items-center gap-2"
+                    >
+                      Refresh Feed
+                      <RefreshCwIcon size={14} />
+                    </button>
                   </div>
-                  <div className="flex gap-6 overflow-x-auto pb-8 snap-x snap-mandatory scrollbar-none -mx-6 px-6">
-                    {liveGames.map(game => (
-                      <div key={game.id} className="snap-center">
+                  <div className="grid gap-6">
+                    {filteredGames.length > 0 ? (
+                      filteredGames.map(game => (
                         <GameCard 
+                          key={game.id} 
                           game={game} 
-                          teams={teams || []} 
+                          teams={teams || []}
                           leagues={leagues || []}
                           onClick={() => {
                             setSelectedGameId(game.id);
@@ -847,170 +974,275 @@ export default function App() {
                             setSelectedTeamId(id);
                             navigateTo('team-details');
                           }}
-                          isLive
+                          isFollowing={followedGames.some(f => f.gameId === game.id)}
+                          onToggleFollow={() => toggleMatchFollow(game.id)}
+                          isLive={game.status === 'live'}
                         />
+                      ))
+                    ) : (
+                      <div className="card-3d p-20 text-center text-gray-400 flex flex-col items-center justify-center gap-6">
+                        <div className="w-24 h-24 bg-gray-50 dark:bg-gray-800 rounded-[32px] flex items-center justify-center shadow-inner border border-white/50 dark:border-white/5">
+                          <CalendarIcon className="w-12 h-12 opacity-20" />
+                        </div>
+                        <div>
+                          <p className="font-black text-2xl text-gray-900 dark:text-white uppercase tracking-tighter">{t('no_matches')}</p>
+                          <p className="text-xs font-bold uppercase tracking-widest mt-2 opacity-50">Filter reset recommended</p>
+                        </div>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </section>
-              )}
+              </div>
 
-              {/* Scheduled/Finished Matches */}
-              {user && (favorites.length > 0) && !selectedLeagueId && (
-                <section>
-                  <div className="flex justify-between items-center mb-4 px-2">
-                    <h2 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] flex items-center gap-3">
-                       <HeartIcon size={14} className="text-pink-500 fill-pink-500 shadow-sm" />
-                       {t('my_favorites')}
-                    </h2>
-                  </div>
-                  <div className="grid gap-5">
-                    {games.filter(g => 
-                      favorites.some(f => f.teamId === g.homeTeamId || f.teamId === g.awayTeamId)
-                    ).slice(0, 3).map(game => (
-                      <GameCard 
-                        key={game.id} 
-                        game={game} 
-                        teams={teams}
-                        leagues={leagues}
-                        onClick={() => {
-                          setSelectedGameId(game.id);
-                          navigateTo('game-details');
-                        }}
-                        onTeamClick={(id) => {
-                          setSelectedTeamId(id);
-                          navigateTo('team-details');
-                        }}
-                        isFollowing={followedGames.some(f => f.gameId === game.id)}
-                        onToggleFollow={() => toggleMatchFollow(game.id)}
-                        isLive={game.status === 'live'}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              <section>
-                <div className="flex justify-between items-center mb-6 px-2">
-                  <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Matchs</h2>
-                  <button 
-                    onClick={() => {
-                      setShowOnlyLive(false);
-                      setSelectedLeagueId(null);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="text-xs font-black text-orange-500 hover:text-orange-600 uppercase tracking-widest transition-colors"
-                  >
-                    See all
-                  </button>
-                </div>
-                <div className="grid gap-6">
-                  {filteredGames.length > 0 ? (
-                    filteredGames.map(game => (
-                      <GameCard 
-                        key={game.id} 
-                        game={game} 
-                        teams={teams || []}
-                        leagues={leagues || []}
-                        onClick={() => {
-                          setSelectedGameId(game.id);
-                          navigateTo('game-details');
-                        }}
-                        onTeamClick={(id) => {
-                          setSelectedTeamId(id);
-                          navigateTo('team-details');
-                        }}
-                        isFollowing={followedGames.some(f => f.gameId === game.id)}
-                        onToggleFollow={() => toggleMatchFollow(game.id)}
-                        isLive={game.status === 'live'}
-                      />
-                    ))
-                  ) : (
-                    <div className="card-3d p-16 text-center text-gray-400 flex flex-col items-center justify-center gap-4">
-                      <div className="w-20 h-20 bg-gray-50 dark:bg-gray-800 rounded-3xl flex items-center justify-center shadow-inner border border-white/50 dark:border-white/5">
-                        <CalendarIcon className="w-10 h-10 opacity-20" />
-                      </div>
-                      <div>
-                        <p className="font-black text-gray-900 dark:text-white uppercase tracking-widest">{t('no_matches')}</p>
-                        <p className="text-[10px] font-bold uppercase tracking-widest mt-1 opacity-50">Try selecting another league</p>
-                      </div>
+              <div className="lg:col-span-4 space-y-8">
+                 {/* Sidebar Content */}
+                 {user && favorites.length > 0 && (
+                  <section className="bg-white dark:bg-gray-900 rounded-[40px] p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-[0.2em] flex items-center gap-2">
+                         <HeartIcon size={14} className="text-pink-500 fill-pink-500" />
+                         {t('my_favorites')}
+                      </h2>
                     </div>
-                  )}
-                </div>
-              </section>
-            </motion.div>
+                    <div className="space-y-4">
+                      {games.filter(g => 
+                        favorites.some(f => f.teamId === g.homeTeamId || f.teamId === g.awayTeamId)
+                      ).slice(0, 5).map(game => (
+                        <div 
+                          key={game.id}
+                          onClick={() => {
+                            setSelectedGameId(game.id);
+                            navigateTo('game-details');
+                          }}
+                          className="flex items-center gap-3 p-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors border border-transparent hover:border-gray-100 dark:hover:border-gray-700"
+                        >
+                           <div className="flex-1 min-w-0">
+                              <p className="text-[11px] font-black text-gray-900 dark:text-white truncate">{teams.find(t => t.id === game.homeTeamId)?.shortName} v {teams.find(t => t.id === game.awayTeamId)?.shortName}</p>
+                              <p className="text-[9px] font-bold text-gray-400 uppercase">{leagues.find(l => l.id === game.leagueId)?.name}</p>
+                           </div>
+                           <div className="text-[10px] font-black text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-lg">
+                              {game.status === 'live' ? 'LIVE' : game.time}
+                           </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                 )}
+
+                 {/* Top Leagues Card */}
+                 <section className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[40px] p-8 text-white shadow-xl shadow-blue-500/20 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+                    <h3 className="text-xl font-black italic tracking-tighter mb-2">PRO LEAGUES</h3>
+                    <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.2em] mb-6 border-b border-white/10 pb-4">Explore World Football</p>
+                    <div className="space-y-4">
+                       {leagues.slice(0, 3).map(league => (
+                         <div 
+                           key={league.id}
+                           onClick={() => {
+                             setSelectedLeagueId(league.id);
+                             navigateTo('league-details');
+                           }}
+                           className="flex items-center gap-4 group cursor-pointer"
+                         >
+                            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center p-2 group-hover:bg-white/20 transition-colors">
+                               <img src={league.logo} alt="" className="w-full h-full object-contain" />
+                            </div>
+                            <span className="text-[13px] font-bold group-hover:translate-x-1 transition-transform">{league.name}</span>
+                            <ArrowRightIcon size={14} className="ml-auto opacity-0 group-hover:opacity-100 transition-all" />
+                         </div>
+                       ))}
+                    </div>
+                 </section>
+              </div>
+            </div>
+          </motion.div>
           )}
 
           {view === 'leagues' && (
-             <motion.div
-               key="leagues-tab-container"
-               initial={{ opacity: 0 }}
-               animate={{ opacity: 1 }}
-               exit={{ opacity: 0 }}
-               className="space-y-6"
-             >
-               {/* Competitions Quick Filter */}
-               <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                  {competitions.map(comp => (
-                    <button 
-                      key={comp.id}
-                      onClick={() => setSelectedLeagueId(comp.id)}
-                      className={cn(
-                        "px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border flex items-center gap-2",
-                        selectedLeagueId === comp.id ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-100" : "bg-white text-gray-400 border-gray-100 hover:border-gray-200"
-                      )}
-                    >
-                      {comp.logo && <img src={comp.logo} alt="" className="w-3 h-3 object-contain" />}
-                      {comp.name}
-                    </button>
-                  ))}
-               </div>
-
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 {leagues
-                   .filter(l => l.competitionId === selectedLeagueId)
-                   .map((league, index) => (
-                   <div 
-                     key={league.id} 
-                     onClick={() => {
-                        // We use selectedLeagueId for competition filtering in the list, 
-                        // but when clicking we need to set the ACTUAL league ID for details
-                        // I'll create a new state specifically for selectedCompetitionId to avoid confusion
-                        // but for now I'll use a local logic
-                        const isCompetitionSelected = competitions.some(c => c.id === selectedLeagueId);
-                        if (isCompetitionSelected) {
-                          // If current "selectedLeagueId" is actually a competition, we don't clear it yet
-                          // but we need to navigate. I should probably have used a separate state.
-                        }
-                       setSelectedLeagueId(league.id);
-                       navigateTo('league-details');
-                     }}
-                     className="card-3d p-4 cursor-pointer flex items-center gap-4 hover:shadow-3d-lg"
-                   >
-                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden bg-blue-50 dark:bg-blue-500/10">
-                        {league.logo ? <img src={league.logo} alt="" className="w-full h-full object-cover" /> : <TrophyIcon className="text-blue-600" />}
+            <motion.div
+              key="leagues-full"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="space-y-10 pb-20"
+            >
+              {/* Compact Header for Leagues */}
+              <div className="relative h-[280px] rounded-[48px] overflow-hidden bg-gray-900 shadow-2xl">
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent z-10" />
+                <img 
+                  src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=2000" 
+                  className="absolute inset-0 w-full h-full object-cover opacity-40"
+                  alt="Leagues Header"
+                />
+                
+                <div className="absolute inset-0 z-20 flex flex-col justify-center px-12 sm:px-16">
+                   <h1 className="text-5xl sm:text-7xl font-black text-white italic tracking-tighter leading-none uppercase mb-4">
+                     YARIGA <span className="text-blue-500">SPORTS</span>
+                   </h1>
+                   <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10">
+                        <GlobeIcon size={14} className="text-blue-400" />
+                        <span className="text-[10px] font-black text-white uppercase tracking-widest">{leagues.length} Federations</span>
                       </div>
-                      <div>
-                        <h3 className="font-bold text-gray-900 dark:text-white">{league.name}</h3>
-                        <div className="flex items-center gap-2">
-                           <p className="text-xs text-gray-500 dark:text-gray-400">{league.country || 'International'}</p>
-                           {league.competitionId && (
-                             <>
-                                <span className="w-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-full" />
-                                <span className="text-[9px] font-black uppercase text-blue-500 tracking-wider">
-                                  {competitions.find(c => c.id === league.competitionId)?.name || 'Tournament'}
-                                </span>
-                             </>
-                           )}
-                        </div>
+                      <div className="flex items-center gap-2 bg-emerald-500/10 backdrop-blur-md px-4 py-1.5 rounded-full border border-emerald-500/20">
+                        <SparklesIcon size={14} className="text-emerald-400" />
+                        <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Real-time Data</span>
                       </div>
-                      <ChevronRightIcon className="ml-auto text-gray-300 dark:text-gray-600" />
                    </div>
-                 ))}
-               </div>
-             </motion.div>
+                </div>
+              </div>
+
+              {/* Main List Layout Container */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                {/* Left Side: Competitions & Search */}
+                <div className="lg:col-span-8 space-y-10">
+                   {/* Search Bar */}
+                   <div className="relative group">
+                      <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
+                         <SearchIcon className="text-gray-400 group-focus-within:text-blue-600 transition-colors" size={20} />
+                      </div>
+                      <input 
+                        type="text"
+                        placeholder="Search competitions, countries or leagues..."
+                        value={leagueSearchQuery}
+                        onChange={(e) => setLeagueSearchQuery(e.target.value)}
+                        className="w-full h-16 bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-3xl pl-16 pr-8 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all shadow-sm dark:text-white"
+                      />
+                   </div>
+
+                   {/* Featured / Top Leagues Horizontal Scroll */}
+                   <section>
+                      <h2 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                        <ZapIcon size={14} className="text-yellow-500" />
+                        Featured Leagues
+                      </h2>
+                      <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-2 px-2">
+                         {leagues.filter(l => l.competitionId === 'top' || ['1', '2', '3'].includes(l.id)).map(league => (
+                            <div 
+                              key={league.id}
+                              onClick={() => {
+                                setSelectedLeagueId(league.id);
+                                navigateTo('league-details');
+                              }}
+                              className="group min-w-[160px] bg-white dark:bg-gray-900 p-5 rounded-[32px] border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-1 transition-all cursor-pointer text-center"
+                            >
+                               <div className="w-14 h-14 mx-auto mb-4 p-3 bg-gray-50 dark:bg-black/20 rounded-2xl group-hover:scale-110 transition-transform flex items-center justify-center relative">
+                                  <img src={league.logo} alt="" className="w-full h-full object-contain" />
+                                  {['1', '2'].includes(league.id) && (
+                                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-900 shadow-lg">
+                                      <SparklesIcon size={8} className="text-white" />
+                                    </div>
+                                  )}
+                               </div>
+                               <p className="text-xs font-black text-gray-900 dark:text-white truncate tracking-tight">{league.name}</p>
+                               <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1 opacity-60">{league.country}</p>
+                            </div>
+                         ))}
+                      </div>
+                   </section>
+
+                   {/* Grouped All Leagues List */}
+                   <div className="space-y-6">
+                      {competitions.map(comp => {
+                        const filteredLeagues = leagues.filter(l => 
+                          l.competitionId === comp.id && 
+                          (!leagueSearchQuery || l.name.toLowerCase().includes(leagueSearchQuery.toLowerCase()))
+                        );
+
+                        if (filteredLeagues.length === 0) return null;
+
+                        return (
+                          <section key={comp.id} className="bg-white dark:bg-gray-900 rounded-[40px] border border-gray-100 dark:border-white/5 overflow-hidden shadow-sm">
+                             <div className="bg-gray-50/80 dark:bg-white/5 px-8 py-5 border-b border-gray-100 dark:border-white/5 flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                   <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 flex items-center justify-center p-1.5 shadow-sm">
+                                      <img src={comp.logo} alt="" className="w-full h-full object-contain" />
+                                   </div>
+                                   <h3 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-widest">{comp.name}</h3>
+                                </div>
+                                <span className="text-[10px] font-bold text-gray-400">{filteredLeagues.length} Leagues</span>
+                             </div>
+                             <div className="divide-y divide-gray-50 dark:divide-white/5">
+                                {filteredLeagues.map(league => (
+                                  <div 
+                                    key={league.id}
+                                    onClick={() => {
+                                      setSelectedLeagueId(league.id);
+                                      navigateTo('league-details');
+                                    }}
+                                    className="px-8 py-5 flex items-center gap-5 hover:bg-gray-50/50 dark:hover:bg-white/[0.02] cursor-pointer transition-colors group"
+                                  >
+                                     <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center p-2 group-hover:scale-110 transition-transform relative">
+                                        <img src={league.logo} alt="" className="w-full h-full object-contain" />
+                                        {league.competitionId === 'top' && (
+                                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-600 rounded-full border border-white dark:border-gray-900 shadow-sm" />
+                                        )}
+                                     </div>
+                                     <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-black text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors">{league.name}</p>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                           <span className="text-[10px] font-bold text-gray-400 leading-none uppercase tracking-widest">{league.country || 'International'}</span>
+                                           <span className="w-1 h-1 bg-gray-200 dark:bg-gray-800 rounded-full" />
+                                           <span className="text-[10px] font-black text-emerald-500 uppercase leading-none">{league.type}</span>
+                                        </div>
+                                     </div>
+                                     <div className="p-2 rounded-full bg-gray-50 dark:bg-gray-800 text-gray-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                        <ArrowRightIcon size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                                     </div>
+                                  </div>
+                                ))}
+                             </div>
+                          </section>
+                        );
+                      })}
+                   </div>
+                </div>
+
+                {/* Right Side: Quick Stats / Favorites Links */}
+                <div className="lg:col-span-4 space-y-10">
+                   {/* Yariga Sports Style Promo Card */}
+                   <div className="bg-[#050505] rounded-[48px] p-8 text-white shadow-xl shadow-blue-500/20 relative overflow-hidden group border border-white/5">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 rounded-full -mr-16 -mt-16 blur-2xl group-hover:scale-150 transition-transform duration-1000" />
+                      <div className="relative z-10">
+                         <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center mb-6 backdrop-blur-md border border-white/10">
+                            <SparklesIcon size={24} className="text-blue-500" />
+                         </div>
+                         <h3 className="text-2xl font-black italic tracking-tighter mb-3 uppercase">
+                           YARIGA <span className="text-blue-500">PREMIUM</span>
+                         </h3>
+                         <p className="text-white/50 text-xs font-bold leading-relaxed mb-8 uppercase tracking-widest">The Ultimate Kurdish Football Experience. v1.1.7 core active.</p>
+                         <button className="w-full h-14 bg-blue-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-95">
+                           Unlock Premium Access
+                         </button>
+                      </div>
+                   </div>
+
+                   {/* Rankings Side Section */}
+                   <section className="bg-white dark:bg-gray-900 rounded-[40px] border border-gray-100 dark:border-white/5 p-8 shadow-sm">
+                      <h2 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                        <GlobeIcon size={14} className="text-blue-500" />
+                        Popular Regions
+                      </h2>
+                      <div className="space-y-4">
+                         {competitions.slice(0, 5).map(comp => (
+                           <div key={comp.id} className="flex items-center justify-between group cursor-pointer">
+                              <div className="flex items-center gap-3">
+                                 <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center p-1.5 grayscale group-hover:grayscale-0 transition-all">
+                                    <img src={comp.logo} alt="" className="w-full h-full object-contain" />
+                                 </div>
+                                 <span className="text-[11px] font-bold text-gray-500 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{comp.name}</span>
+                              </div>
+                              <span className="text-[9px] font-black text-blue-500 bg-blue-50 dark:bg-blue-500/10 px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">GO</span>
+                           </div>
+                         ))}
+                      </div>
+                   </section>
+                </div>
+              </div>
+            </motion.div>
           )}
 
+          
           {view === 'league-details' && selectedLeagueId && leagues.find(l => l.id === selectedLeagueId) && (
             <LeagueDetails 
               league={leagues.find(l => l.id === selectedLeagueId)!}
@@ -1371,314 +1603,250 @@ export default function App() {
             />
           )}
 
+
+
           {view === 'settings' && (
             <motion.div
               key="settings"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="space-y-6"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-8 pb-32"
             >
-              <div className="flex items-center gap-4 mb-2">
-                <div className="p-3 bg-gray-900 rounded-2xl shadow-lg ring-4 ring-gray-50">
-                  <SettingsIcon className="text-white" size={24} />
+              <div className="space-y-8 pb-32 max-w-[600px] mx-auto">
+                <div className="text-center space-y-2 mb-12">
+                   <h2 className="text-[34px] font-bold tracking-tight text-gray-900 dark:text-white">Settings</h2>
+                   <p className="text-gray-500 font-medium">Manage your preferences and profile</p>
                 </div>
-                <div>
-                  <h2 className="text-2xl font-black">{t('preferences')}</h2>
-                  <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest leading-none">{t('app_config')}</p>
-                </div>
-              </div>
 
-              {user && (
-                <div className="card-3d p-8 space-y-6">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">My Profile</h3>
-                  <div className="flex flex-col sm:flex-row gap-8 items-start">
-                    <div className="relative group">
-                      <div className="w-24 h-24 rounded-[32px] bg-blue-600 p-1 shadow-3d-lg overflow-hidden flex-shrink-0">
-                        {user.photoURL ? (
-                          <img src={user.photoURL} className="w-full h-full object-cover rounded-[28px]" alt="" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-white text-3xl font-black italic">
-                            {user.displayName?.charAt(0) || user.email?.charAt(0) || 'U'}
-                          </div>
-                        )}
+                {/* Profile Section - iOS Style */}
+                <div className="space-y-1 px-4">
+                  <div className="bg-white dark:bg-gray-900 rounded-[14px] overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm">
+                    {user ? (
+                      <div className="p-4 flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-[20px] overflow-hidden bg-gray-100">
+                          <img src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`} className="w-full h-full object-cover" alt="" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-[17px] font-semibold text-gray-900 dark:text-white leading-tight">{user.displayName || 'Set Display Name'}</h3>
+                          <p className="text-[13px] text-gray-500">{user.email}</p>
+                        </div>
+                        <ChevronRightIcon className="text-gray-300 w-5 h-5" />
                       </div>
-                      <label className="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-600 rounded-full border-4 border-white dark:border-gray-900 shadow-lg flex items-center justify-center cursor-pointer hover:scale-110 transition-transform">
-                        <PlusIcon size={12} className="text-white" />
-                        <input 
-                          type="file" 
-                          className="hidden" 
-                          accept="image/*"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              const reader = new FileReader();
-                              reader.onloadend = async () => {
-                                const base64 = reader.result as string;
-                                try {
-                                  await updateProfile(user, { photoURL: base64 });
-                                  setUser(prev => prev ? { ...prev, photoURL: base64 } : null);
-                                } catch (err) {
-                                  alert("Failed to update profile picture");
-                                }
-                              };
-                              reader.readAsDataURL(file);
-                            }
-                          }}
-                        />
-                      </label>
+                    ) : (
+                      <button onClick={handleLogin} className="w-full p-4 flex items-center gap-4 text-left hover:bg-gray-50 transition-colors">
+                        <div className="w-16 h-16 rounded-[20px] bg-blue-600 flex items-center justify-center text-white">
+                          <UsersIcon size={32} />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-[17px] font-semibold text-gray-900 dark:text-white">Sign In</h3>
+                          <p className="text-[13px] text-gray-500">Access your profile and favorites</p>
+                        </div>
+                        <ChevronRightIcon className="text-gray-300 w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Main Settings - iOS Style */}
+                <div className="space-y-8">
+                  {/* Preferences Group */}
+                  <div className="space-y-1 px-4">
+                    <p className="text-[13px] text-gray-500 uppercase tracking-tight ml-4 mb-2">PREFERENCES</p>
+                    <div className="bg-white dark:bg-gray-900 rounded-[14px] overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm divide-y divide-gray-50 dark:divide-gray-800">
+                        <div className="p-4 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center text-white">
+                              <BellIcon size={16} />
+                            </div>
+                            <span className="text-[17px] dark:text-white">{t('pref_notifications')}</span>
+                          </div>
+                          <button 
+                            onClick={() => setPrefNotifications(!prefNotifications)}
+                            className={cn(
+                              "w-12 h-7 rounded-full relative transition-all duration-200",
+                              prefNotifications ? "bg-green-500" : "bg-gray-200 dark:bg-gray-700"
+                            )}
+                          >
+                            <motion.div 
+                              animate={{ x: prefNotifications ? 22 : 2 }}
+                              className="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md"
+                            />
+                          </button>
+                        </div>
+
+                        <div className="p-4 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-7 h-7 rounded-lg bg-red-600 flex items-center justify-center text-white">
+                              <ZapIcon size={16} />
+                            </div>
+                            <span className="text-[17px] dark:text-white">{t('pref_play_sounds')}</span>
+                          </div>
+                          <button 
+                            onClick={() => setPrefPlaySounds(!prefPlaySounds)}
+                            className={cn(
+                              "w-12 h-7 rounded-full relative transition-all duration-200",
+                              prefPlaySounds ? "bg-green-500" : "bg-gray-200 dark:bg-gray-700"
+                            )}
+                          >
+                            <motion.div 
+                              animate={{ x: prefPlaySounds ? 22 : 2 }}
+                              className="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md"
+                            />
+                          </button>
+                        </div>
+
+                        <div className="p-4 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center text-white">
+                              <TrophyIcon size={16} />
+                            </div>
+                            <span className="text-[17px] dark:text-white">{prefLanguage === 'English' ? 'Goal Alerts' : 'ئاگاداری گۆڵ'}</span>
+                          </div>
+                          <button 
+                            onClick={() => setPrefGoalAlerts(!prefGoalAlerts)}
+                            className={cn(
+                              "w-12 h-7 rounded-full relative transition-all duration-200",
+                              prefGoalAlerts ? "bg-green-500" : "bg-gray-200 dark:bg-gray-700"
+                            )}
+                          >
+                            <motion.div 
+                              animate={{ x: prefGoalAlerts ? 22 : 2 }}
+                              className="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md"
+                            />
+                          </button>
+                        </div>
+
+                       <div className="p-4 flex items-center justify-between">
+                         <div className="flex items-center gap-3">
+                           <div className="w-7 h-7 rounded-lg bg-pink-500 flex items-center justify-center text-white">
+                             <HeartIcon size={16} />
+                           </div>
+                           <span className="text-[17px] dark:text-white">{t('my_favorites')}</span>
+                         </div>
+                         <button onClick={() => navigateTo('leagues')} className="flex items-center gap-1 text-gray-400">
+                           <ChevronRightIcon size={18} />
+                         </button>
+                       </div>
+
+                       <div className="p-4 flex items-center justify-between">
+                         <div className="flex items-center gap-3">
+                           <div className="w-7 h-7 rounded-lg bg-blue-500 flex items-center justify-center text-white">
+                             <GlobeIcon size={16} />
+                           </div>
+                           <span className="text-[17px] dark:text-white">{t('language')}</span>
+                         </div>
+                         <button onClick={() => setPrefLanguage(prefLanguage === 'English' ? 'Kurdish' : 'English')} className="flex items-center gap-1 text-gray-400">
+                           <span className="text-[17px]">{prefLanguage}</span>
+                           <ChevronRightIcon size={18} />
+                         </button>
+                       </div>
                     </div>
+                  </div>
 
-                    <div className="flex-1 space-y-6 w-full">
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Display Name</label>
-                          <div className="relative">
-                            <input 
-                              id="profile-name-input"
-                              type="text" 
-                              defaultValue={user.displayName || ''}
-                              className="w-full h-14 px-6 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-3xl font-bold text-sm focus:ring-2 focus:ring-blue-600 transition-all dark:text-white shadow-sm"
-                              placeholder="Enter your name"
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Profile Photo URL</label>
-                          <div className="relative">
-                            <input 
-                              id="profile-photo-input"
-                              type="text" 
-                              defaultValue={user.photoURL || ''}
-                              className="w-full h-14 px-6 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-3xl font-bold text-sm focus:ring-2 focus:ring-blue-600 transition-all dark:text-white shadow-sm"
-                              placeholder="https://example.com/photo.jpg"
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2 opacity-60">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Email Address</label>
-                          <div className="w-full h-14 px-6 bg-gray-50 dark:bg-gray-800 rounded-3xl font-bold text-sm flex items-center text-gray-500 border border-gray-100 dark:border-gray-700">
-                            {user.email}
-                          </div>
-                        </div>
-                      </div>
-
-                      <button 
-                        onClick={async () => {
-                          const nameInput = document.getElementById('profile-name-input') as HTMLInputElement;
-                          const photoInput = document.getElementById('profile-photo-input') as HTMLInputElement;
-                          const newName = nameInput.value;
-                          const newPhoto = photoInput.value;
-                          
-                          try {
-                            const btn = document.getElementById('save-profile-btn');
-                            if (btn) {
-                              btn.innerHTML = 'Saving...';
-                              btn.classList.add('opacity-50');
-                            }
-                            
-                            // Update Auth Profile
-                            await updateProfile(user, { 
-                              displayName: newName,
-                              photoURL: newPhoto 
-                            });
-
-                            // Update React State immediately
-                            setUser(prev => prev ? { ...prev, displayName: newName, photoURL: newPhoto } : null);
-
-                            // Sync to Global Leaderboard Firestore
-                            await setDoc(doc(db, 'users', user.uid), {
-                              displayName: newName,
-                              photoURL: newPhoto,
-                              updatedAt: new Date().toISOString()
-                            }, { merge: true });
-
-                            if (btn) {
-                              btn.innerHTML = 'Saved!';
-                              setTimeout(() => {
-                                btn.innerHTML = 'Save Changes';
-                                btn.classList.remove('opacity-50');
-                              }, 2000);
-                            }
-                          } catch (err) {
-                            alert("Failed to update profile");
-                            const btn = document.getElementById('save-profile-btn');
-                            if (btn) {
-                              btn.innerHTML = 'Save Changes';
-                              btn.classList.remove('opacity-50');
-                            }
-                          }
-                        }}
-                        id="save-profile-btn"
-                        className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-[24px] font-black text-xs uppercase tracking-[0.2em] shadow-3d-md transition-all active:scale-95"
-                      >
-                        Save Changes
+                  {/* Fantasy Group */}
+                  <div className="space-y-1 px-4">
+                    <p className="text-[13px] text-gray-500 uppercase tracking-tight ml-4 mb-2">FANTASY & GAMING</p>
+                    <div className="bg-white dark:bg-gray-900 rounded-[14px] overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm divide-y divide-gray-50 dark:divide-gray-800">
+                      <button onClick={() => navigateTo('fantasy')} className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                         <div className="flex items-center gap-3">
+                           <div className="w-7 h-7 rounded-lg bg-yellow-500 flex items-center justify-center text-white">
+                             <CrownIcon size={16} />
+                           </div>
+                           <span className="text-[17px] dark:text-white">Fantasy Management</span>
+                         </div>
+                         <ChevronRightIcon className="text-gray-300 w-5 h-5" />
+                      </button>
+                      <button onClick={() => navigateTo('leaderboard')} className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                         <div className="flex items-center gap-3">
+                           <div className="w-7 h-7 rounded-lg bg-purple-500 flex items-center justify-center text-white">
+                             <TrophyIcon size={16} />
+                           </div>
+                           <span className="text-[17px] dark:text-white">Hall of Fame</span>
+                         </div>
+                         <ChevronRightIcon className="text-gray-300 w-5 h-5" />
                       </button>
                     </div>
                   </div>
-                </div>
-              )}
 
-              <div className="card-3d p-8 space-y-6">
-                <div className="space-y-4">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">{t('pref_notifications')}</h3>
-                  
-                  <div className="flex justify-between items-center group">
-                    <div>
-                      <p className="font-black text-gray-900 dark:text-white">{t('pref_notifications')}</p>
-                      <p className="text-xs text-gray-500 font-medium">{t('pref_notifications_desc')}</p>
-                    </div>
-                    <button 
-                      onClick={() => setPrefNotifications(!prefNotifications)}
-                      className={cn(
-                        "w-14 h-8 rounded-full transition-all relative",
-                        prefNotifications ? "bg-blue-600 shadow-lg shadow-blue-100" : "bg-gray-100 dark:bg-gray-800"
-                      )}
-                    >
-                      <div className={cn(
-                        "absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm",
-                        prefNotifications ? "left-7" : "left-1"
-                      )} />
-                    </button>
-                  </div>
+                  {/* Appearance Group */}
+                  <div className="space-y-1 px-4">
+                    <p className="text-[13px] text-gray-500 uppercase tracking-tight ml-4 mb-2">APPEARANCE</p>
+                    <div className="bg-white dark:bg-gray-900 rounded-[14px] overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm divide-y divide-gray-50 dark:divide-gray-800">
+                       <div className="p-4 flex items-center justify-between">
+                         <div className="flex items-center gap-3">
+                           <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center text-white">
+                             <ClockIcon size={16} />
+                           </div>
+                           <span className="text-[17px] dark:text-white">Time Format</span>
+                         </div>
+                         <div className="flex bg-gray-100 dark:bg-gray-800 p-0.5 rounded-lg">
+                           {(['12h', '24h'] as const).map((format) => (
+                             <button
+                               key={format}
+                               onClick={() => setPrefTimeFormat(format)}
+                               className={cn(
+                                 "px-3 py-1 rounded-md text-[13px] font-medium transition-all",
+                                 prefTimeFormat === format ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500"
+                               )}
+                             >
+                               {format}
+                             </button>
+                           ))}
+                         </div>
+                       </div>
 
-                  <div className="flex justify-between items-center group pt-4 border-t border-gray-50 dark:border-gray-800">
-                    <div>
-                      <p className="font-black text-gray-900 dark:text-white">{t('pref_banners')}</p>
-                      <p className="text-xs text-gray-500 font-medium">{t('pref_banners_desc')}</p>
-                    </div>
-                    <button 
-                      onClick={() => setPrefMobileBanners(!prefMobileBanners)}
-                      className={cn(
-                        "w-14 h-8 rounded-full transition-all relative",
-                        prefMobileBanners ? "bg-blue-600 shadow-lg shadow-blue-100" : "bg-gray-100 dark:bg-gray-800"
-                      )}
-                    >
-                      <div className={cn(
-                        "absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm",
-                        prefMobileBanners ? "left-7" : "left-1"
-                      )} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">{t('settings')}</h3>
-                  
-                  <div className="space-y-6">
-                    <div className="flex justify-between items-center group">
-                      <div>
-                        <p className="font-black text-gray-900 dark:text-white">App Version</p>
-                        <p className="text-xs text-gray-500 font-medium">Current build version of the application</p>
-                      </div>
-                      <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-black border border-blue-100 dark:border-blue-800">
-                        v1.1.5
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center group pt-4 border-t border-gray-50 dark:border-gray-800">
-                      <div>
-                        <p className="font-black text-gray-900 dark:text-white">{t('pref_time')}</p>
-                        <p className="text-xs text-gray-500 font-medium">{t('pref_time_desc')}</p>
-                      </div>
-                      <div className="flex bg-gray-50 dark:bg-gray-800 p-1 rounded-2xl border border-gray-100 dark:border-gray-700">
-                        <button 
-                          onClick={() => setPrefTimeFormat('12h')}
-                          className={cn(
-                            "px-4 py-2 rounded-xl text-[10px] font-black transition-all",
-                            prefTimeFormat === '12h' ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-400 hover:text-gray-600"
-                          )}
-                        >
-                          AM/PM
-                        </button>
-                        <button 
-                          onClick={() => setPrefTimeFormat('24h')}
-                          className={cn(
-                            "px-4 py-2 rounded-xl text-[10px] font-black transition-all",
-                            prefTimeFormat === '24h' ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-400 hover:text-gray-600"
-                          )}
-                        >
-                          24H
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4 pt-4 border-t border-gray-50 dark:border-gray-800 mt-4">
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em]">{t('pref_appearance')}</p>
-                      <div className="grid gap-3">
-                        {(['system', 'light', 'dark'] as const).map(t_key => (
-                          <button 
-                            key={t_key}
-                            onClick={() => setPrefTheme(t_key)}
-                            className={cn(
-                              "w-full p-4 rounded-2xl flex items-center justify-between transition-all border",
-                              prefTheme === t_key 
-                                ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100" 
-                                : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-900 dark:text-white hover:border-gray-200 dark:hover:border-gray-600"
-                            )}
-                          >
-                            <span className="font-black tracking-widest text-xs">
-                              {t(`pref_${t_key}`)}
-                            </span>
-                            <div className={cn(
-                              "w-4 h-4 rounded-full border-2 flex items-center justify-center",
-                              prefTheme === t_key ? "border-white" : "border-gray-200 dark:border-gray-600"
-                            )}>
-                              {prefTheme === t_key && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-4 pt-4 border-t border-gray-50 dark:border-gray-800 mt-4">
-                      <p className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em]">{t('pref_language')}</p>
-                      <div className="grid gap-3">
-                        {(['English', 'Kurdish'] as const).map(lang => (
-                          <button 
-                            key={lang}
-                            onClick={() => setPrefLanguage(lang)}
-                            className={cn(
-                              "w-full p-4 rounded-2xl flex items-center justify-between transition-all border",
-                              prefLanguage === lang 
-                                ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100" 
-                                : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-900 dark:text-white hover:border-gray-200 dark:hover:border-gray-600"
-                            )}
-                          >
-                            <span className="font-black tracking-widest text-xs">{t(lang === 'English' ? 'tap_lang' : 'tap_lang_ku')}</span>
-                            <div className={cn(
-                              "w-4 h-4 rounded-full border-2 flex items-center justify-center",
-                              prefLanguage === lang ? "border-white" : "border-gray-200 dark:border-gray-600"
-                            )}>
-                              {prefLanguage === lang && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
+                       <div className="p-4 space-y-3">
+                         <div className="flex items-center gap-3">
+                           <div className="w-7 h-7 rounded-lg bg-gray-600 flex items-center justify-center text-white">
+                             <LayoutIcon size={16} />
+                           </div>
+                           <span className="text-[17px] dark:text-white">Theme</span>
+                         </div>
+                         <div className="grid grid-cols-3 gap-2">
+                           {(['light', 'dark', 'system'] as const).map((theme) => (
+                             <button
+                               key={theme}
+                               onClick={() => setPrefTheme(theme)}
+                               className={cn(
+                                 "py-2 flex flex-col items-center gap-1 rounded-xl border transition-all capitalize text-[11px] font-medium",
+                                 prefTheme === theme 
+                                   ? "bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400" 
+                                   : "bg-gray-50 dark:bg-gray-800 border-transparent text-gray-400"
+                               )}
+                             >
+                               {theme === 'light' ? <SparklesIcon size={14} /> : theme === 'dark' ? <LockIcon size={14} /> : <GlobeIcon size={14} />}
+                               {theme}
+                             </button>
+                           ))}
+                         </div>
+                       </div>
                     </div>
                   </div>
+
+                  {/* Information Group */}
+                  <div className="space-y-1 px-4">
+                    <p className="text-[13px] text-gray-500 uppercase tracking-tight ml-4 mb-2">ABOUT</p>
+                    <div className="bg-white dark:bg-gray-900 rounded-[14px] overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm divide-y divide-gray-50 dark:divide-gray-800">
+                       <div className="p-4 flex items-center justify-between">
+                         <span className="text-[17px] dark:text-white">Version</span>
+                         <span className="text-[17px] text-gray-400">v1.1.7</span>
+                       </div>
+                    </div>
+                  </div>
+
+                  {isAdmin && (
+                    <div className="px-4">
+                      <button 
+                        onClick={() => navigateTo('admin')}
+                        className="w-full py-4 bg-white dark:bg-gray-900 text-blue-600 rounded-[14px] font-semibold text-[17px] border border-gray-100 dark:border-gray-800 shadow-sm"
+                      >
+                        Administrative Panel
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {isAdmin && (
-                <div className="p-6 bg-blue-50 rounded-[32px] border border-blue-100 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-blue-600 rounded-xl text-white">
-                      <ShieldIcon size={20} />
-                    </div>
-                    <div>
-                      <p className="font-black text-blue-900">Admin Mode Active</p>
-                      <p className="text-xs text-blue-600 font-bold">You have full database access</p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => navigateTo('admin')}
-                    className="px-4 py-2 bg-white text-blue-600 rounded-xl font-black text-xs shadow-sm hover:shadow-md transition-all"
-                  >
-                    Open Panel
-                  </button>
-                </div>
-              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -1736,13 +1904,12 @@ export default function App() {
 
       {/* Bottom Nav */}
       {view !== 'game-details' && view !== 'team-details' && view !== 'league-details' && view !== 'player-details' && view !== 'fantasy' && (
-        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-md bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.3)] dark:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.8)] rounded-[32px] border-t-2 border-l-2 border-white/50 dark:border-white/10 px-4 py-2 z-40 ring-1 ring-black/5">
-          <div className="flex justify-between items-center px-1">
-            <NavButton active={view === 'matches'} onClick={() => { navigateTo('matches'); setSelectedLeagueId(null); setSelectedPlayerId(null); setSelectedTeamId(null); }} icon={<ClockIcon />} label={prefLanguage === 'English' ? 'Home' : 'سەرەکی'} />
-            <NavButton active={view === 'leagues'} onClick={() => navigateTo('leagues')} icon={<ShieldIcon />} label={prefLanguage === 'English' ? 'Leagues' : 'خولەکان'} />
-            <NavButton active={view === 'fantasy'} onClick={() => navigateTo('fantasy')} icon={<CrownIcon />} label={t('fantasy')} />
-            <NavButton active={view === 'leaderboard'} onClick={() => navigateTo('leaderboard')} icon={<TrophyIcon />} label={prefLanguage === 'English' ? 'Ranking' : 'ڕیزبەندی'} />
-            <NavButton active={view === 'settings'} onClick={() => navigateTo('settings')} icon={<SettingsIcon />} label={prefLanguage === 'English' ? 'Settings' : 'ڕێکخستن'} />
+        <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[calc(100%-48px)] max-w-sm bg-white/70 dark:bg-black/40 backdrop-blur-3xl shadow-[0_30px_60px_-12px_rgba(0,0,0,0.25)] rounded-[40px] border border-white/40 dark:border-white/5 py-3 px-6 z-40 ring-1 ring-black/5">
+          <div className="flex justify-between items-center">
+            <NavButton active={view === 'matches'} onClick={() => { navigateTo('matches'); setSelectedLeagueId(null); setSelectedPlayerId(null); setSelectedTeamId(null); }} icon={<ClockIcon />} label={prefLanguage === 'English' ? 'Matches' : 'یارییەکان'} />
+            <NavButton active={view === 'leagues'} onClick={() => navigateTo('leagues')} icon={<ShieldIcon />} label={prefLanguage === 'English' ? 'Explore' : 'گەڕان'} />
+            <NavButton active={view === 'leaderboard'} onClick={() => navigateTo('leaderboard')} icon={<TrophyIcon />} label={prefLanguage === 'English' ? 'Stats' : 'ئامار'} />
+            <NavButton active={view === 'settings'} onClick={() => navigateTo('settings')} icon={<SettingsIcon />} label={prefLanguage === 'English' ? 'My' : 'من'} />
           </div>
         </nav>
       )}
@@ -1755,23 +1922,21 @@ function NavButton({ active, onClick, icon, label }: { active: boolean; onClick:
     <button 
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center gap-1 transition-all text-center min-w-[60px] group",
-        active ? "scale-105" : "text-gray-400 hover:text-gray-500 scale-95"
+        "flex flex-col items-center gap-1.5 transition-all text-center group",
+        active ? "scale-100" : "text-gray-400 hover:text-gray-500 scale-95"
       )}
     >
       <div className={cn(
-        "w-11 h-11 rounded-[18px] flex items-center justify-center transition-all relative overflow-hidden",
+        "w-12 h-12 rounded-[22px] flex items-center justify-center transition-all duration-500 relative overflow-hidden",
         active 
-          ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-[0_8px_20px_-4px_rgba(37,99,235,0.4)] ring-2 ring-blue-400/20" 
-          : "bg-gray-50 dark:bg-gray-800/50 text-gray-400 border border-gray-100 dark:border-gray-700/50 shadow-inner"
+          ? "bg-[#1A1A1A] dark:bg-white text-white dark:text-black shadow-xl" 
+          : "bg-transparent text-gray-400"
       )}>
-        {/* 3D Gloss Effect */}
-        {active && <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent pointer-events-none" />}
-        {React.cloneElement(icon as React.ReactElement, { size: 20, strokeWidth: active ? 2.5 : 2 })}
+        {React.cloneElement(icon as React.ReactElement, { size: 22, strokeWidth: active ? 2.5 : 2 })}
       </div>
       <span className={cn(
-        "text-[9px] font-black uppercase tracking-[0.15em] transition-all",
-        active ? "text-blue-600 dark:text-blue-400" : "opacity-40"
+        "text-[10px] font-bold tracking-tight transition-all duration-300",
+        active ? "text-[#1A1A1A] dark:text-white opacity-100" : "opacity-0"
       )}>{label}</span>
     </button>
   );

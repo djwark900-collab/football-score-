@@ -141,6 +141,15 @@
       },
       "required": ["teamId"]
     },
+    "FollowedMatch": {
+      "title": "Followed Match",
+      "description": "A match followed by a user for notifications",
+      "type": "object",
+      "properties": {
+        "gameId": { "type": "string" }
+      },
+      "required": ["gameId"]
+    },
     "Transfer": {
       "title": "Transfer",
       "description": "A player transfer between teams",
@@ -201,6 +210,22 @@
         "xp": { "type": "number" },
         "level": { "type": "number" }
       }
+    },
+    "News": {
+      "title": "News",
+      "description": "News articles and updates",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "author": { "type": "string" },
+        "category": { "type": "string" },
+        "leagueId": { "type": "string" },
+        "teamId": { "type": "string" }
+      },
+      "required": ["title", "content", "date"]
     }
   },
   "firestore": {
@@ -208,14 +233,16 @@
     "/leagues/{leagueId}": { "schema": "League", "description": "Global leagues" },
     "/leagues/{leagueId}/seasons/{seasonId}": { "schema": "Season", "description": "Seasons per league" },
     "/teams/{teamId}": { "schema": "Team", "description": "Teams in the system" },
-    "/teams/{teamId}/players/{playerId}": { "schema": "Player", "description": "Players per team" },
+    "/players/{playerId}": { "schema": "Player", "description": "All players in the system" },
     "/venues/{venueId}": { "schema": "Venue", "description": "Venues/Stadiums" },
     "/games/{gameId}": { "schema": "Game", "description": "All matches" },
     "/admins/{adminId}": { "schema": "Administrator", "description": "Authorized administrators" },
     "/users/{userId}": { "schema": "UserProfile", "description": "Global user profiles" },
     "/users/{userId}/favorites/{favoriteId}": { "schema": "Favorite", "description": "User's favorite teams" },
+    "/users/{userId}/matchNotifications/{notificationId}": { "schema": { "$ref": "#/entities/FollowedMatch" }, "description": "User's followed matches" },
     "/transfers/{transferId}": { "schema": "Transfer", "description": "Player transfers" },
     "/fantasyTeams/{userId}": { "schema": "FantasyTeam", "description": "User's fantasy team" },
-    "/users/{userId}/predictions/{predictionId}": { "schema": "MatchPrediction", "description": "User's match predictions" }
+    "/users/{userId}/predictions/{predictionId}": { "schema": "MatchPrediction", "description": "User's match predictions" },
+    "/news/{newsId}": { "schema": "News", "description": "News articles" }
   }
 }
